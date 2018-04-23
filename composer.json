@@ -2,7 +2,7 @@
   "name": "plan2net/webp",
   "description": "Convert processed images to webp",
   "type": "typo3-cms-extension",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "require": {
     "typo3/cms-core": ">=8.7.0"
   },
