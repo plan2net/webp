@@ -23,18 +23,18 @@ class Webp
      */
     public function process($originalFile, &$processedFile)
     {
-        $extensionConfiguration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
-        if (!empty($extensionConfiguration['magick_parameters'])) {
-            $parameters = $extensionConfiguration['magick_parameters'];
-        } else {
-            $parameters = '-quality=85 -define webp:lossless=false';
-        }
+
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         $processedFilePath = $processedFile->getForLocalProcessing(false);
-        $this->getGraphicalFunctionsObject()->imageMagickExec($originalFilePath,
-            $processedFilePath, $parameters);
+
+        // create WebP file
+        $this->getGraphicalFunctionsObject()->imageMagickExec(
+            $originalFilePath,
+            $processedFilePath,
+            $this->getMagickParameters()
+        );
         $processedFile->updateProperties(
             [
                 'width' => $originalFile->getProperty('width'),
@@ -58,6 +58,21 @@ class Webp
         }
 
         return $graphicalFunctionsObject;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getMagickParameters(): string
+    {
+        $extensionConfiguration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
+        if (!empty($extensionConfiguration['magick_parameters'])) {
+            $parameters = $extensionConfiguration['magick_parameters'];
+        } else {
+            $parameters = '-quality=85 -define webp:lossless=false';
+        }
+
+        return $parameters;
     }
 
 }

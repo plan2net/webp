@@ -87,11 +87,7 @@ class Webp
     protected function isInProcessingFolder($file): bool
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
-        if (strpos($file->getIdentifier(), $processingFolder->getIdentifier()) !== false) {
-            return true;
-        }
-
-        return false;
+        return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) !== false;
     }
 
     /**
@@ -100,11 +96,7 @@ class Webp
      */
     protected function isSupportedFileExtension($extension): bool
     {
-        if (array_search(strtolower($extension), ['jpg', 'jpeg', 'png']) !== false) {
-            return true;
-        }
-
-        return false;
+        return in_array(strtolower($extension), ['jpg', 'jpeg', 'png']);
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 
 $EM_CONF[$_EXTKEY] = [
-    'title' => 'Convert processed images to webp',
+    'title' => 'Convert processed jpg/png images to WebP format',
     'description' => '',
     'category' => 'be',
     'author' => 'Wolfgang Klinger',
@@ -18,10 +18,10 @@ $EM_CONF[$_EXTKEY] = [
     'clearCacheOnLoad' => 0,
     'lockType' => '',
     'author_company' => 'plan2net GmbH',
-    'version' => '0.9.1',
+    'version' => '1.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '8.7.0-8.7.99'
+            'typo3' => '8.7.0-9.5.99'
         ],
         'conflicts' => [
         ],
