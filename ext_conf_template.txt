@@ -1,2 +1,2 @@
 # cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
-magick_parameters = -quality 85 -define webp:lossless=false
+magick_parameters = -quality 95 -define webp:lossless=false

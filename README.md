@@ -38,10 +38,15 @@ http://www.graphicsmagick.org/GraphicsMagick.html
 
 Default value is:
 
-    -quality 85 -define webp:lossless=false
+    -quality 95 -define webp:lossless=false
 
-which has the least impact on visual difference to the original image.
-Set `webp:lossless=true` for even smaller image sizes.
+which has (in our experience) a minor to no impact on visual difference to the original image.
+
+*Warning*
+
+Try to set a higher value for `quality` first if the image does not fit your expectations,
+before trying to use `webp:lossless=true`, as this could even lead to a
+higher filesize than the original!
 
 # Webserver configuration
 
