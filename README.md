@@ -24,6 +24,22 @@ Add via composer.json:
 
 Install and activate the extension in the Extension manager and clear your processed files in the Install Tool or Maintenance module.
 
+# Requirements
+
+Your version of ImageMagick or GraphicsMagick on the server needs to support WebP (obviously).
+
+You can test the support of GraphicsMagick with:
+
+    gm version | grep WebP
+
+(should return `yes`)
+
+or using ImageMagick with: 
+
+    convert version | grep webp
+
+(should return a list of supported formats including `webp`)
+
 # Extension manager configuration
 
 You can set parameters for the conversion in the extension configuration. 
