@@ -1,2 +1,4 @@
 # cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
 magick_parameters = -quality 95 -define webp:lossless=false
+# cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy as Webp; disable to convert images in the _processed_ folder only
+convert_all_images = 1

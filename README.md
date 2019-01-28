@@ -1,8 +1,8 @@
 # WebP for TYPO3 CMS LTS 8 and 9
 
-Adds an automagically created _WebP_ copy for every processed jpg/png image in the format
+Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png image in the format
 
-    original.jpg.webp
+    original.ext.webp
     
 # What is WebP and why do I want it?
 
@@ -19,7 +19,7 @@ Adds an automagically created _WebP_ copy for every processed jpg/png image in t
 Add via composer.json: 
 
     "require": {
-        "plan2net/webp": "^1.0"
+        "plan2net/webp": "^1.1"
     }
 
 Install and activate the extension in the Extension manager and clear your processed files in the Install Tool or Maintenance module.
@@ -28,12 +28,17 @@ Install and activate the extension in the Extension manager and clear your proce
 
 You can set parameters for the conversion in the extension configuration. 
 
+## `magick_parameters`
+
     # cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
-    magick_parameters =
+    magick_parameters = -quality 95 -define webp:lossless=false
 
 You find a list of possible options here:
+
 https://www.imagemagick.org/script/webp.php
+
 or here:
+
 http://www.graphicsmagick.org/GraphicsMagick.html
 
 Default value is:
@@ -48,7 +53,16 @@ Try to set a higher value for `quality` first if the image does not fit your exp
 before trying to use `webp:lossless=true`, as this could even lead to a
 higher filesize than the original!
 
-# Webserver configuration
+## `convert_all_images`
+
+    # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy as Webp; disable to convert images in the _processed_ folder only
+    convert_all_images = 1
+    
+Since version `1.1.0` all images in every local and writable storage will be converted to Webp by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
+
+# Webserver example configuration
+
+Please adapt the following to _your specific needs_, this is only an example configuration.
 
 ## nginx
 
@@ -61,7 +75,11 @@ Add a map directive in your global nginx configuration:
 
 and add these rules to your `server` configuration:
 
-    location ~* ^/fileadmin/_processed_/.+\.(png|jpg)$ {
+    location ~* ^/fileadmin/.+\.(png|jpg|jpeg)$ {
+            add_header Vary Accept;
+            try_files $uri$webp_suffix $uri =404;
+    }
+    location ~* ^/other-storage/.+\.(png|jpg|jpeg)$ {
             add_header Vary Accept;
             try_files $uri$webp_suffix $uri =404;
     }
@@ -72,7 +90,8 @@ and add these rules to your `server` configuration:
         RewriteEngine On
         RewriteCond %{HTTP_ACCEPT} image/webp
         RewriteCond %{DOCUMENT_ROOT}/$1.$2.webp -f
-        RewriteRule ^(fileadmin/_processed_.+)\.(jpg|png)$ $1.$2.webp [T=image/webp,E=accept:1]
+        RewriteRule ^(fileadmin/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
+        RewriteRule ^(other-storage/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
     </IfModule>
 
     <IfModule mod_headers.c>
@@ -90,7 +109,16 @@ You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_
     
 but that requires more knowledge to set up.
 
+# Drawbacks
+
+Note that this extension produces an additional load on your server (each processed image is reprocessed) and possibly creates a lot of additional files that consume disk space (size varies depending on your ImageMagick/GraphicsMagick configuration).
+
 # Inspiration
 
 This extension was inspired by Angela Dudtkowski's _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-) 
 
+# Changelog
+
+| Release       | Changes
+| ------------- |-------------
+| 1.1.0         | Convert all images in every local and writable storage<br>Fix fallback options for conversion<br>Update README

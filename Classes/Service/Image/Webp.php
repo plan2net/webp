@@ -15,6 +15,8 @@ use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 class Webp
 {
 
+    const MAGICK_DEFAULT_OPTIONS = '-quality=95 -define webp:lossless=false';
+
     /**
      * Perform image conversion
      *
@@ -69,7 +71,7 @@ class Webp
         if (!empty($extensionConfiguration['magick_parameters'])) {
             $parameters = $extensionConfiguration['magick_parameters'];
         } else {
-            $parameters = '-quality=85 -define webp:lossless=false';
+            $parameters = self::MAGICK_DEFAULT_OPTIONS;
         }
 
         return $parameters;

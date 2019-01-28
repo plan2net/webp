@@ -38,13 +38,19 @@ class Webp
         $taskType,
         array $configuration
     ) {
-        if (!$this->isInProcessingFolder($processedFile)) {
+        if ($taskType !== 'Image.CropScaleMask') {
             return;
         }
         if (!$this->isSupportedFileExtension($processedFile->getExtension())) {
             return;
         }
-        if ($taskType !== 'Image.CropScaleMask') {
+        // convert images in any folder or only in the _processed_ folder
+        $convertAllImages = (bool)$this->getExtensionConfiguration('convert_all_images');
+        if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
+            return;
+        }
+        // process files only in a local and writable storage
+        if (!$this->isStorageLocalAndWritable($processedFile)) {
             return;
         }
         /** @var ProcessedFileRepository $processedFileRepository */
@@ -65,7 +71,7 @@ class Webp
             ]
         );
 
-        // add will add or update
+        // ->add will add or update
         $processedFileRepository->add($processedFileWebp);
     }
 
@@ -84,10 +90,22 @@ class Webp
      * @param ProcessedFile $file
      * @return bool
      */
-    protected function isInProcessingFolder($file): bool
+    protected function isFileInProcessingFolder($file): bool
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
+
         return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) !== false;
+    }
+
+    /**
+     * @param ProcessedFile $file
+     * @return bool
+     */
+    protected function isStorageLocalAndWritable($file): bool
+    {
+        $storage = $file->getStorage();
+
+        return $storage->getDriverType() === 'Local' && $storage->isWritable();
     }
 
     /**
@@ -112,6 +130,26 @@ class Webp
             'Image.Webp' . '.' . $processedFile->getName() . $file->getModificationTime(),
             serialize($configuration)
         ];
+    }
+
+    /**
+     * Returns the whole extension configuration or a specific property
+     *
+     * @param string|null $key
+     * @return array|string
+     */
+    protected function getExtensionConfiguration($key = null)
+    {
+        $configuration = [];
+        if (isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp'])) {
+            $configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
+        }
+
+        if ($key !== null && isset($configuration[$key])) {
+            return (string)$key;
+        }
+
+        return $configuration;
     }
 
 }
