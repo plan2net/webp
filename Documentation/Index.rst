@@ -16,16 +16,16 @@ Extension Name
 		|release|
 
 	:Language:
-		en
+		English
 
 	:Description:
-		Manual covering TYPO3 extension webp
+		Manual covering the TYPO3 extension *"webp"*.
 
 	:Keywords:
 		webp,jpg,jpeg,image,performance
 
 	:Copyright:
-		2018
+		2019
 
 	:Author:
 		Wolfgang Klinger
@@ -51,11 +51,7 @@ Extension Name
 	:titlesonly:
 
 	Introduction/Index
-#	User/Index
 	Administrator/Index
-#	Configuration/Index
-#	Developer/Index
 	KnownProblems/Index
-#	ToDoList/Index
-#	ChangeLog/Index
+	ChangeLog/Index
 	Links

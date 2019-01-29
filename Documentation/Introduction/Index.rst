@@ -12,10 +12,10 @@ Introduction
 What does it do?
 ----------------
 
-Adds an automatically created _WebP_ copy for every processed JPEG/PNG image in the following format.
+Adds an automatically created _WebP_ copy for every processed JPEG or PNG image in the following format.
 
   original.jpg.webp
-    
+
 What is WebP and why do I want it?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -28,14 +28,22 @@ What is WebP and why do I want it?
 
   -- Source: `A new image format for the Web <https://developers.google.com/speed/webp/>`_
 
+Drawbacks
+---------
+
+Note that this extension produces an additional load on your server (each processed image is reprocessed) and possibly creates a lot of
+additional files that consume disk space. Size varies depending on your ImageMagick/GraphicsMagick configuration.
+
 Alternatives
 ------------
 
 You can get an equal result with using the `PageSpeed Module <https://developers.google.com/speed/pagespeed/module/>`_ for
-Apache *mod_pagespeed* or nginx *ngx_pagespeed* modules with a configuration like:
+Apache *mod_pagespeed* or nginx *ngx_pagespeed* with a configuration like this:
 
-  |pagespeed EnableFilters convert_jpeg_to_webp;
-  |pagespeed EnableFilters convert_to_webp_lossless;
+.. code-block:: nginx
+
+  pagespeed EnableFilters convert_jpeg_to_webp;
+  pagespeed EnableFilters convert_to_webp_lossless;
 
 But that requires more knowledge to set up.
 

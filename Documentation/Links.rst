@@ -6,7 +6,7 @@
 Links
 -----
 
-:TYPO3 Extension Repository:
+:TER:
 	https://extensions.typo3.org/extension/webp
 
 :Issue Tracker:
