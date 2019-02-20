@@ -146,7 +146,7 @@ class Webp
         }
 
         if ($key !== null && isset($configuration[$key])) {
-            return (string)$key;
+            return (string)$configuration[$key];
         }
 
         return $configuration;
