@@ -136,7 +136,7 @@ class Webp
      * Returns the whole extension configuration or a specific property
      *
      * @param string|null $key
-     * @return array|string
+     * @return array|string|null
      */
     protected function getExtensionConfiguration($key = null)
     {
@@ -145,8 +145,12 @@ class Webp
             $configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
         }
 
-        if ($key !== null && isset($configuration[$key])) {
-            return (string)$configuration[$key];
+        if (is_string($key)) {
+            if (isset($configuration[$key])) {
+                return (string)$configuration[$key];
+            }
+
+            return null;
         }
 
         return $configuration;
