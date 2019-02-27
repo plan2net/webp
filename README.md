@@ -100,6 +100,8 @@ and add these rules to your `server` configuration:
             try_files $uri$webp_suffix $uri =404;
     }
 
+Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
+
 ## Apache (.htaccess example)
 
     <IfModule mod_rewrite.c>
@@ -116,6 +118,8 @@ and add these rules to your `server` configuration:
 
     AddType image/webp .webp
     
+Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
+
 # Alternatives
 
 You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_pagespeed_ modules from Google https://developers.google.com/speed/pagespeed/module/ with a configuration like:
