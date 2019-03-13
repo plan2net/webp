@@ -22,7 +22,9 @@ Add via composer.json:
         "plan2net/webp": "^1.1"
     }
 
-Install and activate the extension in the Extension manager and clear your processed files in the Install Tool or Maintenance module.
+* Install and activate the extension in the Extension manager 
+* Flush TYPO3 and PHP Cache
+* Clear the processed files in the Install Tool or Maintenance module
 
 # Requirements
 
