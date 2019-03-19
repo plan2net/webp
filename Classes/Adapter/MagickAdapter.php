@@ -32,7 +32,6 @@ class MagickAdapter implements AdapterInterface
      */
     public function convert(string $originalFilePath, string $targetFilePath)
     {
-        // create WebP file
         $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
             $targetFilePath,

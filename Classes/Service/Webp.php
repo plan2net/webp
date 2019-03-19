@@ -21,7 +21,7 @@ class Webp
      * @param \TYPO3\CMS\Core\Resource\ProcessedFile $originalFile
      * @param \TYPO3\CMS\Core\Resource\ProcessedFile $processedFile
      */
-    public function process($originalFile, &$processedFile)
+    public function process($originalFile, $processedFile)
     {
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
