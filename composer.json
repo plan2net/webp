@@ -1,8 +1,18 @@
 {
   "name": "plan2net/webp",
-  "description": "Convert TYPO3 CMS processed jpg/png images to WebP format",
+  "description": "Conversion of processed TYPO3 images to WebP format",
   "type": "typo3-cms-extension",
-  "version": "1.1.1",
+  "homepage": "https://www.plan2.net/",
+  "authors": [
+    {
+      "name": "Wolfgang Klinger",
+      "role": "Developer"
+    },
+    {
+      "name": "Martin Kutschker",
+      "role": "reStructuredText Documentation"
+    }
+  ],
   "require": {
     "typo3/cms-core": "^8.7 || ^9.5"
   },

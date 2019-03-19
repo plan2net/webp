@@ -16,11 +16,9 @@ Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png image
 
 # Installation
 
-Add via composer.json: 
+Add via composer: 
 
-    "require": {
-        "plan2net/webp": "^1.1"
-    }
+    composer require "plan2net/webp"
 
 * Install and activate the extension in the Extension manager 
 * Flush TYPO3 and PHP Cache

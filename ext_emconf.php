@@ -1,9 +1,9 @@
 <?php
 
 $EM_CONF[$_EXTKEY] = [
-    'title' => 'Convert processed jpg/png images to WebP format',
-    'description' => '',
-    'category' => 'be',
+    'title' => 'Conversion of processed TYPO3 images to WebP format',
+    'description' => 'Adds automatically created _WebP_ copies of all JPEG and PNG images processed by TYPO3.',
+    'category' => 'fe',
     'author' => 'Wolfgang Klinger',
     'author_email' => 'wk@plan2.net',
     'shy' => '',
