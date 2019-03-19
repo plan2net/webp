@@ -28,17 +28,19 @@ Add via composer:
 
 Your version of ImageMagick or GraphicsMagick on the server needs to support WebP (obviously).
 
-You can test the support of GraphicsMagick with:
+You can test the support of GraphicsMagick with e.g.:
 
     gm version | grep WebP
 
 (should return `yes`)
 
-or using ImageMagick with: 
+or using ImageMagick with e.g.: 
 
     convert version | grep webp
 
 (should return a list of supported formats including `webp`)
+
+These are examples, check your system documentation for further information on how to verify webp support on your platform.
 
 # Extension manager configuration
 
