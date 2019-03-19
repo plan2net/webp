@@ -62,8 +62,8 @@ You can set parameters for the conversion in the extension configuration.
 
 .. code-block:: none
 
-  # cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
-  magick_parameters =
+  # cat=basic; type=string; label=Webp conversion parameters (for internal or external adapter)
+  parameters =
 
 You find a list of possible options here:
 

@@ -44,10 +44,10 @@ or using ImageMagick with:
 
 You can set parameters for the conversion in the extension configuration. 
 
-## `magick_parameters`
+## `parameters`
 
-    # cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
-    magick_parameters = -quality 95 -define webp:lossless=false
+    # cat=basic; type=string; label=Webp conversion parameters (for internal or external adapter)
+    parameters = -quality 95 -define webp:lossless=false
 
 You find a list of possible options here:
 
@@ -69,10 +69,10 @@ Try to set a higher value for `quality` first if the image does not fit your exp
 before trying to use `webp:lossless=true`, as this could even lead to a
 higher filesize than the original!
 
-## `convert_all_images`
+## `convert_all`
 
     # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy as Webp; disable to convert images in the _processed_ folder only
-    convert_all_images = 1
+    convert_all = 1
     
 Since version `1.1.0` all images in every local and writable storage will be converted to Webp by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 

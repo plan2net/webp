@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Processing;
 
+use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -20,8 +21,8 @@ class Webp
 {
 
     /**
-     * Process file
-     * Create webp image copy
+     * Process file using the specified adapter.
+     * Create webp image copy.
      *
      * @param FileProcessingService $fileProcessingService
      * @param DriverInterface       $driver
@@ -35,44 +36,70 @@ class Webp
         DriverInterface $driver,
         ProcessedFile $processedFile,
         File $file,
-        $taskType,
+        string $taskType,
         array $configuration
     ) {
+        if ($this->shouldProcess($taskType, $processedFile)) {
+            /** @var ProcessedFileRepository $processedFileRepository */
+            $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
+            $processedFileWebp = $processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
+                $file,
+                $taskType,
+                $configuration + [
+                    'webp' => true
+                ]
+            );
+            // Check if reprocessing is required
+            if (!$this->needsReprocessing($processedFileWebp)) {
+                return;
+            }
+
+            try {
+                /** @var \Plan2net\Webp\Service\Webp $service */
+                $service = GeneralUtility::makeInstance(\Plan2net\Webp\Service\Webp::class);
+                $service->process($processedFile, $processedFileWebp);
+
+                $processedFileWebp->updateProperties(
+                    [
+                        'checksum' => GeneralUtility::shortMD5(implode('|',
+                            $this->getChecksumData($file, $processedFileWebp, $configuration)))
+                    ]
+                );
+
+                // ->add will add or update
+                $processedFileRepository->add($processedFileWebp);
+            } catch (\Exception $e) {
+                // @todo log
+            }
+        }
+    }
+
+    /**
+     * @param string $taskType
+     * @param ProcessedFile $processedFile
+     * @return bool
+     */
+    protected function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
+    {
+        $process = true;
+
         if ($taskType !== 'Image.CropScaleMask') {
-            return;
+            $process = false;
         }
         if (!$this->isSupportedFileExtension($processedFile->getExtension())) {
-            return;
+            $process = false;
         }
         // convert images in any folder or only in the _processed_ folder
-        $convertAllImages = (bool)$this->getExtensionConfiguration('convert_all_images');
+        $convertAllImages = (bool)Configuration::get('convert_all');
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
-            return;
+            $process = false;
         }
         // process files only in a local and writable storage
         if (!$this->isStorageLocalAndWritable($processedFile)) {
-            return;
+            $process = false;
         }
-        /** @var ProcessedFileRepository $processedFileRepository */
-        $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
-        $configuration['webp'] = true;
-        $processedFileWebp = $processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration($file, $taskType, $configuration);
-        // Check if processing is required
-        if (!$this->needsReprocessing($processedFileWebp)) {
-            return;
-        }
-        /** @var \Plan2net\Webp\Service\Image\Webp $service */
-        $service = GeneralUtility::makeInstance(\Plan2net\Webp\Service\Image\Webp::class);
-        $service->process($processedFile, $processedFileWebp);
 
-        $processedFileWebp->updateProperties(
-            [
-                'checksum' => GeneralUtility::shortMD5(implode('|', $this->getChecksumData($file, $processedFileWebp, $configuration)))
-            ]
-        );
-
-        // ->add will add or update
-        $processedFileRepository->add($processedFileWebp);
+        return $process;
     }
 
     /**
@@ -130,30 +157,6 @@ class Webp
             'Image.Webp' . '.' . $processedFile->getName() . $file->getModificationTime(),
             serialize($configuration)
         ];
-    }
-
-    /**
-     * Returns the whole extension configuration or a specific property
-     *
-     * @param string|null $key
-     * @return array|string|null
-     */
-    protected function getExtensionConfiguration($key = null)
-    {
-        $configuration = [];
-        if (isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp'])) {
-            $configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
-        }
-
-        if (is_string($key)) {
-            if (isset($configuration[$key])) {
-                return (string)$configuration[$key];
-            }
-
-            return null;
-        }
-
-        return $configuration;
     }
 
 }

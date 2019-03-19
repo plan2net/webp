@@ -1,4 +1,6 @@
-# cat=basic; type=string; label=Webp ImageMagick or GraphicsMagick conversion parameters
-magick_parameters = -quality 95 -define webp:lossless=false
-# cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy as Webp; disable to convert images in the _processed_ folder only
-convert_all_images = 1
+# cat=basic; type=options[Local Magick adapter=Plan2net\Webp\Adapter\MagickAdapter,External adapter=Plan2net\Webp\Adapter\ExternalAdapter]; label=Conversion adapter (see documentation)
+adapter = Plan2net\Webp\Adapter\MagickAdapter
+# cat=basic; type=string; label=Parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
+parameters = -quality 95 -define webp:lossless=false
+# cat=basic; type=boolean; label=Convert all images in local and writable storages (see documentation)
+convert_all = 1
