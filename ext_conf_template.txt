@@ -1,4 +1,4 @@
-# cat=basic; type=options[Local Magick adapter=Plan2net\Webp\Adapter\MagickAdapter,External adapter=Plan2net\Webp\Adapter\ExternalAdapter]; label=Conversion adapter (see documentation)
+# cat=basic; type=options[Local ImageMagick/GraphicsMagick adapter=Plan2net\Webp\Adapter\MagickAdapter,External adapter=Plan2net\Webp\Adapter\ExternalAdapter]; label=Conversion adapter (see documentation)
 adapter = Plan2net\Webp\Adapter\MagickAdapter
 # cat=basic; type=string; label=Parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
 parameters = -quality 95 -define webp:lossless=false
