@@ -120,6 +120,23 @@ Make sure that there are no other rules that already apply to the specified imag
     
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
+# Removing processed files
+
+You can remove the created .webp files at any time within the TYPO3 CMS backend.
+
+## TYPO3 CMS LTS 8.7
+
+* Go to System > Install > Clean up
+* Click the _Clear processed files_ button
+
+## TYPO3 CMS LTS 9.5
+
+* Go to Admin Tools > Remove Temporary Assets
+* Click the _Scan temporary files_ button
+* In the modal click the button with the path of the storage
+
+Although the button names only the path of the \_processed\_ folder, all processed files of the storage are actually deleted!
+
 # Alternatives
 
 You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_pagespeed_ modules from Google https://developers.google.com/speed/pagespeed/module/ with a configuration like:
@@ -129,7 +146,7 @@ You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_
     
 but that requires more knowledge to set up.
 
-# Drawbacks
+# Drawbacks to keep in mind
 
 Note that this extension produces an additional load on your server (each processed image is reprocessed) and possibly creates a lot of additional files that consume disk space (size varies depending on your ImageMagick/GraphicsMagick configuration).
 
