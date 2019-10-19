@@ -7,12 +7,12 @@ use TYPO3\CMS\Core\SingletonInterface;
 
 /**
  * Class Configuration
+ *
  * @package Plan2net\Webp\Service
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class Configuration implements SingletonInterface
 {
-
     /**
      * @var array
      */
@@ -27,7 +27,7 @@ class Configuration implements SingletonInterface
     public static function get($key = null)
     {
         if (empty(self::$configuration) && isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp'])) {
-            self::$configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp']);
+            self::$configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp'], [false]);
         }
 
         if (!empty($key)) {
@@ -40,5 +40,4 @@ class Configuration implements SingletonInterface
 
         return self::$configuration;
     }
-
 }

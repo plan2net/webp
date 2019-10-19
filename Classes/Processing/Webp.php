@@ -19,10 +19,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Webp
 {
-
     /**
-     * Process file using the specified adapter.
-     * Create webp image copy.
+     * Process a file using the specified adapter to create a webp copy.
      *
      * @param FileProcessingService $fileProcessingService
      * @param DriverInterface       $driver
@@ -59,6 +57,8 @@ class Webp
                 $service = GeneralUtility::makeInstance(\Plan2net\Webp\Service\Webp::class);
                 $service->process($processedFile, $processedFileWebp);
 
+                // @todo using shortMD5 results in a very bad checksum,
+                // but TYPO3 CMS core has a limit on this field
                 $processedFileWebp->updateProperties(
                     [
                         'checksum' => GeneralUtility::shortMD5(implode('|',
@@ -89,12 +89,12 @@ class Webp
         if (!$this->isSupportedFileExtension($processedFile->getExtension())) {
             $process = false;
         }
-        // convert images in any folder or only in the _processed_ folder
+        // Convert images in any folder or only in the _processed_ folder
         $convertAllImages = (bool)Configuration::get('convert_all');
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
             $process = false;
         }
-        // process files only in a local and writable storage
+        // Process files only in a local and writable storage
         if (!$this->isStorageLocalAndWritable($processedFile)) {
             $process = false;
         }
@@ -158,5 +158,4 @@ class Webp
             serialize($configuration)
         ];
     }
-
 }

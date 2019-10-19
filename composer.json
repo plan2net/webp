@@ -1,12 +1,13 @@
 {
   "name": "plan2net/webp",
+  "license": "GPL-3.0",
   "description": "Conversion of processed TYPO3 images to WebP format",
   "type": "typo3-cms-extension",
   "homepage": "https://www.plan2.net/",
   "authors": [
     {
       "name": "Wolfgang Klinger",
-      "role": "Developer"
+      "role": "Lead Developer"
     },
     {
       "name": "Martin Kutschker",
@@ -14,6 +15,7 @@
     }
   ],
   "require": {
+    "php": ">=7.0.0",
     "typo3/cms-core": "^8.7 || ^9.5"
   },
   "autoload": {

@@ -14,7 +14,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Webp
 {
-
     /**
      * Perform image conversion
      *
@@ -46,5 +45,4 @@ class Webp
             ]
         );
     }
-
 }

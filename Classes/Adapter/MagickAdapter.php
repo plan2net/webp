@@ -8,12 +8,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Class MagickAdapter
+ *
  * @package Plan2net\Webp\Adapter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class MagickAdapter implements AdapterInterface
 {
-
     /**
      * @var
      */
@@ -39,7 +39,7 @@ class MagickAdapter implements AdapterInterface
         );
 
         if (!@is_file($targetFilePath)) {
-            throw new \RuntimeException("File $targetFilePath could not be created!");
+            throw new \RuntimeException(sprintf('File %s could not be created!', $targetFilePath));
         }
     }
 
@@ -59,5 +59,4 @@ class MagickAdapter implements AdapterInterface
 
         return $graphicalFunctionsObject;
     }
-
 }

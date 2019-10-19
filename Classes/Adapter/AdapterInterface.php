@@ -5,11 +5,11 @@ namespace Plan2net\Webp\Adapter;
 
 /**
  * Interface AdapterInterface
+ *
  * @package Plan2net\Webp\Adapter
  */
 interface AdapterInterface
 {
-
     /**
      * AdapterInterface constructor.
      * @param string $parameters
@@ -24,5 +24,4 @@ interface AdapterInterface
      * @throws \RuntimeException
      */
     public function convert(string $originalFilePath, string $targetFilePath);
-
 }

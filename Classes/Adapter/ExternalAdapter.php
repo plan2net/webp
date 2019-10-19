@@ -8,12 +8,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Class ExternalAdapter
+ *
  * @package Plan2net\Webp\Adapter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class ExternalAdapter implements AdapterInterface
 {
-
     /**
      * @var string
      */
@@ -48,5 +48,4 @@ class ExternalAdapter implements AdapterInterface
             throw new \RuntimeException("File $targetFilePath could not be created!");
         }
     }
-
 }
