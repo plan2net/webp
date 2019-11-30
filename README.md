@@ -26,7 +26,7 @@ Add via composer:
 
 # Requirements
 
-Your version of ImageMagick or GraphicsMagick on the server needs to support WebP (obviously).
+You can either use the installed Imagemagick or GraphicsMagick you already use for TYPO3 image manipulation if it supports webp (see below) or you can use any other external binary available on your server (e.g. [_cwebp_](https://developers.google.com/speed/webp/docs/cwebp)).
 
 You can test the support of GraphicsMagick with e.g.:
 
@@ -48,22 +48,23 @@ You can set parameters for the conversion in the extension configuration.
 
 ## `parameters`
 
-    # cat=basic; type=string; label=Webp conversion parameters (for internal or external adapter)
-    parameters = -quality 95 -define webp:lossless=false
+```
+parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 15 -define webp:lossless=true
+```
 
 You find a list of possible options here:
 
 https://www.imagemagick.org/script/webp.php
-
-or here:
-
 http://www.graphicsmagick.org/GraphicsMagick.html
 
-Default value is:
+If you want to use an external binary, you have to supply an option string with exactly two `%s` placeholders for the original file and the target file name.
+E.g.:
 
-    -quality 95 -define webp:lossless=false
+```
+image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossless %s -o %s
+```
 
-which has (in our experience) a minor to no impact on visual difference to the original image.
+https://developers.google.com/speed/webp/docs/cwebp
 
 *Warning*
 
@@ -73,10 +74,10 @@ higher filesize than the original!
 
 ## `convert_all`
 
-    # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy as Webp; disable to convert images in the _processed_ folder only
+    # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy in Webp format; disable to convert images in the _processed_ folder only
     convert_all = 1
     
-Since version `1.1.0` all images in every local and writable storage will be converted to Webp by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
+Since version `1.1.0` all images in every local and writable storage will be saved as a copy in Webp format by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 
 # Webserver example configuration
 
@@ -161,3 +162,4 @@ This extension was inspired by Angela Dudtkowski's _cs_webp_ extension that has 
 | Release       | Changes
 | ------------- |-------------
 | 1.1.0         | Convert all images in every local and writable storage<br>Fix fallback options for conversion<br>Update README
+| 1.2.0         | Add options for different conversion parameters per image mimetype

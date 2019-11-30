@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Processing;
 
 use Plan2net\Webp\Service\Configuration;
+use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -40,6 +41,8 @@ class Webp
         if ($this->shouldProcess($taskType, $processedFile)) {
             /** @var ProcessedFileRepository $processedFileRepository */
             $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
+            // This will either return an existing file
+            // or create a new one
             $processedFileWebp = $processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $file,
                 $taskType,
@@ -53,8 +56,8 @@ class Webp
             }
 
             try {
-                /** @var \Plan2net\Webp\Service\Webp $service */
-                $service = GeneralUtility::makeInstance(\Plan2net\Webp\Service\Webp::class);
+                /** @var WebpService $service */
+                $service = GeneralUtility::makeInstance(WebpService::class);
                 $service->process($processedFile, $processedFileWebp);
 
                 // @todo using shortMD5 results in a very bad checksum,
@@ -66,7 +69,7 @@ class Webp
                     ]
                 );
 
-                // ->add will add or update
+                // This will add or update
                 $processedFileRepository->add($processedFileWebp);
             } catch (\Exception $e) {
                 // @todo log
@@ -86,7 +89,8 @@ class Webp
         if ($taskType !== 'Image.CropScaleMask') {
             $process = false;
         }
-        if (!$this->isSupportedFileExtension($processedFile->getExtension())) {
+
+        if (!WebpService::isSupportedMimeType($processedFile->getMimeType())) {
             $process = false;
         }
         // Convert images in any folder or only in the _processed_ folder
@@ -136,17 +140,8 @@ class Webp
     }
 
     /**
-     * @param string $extension
-     * @return bool
-     */
-    protected function isSupportedFileExtension($extension): bool
-    {
-        return in_array(strtolower($extension), ['jpg', 'jpeg', 'png']);
-    }
-
-    /**
-     * @param \TYPO3\CMS\Core\Resource\File $file
-     * @param \TYPO3\CMS\Core\Resource\ProcessedFile $processedFile
+     * @param File $file
+     * @param ProcessedFile $processedFile
      * @param array $configuration
      * @return array
      */

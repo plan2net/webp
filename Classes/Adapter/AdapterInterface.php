@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Adapter;
 
+use RuntimeException;
+
 /**
  * Interface AdapterInterface
  *
@@ -21,7 +23,7 @@ interface AdapterInterface
      *
      * @param string $originalFilePath
      * @param string $targetFilePath
-     * @throws \RuntimeException
+     * @throws RuntimeException
      */
     public function convert(string $originalFilePath, string $targetFilePath);
 }

@@ -1,6 +1,6 @@
 # cat=basic; type=options[Local ImageMagick/GraphicsMagick adapter=Plan2net\Webp\Adapter\MagickAdapter,External adapter=Plan2net\Webp\Adapter\ExternalAdapter]; label=Conversion adapter (see documentation)
 adapter = Plan2net\Webp\Adapter\MagickAdapter
-# cat=basic; type=string; label=Parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
-parameters = -quality 95 -define webp:lossless=false
+# cat=basic; type=string; label=For each mime type conversion parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
+parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true
 # cat=basic; type=boolean; label=Convert all images in local and writable storages (see documentation)
 convert_all = 1
