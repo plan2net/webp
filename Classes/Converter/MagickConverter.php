@@ -1,18 +1,19 @@
 <?php
 declare(strict_types=1);
 
-namespace Plan2net\Webp\Adapter;
+namespace Plan2net\Webp\Converter;
 
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Class MagickAdapter
+ * Uses the builtin TYPO3 graphical functions (imagemagick, graphicsmagick)
  *
- * @package Plan2net\Webp\Adapter
+ * @package Plan2net\Webp\Converter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
-class MagickAdapter implements AdapterInterface
+class MagickConverter implements Converter
 {
     /**
      * @var
@@ -32,14 +33,17 @@ class MagickAdapter implements AdapterInterface
      */
     public function convert(string $originalFilePath, string $targetFilePath)
     {
-        $this->getGraphicalFunctionsObject()->imageMagickExec(
+        $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
             $targetFilePath,
             $this->parameters
         );
 
         if (!@is_file($targetFilePath)) {
-            throw new \RuntimeException(sprintf('File %s could not be created!', $targetFilePath));
+            throw new \RuntimeException(sprintf('File "%s" was not created: %s!',
+                $targetFilePath,
+                $result ?: 'maybe missing support for webp?'
+            ));
         }
     }
 
@@ -53,8 +57,6 @@ class MagickAdapter implements AdapterInterface
         if ($graphicalFunctionsObject === null) {
             /** @var GraphicalFunctions $graphicalFunctionsObject */
             $graphicalFunctionsObject = GeneralUtility::makeInstance(GraphicalFunctions::class);
-            // @todo remove (TYPO3 CMS 9.5)
-            $graphicalFunctionsObject->init();
         }
 
         return $graphicalFunctionsObject;

@@ -1,25 +1,24 @@
 <?php
 declare(strict_types=1);
 
-namespace Plan2net\Webp\Adapter;
+namespace Plan2net\Webp\Converter;
 
 use RuntimeException;
 
 /**
- * Interface AdapterInterface
+ * Interface Converter
  *
- * @package Plan2net\Webp\Adapter
+ * @package Plan2net\Webp\Converter
  */
-interface AdapterInterface
+interface Converter
 {
     /**
-     * AdapterInterface constructor.
      * @param string $parameters
      */
     public function __construct(string $parameters);
 
     /**
-     * Convert a file $originalFilePath to webp in $targetFilePath.
+     * Converts a file $originalFilePath to webp in $targetFilePath.
      *
      * @param string $originalFilePath
      * @param string $targetFilePath

@@ -1,7 +1,7 @@
 {
   "name": "plan2net/webp",
   "license": "GPL-3.0",
-  "description": "Conversion of processed TYPO3 images to WebP format",
+  "description": "Create a WebP copy for images (TYPO3 CMS)",
   "type": "typo3-cms-extension",
   "homepage": "https://www.plan2.net/",
   "authors": [
@@ -12,6 +12,10 @@
     {
       "name": "Martin Kutschker",
       "role": "reStructuredText Documentation"
+    },
+    {
+      "name": "Team Wonderland",
+      "role": "Support and review"
     }
   ],
   "require": {

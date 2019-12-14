@@ -3,8 +3,10 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
-use Exception;
-use Plan2net\Webp\Adapter\AdapterInterface;
+use InvalidArgumentException;
+use Plan2net\Webp\Converter\Converter;
+use RuntimeException;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -26,8 +28,10 @@ class Webp
      *
      * @param ProcessedFile $originalFile
      * @param ProcessedFile $processedFile
+     * @throws InvalidArgumentException
+     * @throws RuntimeException
      */
-    public function process($originalFile, $processedFile)
+    public function process(ProcessedFile $originalFile, ProcessedFile $processedFile)
     {
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
@@ -38,30 +42,29 @@ class Webp
         // and don't need another copy
         $targetFilePath = $processedFile->getForLocalProcessing(false);
 
-        $adapterClass = Configuration::get('adapter');
+        $converterClass = Configuration::get('converter');
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
-        if ($parameters) {
-            try {
-                /** @var AdapterInterface $adapter */
-                $adapter = GeneralUtility::makeInstance($adapterClass, $parameters);
-                $adapter->convert(
-                    $originalFilePath,
-                    $targetFilePath
+        if (!empty($parameters)) {
+            /** @var Converter $converter */
+            $converter = GeneralUtility::makeInstance($converterClass, $parameters);
+            $converter->convert($originalFilePath, $targetFilePath);
+            $fileSizeTargetFile = @filesize($targetFilePath);
+            if ($originalFile->getSize() <= $fileSizeTargetFile) {
+                $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+                $logger->warning(
+                    sprintf('Processed file (%s) is larger than the original (%s)!',
+                        $targetFilePath, $originalFilePath)
                 );
-                $processedFile->updateProperties(
-                    [
-                        'width' => $originalFile->getProperty('width'),
-                        'height' => $originalFile->getProperty('height'),
-                        'size' => @filesize($targetFilePath)
-                    ]
-                );
-            } catch (Exception $e) {
-                $processedFile->delete();
-                // @todo log
             }
+            $processedFile->updateProperties(
+                [
+                    'width' => $originalFile->getProperty('width'),
+                    'height' => $originalFile->getProperty('height'),
+                    'size' => $fileSizeTargetFile
+                ]
+            );
         } else {
-            $processedFile->delete();
-            // @todo log
+            throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
         }
     }
 
@@ -69,7 +72,7 @@ class Webp
      * @param $mimeType
      * @return bool
      */
-    public static function isSupportedMimeType($mimeType): bool
+    public static function isSupportedMimeType(string $mimeType): bool
     {
         return in_array(strtolower($mimeType), self::SUPPORTED_MIME_TYPES, true);
     }

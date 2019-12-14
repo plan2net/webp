@@ -5,6 +5,7 @@ namespace Plan2net\Webp\Processing;
 
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\Webp as WebpService;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -21,14 +22,14 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 class Webp
 {
     /**
-     * Process a file using the specified adapter to create a webp copy.
+     * Process a file using the configured adapter to create a webp copy
      *
      * @param FileProcessingService $fileProcessingService
-     * @param DriverInterface       $driver
-     * @param ProcessedFile         $processedFile
-     * @param File                  $file
-     * @param string                $taskType
-     * @param array                 $configuration
+     * @param DriverInterface $driver
+     * @param ProcessedFile $processedFile
+     * @param File $file
+     * @param string $taskType
+     * @param array $configuration
      */
     public function processFile(
         FileProcessingService $fileProcessingService,
@@ -60,7 +61,7 @@ class Webp
                 $service = GeneralUtility::makeInstance(WebpService::class);
                 $service->process($processedFile, $processedFileWebp);
 
-                // @todo using shortMD5 results in a very bad checksum,
+                // Be aware that using shortMD5 results in a very bad checksum,
                 // but TYPO3 CMS core has a limit on this field
                 $processedFileWebp->updateProperties(
                     [
@@ -72,7 +73,16 @@ class Webp
                 // This will add or update
                 $processedFileRepository->add($processedFileWebp);
             } catch (\Exception $e) {
-                // @todo log
+                $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+                $logger->error(sprintf('Failed to convert image to webp: %s', $e->getMessage()));
+                try {
+                    $processedFile->delete(true);
+                } catch (\Exception $e) {
+                    $logger->error(sprintf('Failed to remove processed file "%s": %s',
+                        $processedFile->getIdentifier(),
+                        $e->getMessage()
+                    ));
+                }
             }
         }
     }
@@ -84,26 +94,26 @@ class Webp
      */
     protected function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
     {
-        $process = true;
-
         if ($taskType !== 'Image.CropScaleMask') {
-            $process = false;
+            return false;
         }
 
         if (!WebpService::isSupportedMimeType($processedFile->getMimeType())) {
-            $process = false;
+            return false;
         }
+
         // Convert images in any folder or only in the _processed_ folder
         $convertAllImages = (bool)Configuration::get('convert_all');
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
-            $process = false;
-        }
-        // Process files only in a local and writable storage
-        if (!$this->isStorageLocalAndWritable($processedFile)) {
-            $process = false;
+            return false;
         }
 
-        return $process;
+        // Process files only in a local and writable storage
+        if (!$this->isStorageLocalAndWritable($processedFile)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -135,6 +145,10 @@ class Webp
     protected function isStorageLocalAndWritable($file): bool
     {
         $storage = $file->getStorage();
+        // Ignore files in fallback storage (e.g. files from extensions)
+        if ($storage->getStorageRecord()['uid'] === 0) {
+            return false;
+        }
 
         return $storage->getDriverType() === 'Local' && $storage->isWritable();
     }
