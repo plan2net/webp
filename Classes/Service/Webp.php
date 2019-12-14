@@ -4,9 +4,11 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Service;
 
 use InvalidArgumentException;
+use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Converter;
+use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
 use RuntimeException;
-use TYPO3\CMS\Core\Log\LogManager;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -30,6 +32,8 @@ class Webp
      * @param ProcessedFile $processedFile
      * @throws InvalidArgumentException
      * @throws RuntimeException
+     * @throws WillNotRetryWithConfigurationException
+     * @throws ConvertedFileLargerThanOriginalException
      */
     public function process(ProcessedFile $originalFile, ProcessedFile $processedFile)
     {
@@ -37,7 +41,7 @@ class Webp
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
-        // We set writable=false here even though we write to it
+        // Set writable=false here even though we write to it
         // as this is already the file we want to work with
         // and don't need another copy
         $targetFilePath = $processedFile->getForLocalProcessing(false);
@@ -45,14 +49,21 @@ class Webp
         $converterClass = Configuration::get('converter');
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
+            if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
+                throw new WillNotRetryWithConfigurationException(
+                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
+                        $targetFilePath, $originalFilePath)
+                );
+            }
+
             /** @var Converter $converter */
             $converter = GeneralUtility::makeInstance($converterClass, $parameters);
             $converter->convert($originalFilePath, $targetFilePath);
             $fileSizeTargetFile = @filesize($targetFilePath);
             if ($originalFile->getSize() <= $fileSizeTargetFile) {
-                $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
-                $logger->warning(
-                    sprintf('Processed file (%s) is larger than the original (%s)!',
+                $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
+                throw new ConvertedFileLargerThanOriginalException(
+                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
                         $targetFilePath, $originalFilePath)
                 );
             }
@@ -96,5 +107,42 @@ class Webp
         }
 
         return null;
+    }
+
+    /**
+     * @param int $fileId
+     * @param string $configuration
+     */
+    protected function saveFailedAttempt(int $fileId, string $configuration)
+    {
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_webp_failed');
+        $queryBuilder->insert('tx_webp_failed')
+            ->values([
+                'file_id' => $fileId,
+                'configuration' => $configuration,
+                'configuration_hash' => sha1($configuration)
+            ])
+            ->execute();
+    }
+
+    /**
+     * @param int $fileId
+     * @param string $configuration
+     * @return bool
+     */
+    protected function hasFailedAttempt(int $fileId, string $configuration): bool
+    {
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getQueryBuilderForTable('tx_webp_failed');
+
+        return (bool)$queryBuilder->count('uid')
+            ->from('tx_webp_failed')
+            ->where(
+                $queryBuilder->expr()->eq('file_id', $fileId),
+                $queryBuilder->expr()->eq('configuration_hash', $queryBuilder->createNamedParameter(sha1($configuration)))
+            )
+            ->execute()
+            ->fetchColumn();
     }
 }

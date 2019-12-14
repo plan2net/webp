@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Processing;
 
+use Exception;
+use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
+use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Log\LogManager;
@@ -56,6 +59,7 @@ class Webp
                 return;
             }
 
+            $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
             try {
                 /** @var WebpService $service */
                 $service = GeneralUtility::makeInstance(WebpService::class);
@@ -72,17 +76,14 @@ class Webp
 
                 // This will add or update
                 $processedFileRepository->add($processedFileWebp);
-            } catch (\Exception $e) {
-                $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+            } catch (WillNotRetryWithConfigurationException $e) {
+                // silently ignore
+            } catch (ConvertedFileLargerThanOriginalException $e) {
+                $logger->warning($e->getMessage());
+                $this->removeProcessedFile($processedFileWebp);
+            } catch (Exception $e) {
                 $logger->error(sprintf('Failed to convert image to webp: %s', $e->getMessage()));
-                try {
-                    $processedFile->delete(true);
-                } catch (\Exception $e) {
-                    $logger->error(sprintf('Failed to remove processed file "%s": %s',
-                        $processedFile->getIdentifier(),
-                        $e->getMessage()
-                    ));
-                }
+                $this->removeProcessedFile($processedFileWebp);
             }
         }
     }
@@ -166,5 +167,21 @@ class Webp
             'Image.Webp' . '.' . $processedFile->getName() . $file->getModificationTime(),
             serialize($configuration)
         ];
+    }
+
+    /**
+     * @param ProcessedFile $processedFile
+     */
+    protected function removeProcessedFile(ProcessedFile $processedFile)
+    {
+        try {
+            $processedFile->delete(true);
+        } catch (Exception $e) {
+            $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+            $logger->error(sprintf('Failed to remove processed file "%s": %s',
+                $processedFile->getIdentifier(),
+                $e->getMessage()
+            ));
+        }
     }
 }

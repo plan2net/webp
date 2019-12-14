@@ -125,10 +125,13 @@ Make sure that there are no other rules that already apply to the specified imag
     
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
-# Logging
+# Troubleshooting and logging
 
 If something does not work as expected take a look at the log file.
 Every problem is logged to the TYPO3 log (since version 2.0), normally found in `var/log/typo3_*.log`
+
+Converted files that are larger than the original are removed automatically (since version 2.1.0)
+and the conversion will not be retried with the same configuration.
 
 # Removing processed files
 
@@ -173,6 +176,7 @@ This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/age
 | 2.0.0         | Cleanup, optimization and bugfixes. 
 |               | Added logging. 
 |               | :fire: Renamed configuration options. Save the configuration again once!
+| 2.1.0         | Converted files larger than the original are removed and conversion will not be retried with the same configuration
 
 # Spread some love
 
