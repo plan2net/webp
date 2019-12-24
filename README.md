@@ -96,11 +96,11 @@ Add a map directive in your global nginx configuration:
 
 and add these rules to your `server` configuration:
 
-    location ~* ^/fileadmin/.+\.(png|jpg|jpeg)$ {
+    location ~* ^/fileadmin/.+\.(?i)(png|jpe?g)$ {
             add_header Vary Accept;
             try_files $uri$webp_suffix $uri =404;
     }
-    location ~* ^/other-storage/.+\.(png|jpg|jpeg)$ {
+    location ~* ^/other-storage/.+\.(?i)(png|jpe?g)$ {
             add_header Vary Accept;
             try_files $uri$webp_suffix $uri =404;
     }
@@ -113,8 +113,8 @@ Make sure that there are no other rules that already apply to the specified imag
         RewriteEngine On
         RewriteCond %{HTTP_ACCEPT} image/webp
         RewriteCond %{DOCUMENT_ROOT}/$1.$2.webp -f
-        RewriteRule ^(fileadmin/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
-        RewriteRule ^(other-storage/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
+        RewriteRule ^(fileadmin/.+)\.(?i)(png|jpe?g)$ $1.$2.webp [T=image/webp,E=accept:1]
+        RewriteRule ^(other-storage/.+)\.(?i)(png|jpe?g)$ $1.$2.webp [T=image/webp,E=accept:1]
     </IfModule>
 
     <IfModule mod_headers.c>
