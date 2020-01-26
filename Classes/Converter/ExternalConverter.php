@@ -44,7 +44,11 @@ class ExternalConverter implements Converter
      */
     public function convert(string $originalFilePath, string $targetFilePath)
     {
-        $command = escapeshellcmd(sprintf($this->parameters, $originalFilePath, $targetFilePath));
+        $command = sprintf(
+            escapeshellcmd($this->parameters),
+            CommandUtility::escapeShellArgument($originalFilePath),
+            CommandUtility::escapeShellArgument($targetFilePath)
+        );
         CommandUtility::exec($command);
         GeneralUtility::fixPermissions($targetFilePath);
 
