@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Converter;
 
 use InvalidArgumentException;
+use Plan2net\Webp\Service\Configuration;
 use RuntimeException;
 use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -44,11 +45,12 @@ class ExternalConverter implements Converter
      */
     public function convert(string $originalFilePath, string $targetFilePath)
     {
+        $silent = filter_var(Configuration::get('silent'), FILTER_VALIDATE_BOOLEAN);
         $command = sprintf(
             escapeshellcmd($this->parameters),
             CommandUtility::escapeShellArgument($originalFilePath),
             CommandUtility::escapeShellArgument($targetFilePath)
-        );
+        ) . ($silent ? ' >/dev/null 2>&1' : '');
         CommandUtility::exec($command);
         GeneralUtility::fixPermissions($targetFilePath);
 

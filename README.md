@@ -81,6 +81,13 @@ higher filesize than the original!
     
 Since version `1.1.0` all images in every local and writable storage will be saved as a copy in Webp format by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 
+## `silent`
+
+    # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command
+    silent = 1
+    
+Since version `2.2.0` you can suppress output (stdout, stderr) from the external converter (Linux only).
+
 # Webserver example configuration
 
 Please **adapt** the following to _your specific needs_, this is **only an example** configuration.
@@ -167,7 +174,7 @@ Note that this extension produces an additional load on your server (each proces
 
 This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/agentur/)'s _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-) 
 
-# Changelog
+# Changelog (features only, see history for bugfixes)
 
 | Release       | Changes
 | ------------- |-------------
@@ -177,6 +184,7 @@ This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/age
 |               | Added logging. 
 |               | :fire: Renamed configuration options. Save the configuration again once!
 | 2.1.0         | Converted files larger than the original are removed and conversion will not be retried with the same configuration
+| 2.2.0         | Suppress output (stdout, stderr) from the external converter command
 
 # Spread some love
 

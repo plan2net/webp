@@ -4,3 +4,5 @@ converter = Plan2net\Webp\Converter\MagickConverter
 parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true
 # cat=basic; type=boolean; label=Convert all images in local and writable storages (see documentation)
 convert_all = 1
+# cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command (Linux only)
+silent = 0
