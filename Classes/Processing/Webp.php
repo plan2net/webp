@@ -11,6 +11,7 @@ use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Resource\Service\FileProcessingService;
@@ -37,7 +38,7 @@ class Webp
     public function processFile(
         FileProcessingService $fileProcessingService,
         DriverInterface $driver,
-        ProcessedFile $processedFile,
+        FileInterface $processedFile,
         File $file,
         string $taskType,
         array $configuration
@@ -57,6 +58,14 @@ class Webp
             // Check if reprocessing is required
             if (!$this->needsReprocessing($processedFileWebp)) {
                 return;
+            }
+
+            // Check if we are processing the original file
+            if (!$this->isFileInProcessingFolder($processedFile)) {
+                // In this case the processed file has the wrong storage record attached
+                // and the file would not be found in the next steps,
+                // so we use the original file then
+                $processedFile = $file;
             }
 
             $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
@@ -99,7 +108,7 @@ class Webp
             return false;
         }
 
-        if (!WebpService::isSupportedMimeType($processedFile->getMimeType())) {
+        if (!WebpService::isSupportedMimeType($processedFile->getOriginalFile()->getMimeType())) {
             return false;
         }
 
@@ -136,7 +145,7 @@ class Webp
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
 
-        return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) !== false;
+        return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) === 0;
     }
 
     /**

@@ -7,8 +7,8 @@ use InvalidArgumentException;
 use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
-use RuntimeException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -28,23 +28,18 @@ class Webp
     /**
      * Perform image conversion
      *
-     * @param ProcessedFile $originalFile
+     * @param FileInterface $originalFile
      * @param ProcessedFile $processedFile
-     * @throws InvalidArgumentException
-     * @throws RuntimeException
-     * @throws WillNotRetryWithConfigurationException
      * @throws ConvertedFileLargerThanOriginalException
+     * @throws WillNotRetryWithConfigurationException
      */
-    public function process(ProcessedFile $originalFile, ProcessedFile $processedFile)
+    public function process(FileInterface $originalFile, ProcessedFile $processedFile)
     {
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
-        // Set writable=false here even though we write to it
-        // as this is already the file we want to work with
-        // and don't need another copy
-        $targetFilePath = $processedFile->getForLocalProcessing(false);
+        $targetFilePath = "$originalFilePath.webp";
 
         $converterClass = Configuration::get('converter');
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
@@ -140,7 +135,8 @@ class Webp
             ->from('tx_webp_failed')
             ->where(
                 $queryBuilder->expr()->eq('file_id', $fileId),
-                $queryBuilder->expr()->eq('configuration_hash', $queryBuilder->createNamedParameter(sha1($configuration)))
+                $queryBuilder->expr()->eq('configuration_hash',
+                    $queryBuilder->createNamedParameter(sha1($configuration)))
             )
             ->execute()
             ->fetchColumn();
