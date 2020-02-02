@@ -10,4 +10,9 @@ defined('TYPO3_MODE') or die('Access denied');
         \Plan2net\Webp\Processing\Webp::class,
         'processFile'
     );
+
+    $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks'][] = [
+        \Plan2net\Webp\Core\Filter\FileNameFilter::class,
+        'filterWebpFiles'
+    ];
 })();
