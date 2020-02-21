@@ -25,7 +25,7 @@ class Configuration implements SingletonInterface
      * @param string|null $key
      * @return array|string|null
      */
-    public static function get(?string $key = null)
+    public static function get($key = null)
     {
         try {
             if (version_compare(TYPO3_version, '9.5', '>=')) {

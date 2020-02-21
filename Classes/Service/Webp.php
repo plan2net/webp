@@ -20,7 +20,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Webp
 {
-    public const SUPPORTED_MIME_TYPES = [
+    const SUPPORTED_MIME_TYPES = [
         'image/jpeg',
         'image/png'
     ];
@@ -87,11 +87,11 @@ class Webp
      * @param string $mimeType
      * @return string|null
      */
-    protected function getParametersForMimeType(string $mimeType): ?string
+    protected function getParametersForMimeType(string $mimeType)
     {
         $parameters = explode('|', Configuration::get('parameters'));
         foreach ($parameters as $parameter) {
-            [$type, $options] = explode('::', $parameter, 2);
+            list($type, $options) = explode('::', $parameter, 2);
             // Fallback to old options format
             if (empty($options)) {
                 return $type;
