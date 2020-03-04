@@ -119,8 +119,8 @@ Make sure that there are no other rules that already apply to the specified imag
     <IfModule mod_rewrite.c>
         RewriteEngine On
         RewriteCond %{HTTP_ACCEPT} image/webp
-        RewriteCond %{DOCUMENT_ROOT}/$1.$2.webp -f
-        RewriteRule ^(fileadmin|other-storage)/.+\.(png|jpg|jpeg)$ $1.$2.webp [NC,T=image/webp,E=accept:1]
+        RewriteCond %{DOCUMENT_ROOT}/$1.$3.webp -f
+        RewriteRule ^((fileadmin|other-storage)/.+)\.(png|jpg|jpeg)$ $1.$3.webp [L]
     </IfModule>
 
     <IfModule mod_headers.c>
