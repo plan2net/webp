@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Plan2net\Webp\Processing;
+namespace Plan2net\Webp\EventListener;
 
 use Exception;
 use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
@@ -9,40 +9,44 @@ use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Log\LogManager;
-use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
-use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
-use TYPO3\CMS\Core\Resource\Service\FileProcessingService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Class Webp
+ * Class AfterFileProcessing
  *
- * @package Plan2net\Webp\Processing
- * @author  Wolfgang Klinger <wk@plan2.net>
+ * @package Plan2net\Webp\EventListener
+ * @author Wolfgang Klinger <wk@plan2.net>
  */
-class Webp
+class AfterFileProcessing
 {
+    public function __invoke(AfterFileProcessingEvent $event): void
+    {
+        $this->processFile(
+            $event->getProcessedFile(),
+            $event->getFile(),
+            $event->getTaskType(),
+            $event->getConfiguration()
+        );
+    }
+
     /**
      * Process a file using the configured adapter to create a webp copy
      *
-     * @param FileProcessingService $fileProcessingService
-     * @param DriverInterface $driver
      * @param ProcessedFile $processedFile
-     * @param File $file
+     * @param FileInterface $file
      * @param string $taskType
      * @param array $configuration
      */
-    public function processFile(
-        FileProcessingService $fileProcessingService,
-        DriverInterface $driver,
-        FileInterface $processedFile,
-        File $file,
+    protected function processFile(
+        ProcessedFile $processedFile,
+        FileInterface $file,
         string $taskType,
         array $configuration
-    ) {
+    ): void {
         if ($this->shouldProcess($taskType, $processedFile)) {
             /** @var ProcessedFileRepository $processedFileRepository */
             $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
@@ -164,12 +168,12 @@ class Webp
     }
 
     /**
-     * @param File $file
+     * @param FileInterface $file
      * @param ProcessedFile $processedFile
      * @param array $configuration
      * @return array
      */
-    protected function getChecksumData($file, $processedFile, $configuration): array
+    protected function getChecksumData(FileInterface $file, ProcessedFile $processedFile, array $configuration): array
     {
         return [
             $file->getUid(),
@@ -181,7 +185,7 @@ class Webp
     /**
      * @param ProcessedFile $processedFile
      */
-    protected function removeProcessedFile(ProcessedFile $processedFile)
+    protected function removeProcessedFile(ProcessedFile $processedFile): void
     {
         try {
             $processedFile->delete(true);

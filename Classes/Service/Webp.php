@@ -20,7 +20,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Webp
 {
-    const SUPPORTED_MIME_TYPES = [
+    protected const SUPPORTED_MIME_TYPES = [
         'image/jpeg',
         'image/png'
     ];
@@ -33,7 +33,7 @@ class Webp
      * @throws ConvertedFileLargerThanOriginalException
      * @throws WillNotRetryWithConfigurationException
      */
-    public function process(FileInterface $originalFile, ProcessedFile $processedFile)
+    public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
@@ -87,11 +87,11 @@ class Webp
      * @param string $mimeType
      * @return string|null
      */
-    protected function getParametersForMimeType(string $mimeType)
+    protected function getParametersForMimeType(string $mimeType): ?string
     {
         $parameters = explode('|', Configuration::get('parameters'));
         foreach ($parameters as $parameter) {
-            list($type, $options) = explode('::', $parameter, 2);
+            [$type, $options] = explode('::', $parameter, 2);
             // Fallback to old options format
             if (empty($options)) {
                 return $type;
@@ -108,7 +108,7 @@ class Webp
      * @param int $fileId
      * @param string $configuration
      */
-    protected function saveFailedAttempt(int $fileId, string $configuration)
+    protected function saveFailedAttempt(int $fileId, string $configuration): void
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('tx_webp_failed');

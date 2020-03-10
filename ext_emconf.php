@@ -1,17 +1,17 @@
 <?php
 
 $EM_CONF[$_EXTKEY] = [
-    'title' => 'Create a WebP copy for images (TYPO3 CMS)',
-    'description' => 'Adds automatically created _WebP_ copies of all JPEG and PNG images processed by TYPO3',
+    'title' => 'Creates WebP copies for images',
+    'description' => 'Creates WebP copies of all jpeg and png images',
     'category' => 'fe',
     'author' => 'Wolfgang Klinger',
     'author_email' => 'wk@plan2.net',
     'state' => 'stable',
     'author_company' => 'plan2net GmbH',
-    'version' => '2.2.2',
+    'version' => '3.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '8.7.0-9.5.99'
+            'typo3' => '10.4.0-10.4.99'
         ],
         'conflicts' => [
         ],

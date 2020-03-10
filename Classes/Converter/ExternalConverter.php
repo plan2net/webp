@@ -43,14 +43,14 @@ class ExternalConverter implements Converter
     /**
      * @inheritdoc
      */
-    public function convert(string $originalFilePath, string $targetFilePath)
+    public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $silent = filter_var(Configuration::get('silent'), FILTER_VALIDATE_BOOLEAN);
         $command = sprintf(
-            escapeshellcmd($this->parameters),
-            CommandUtility::escapeShellArgument($originalFilePath),
-            CommandUtility::escapeShellArgument($targetFilePath)
-        ) . ($silent ? ' >/dev/null 2>&1' : '');
+                escapeshellcmd($this->parameters),
+                CommandUtility::escapeShellArgument($originalFilePath),
+                CommandUtility::escapeShellArgument($targetFilePath)
+            ) . ($silent ? ' >/dev/null 2>&1' : '');
         CommandUtility::exec($command);
         GeneralUtility::fixPermissions($targetFilePath);
 

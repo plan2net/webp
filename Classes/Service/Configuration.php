@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -27,14 +28,13 @@ class Configuration implements SingletonInterface
      */
     public static function get($key = null)
     {
-        try {
-            if (version_compare(TYPO3_version, '9.5', '>=')) {
-                self::$configuration = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Configuration\ExtensionConfiguration::class)->get('webp');
-            } else {
-                // @deprecated, remove when dropping support for 8.7
-                self::$configuration = (array)unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['webp'], [false]);
+        if (empty(self::$configuration)) {
+            try {
+                self::$configuration = GeneralUtility::makeInstance(ExtensionConfiguration::class)
+                    ->get('webp');
+            } catch (\Exception $e) {
             }
-        } catch (\Exception $e) {}
+        }
 
         if (!empty($key)) {
             if (isset(self::$configuration[$key])) {

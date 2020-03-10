@@ -1,12 +1,16 @@
-# WebP for TYPO3 CMS LTS 8 and 9
+# WebP for TYPO3 CMS
+
+Use version 2.* for TYPO3 CMS LTS 8 and 9 and >= 3.* for TYPO3 CMS >= 10.4
 
 :fire: **If you update from a previous version to 2.0 you have to save the configuration again once!**
+
+## What does it do?
 
 Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png image in the format
 
     original.ext.webp
     
-# What is WebP and why do I want it?
+## What is WebP and why do I want it?
 
 > WebP is a modern image format that provides superior lossless and lossy compression for images on the web. Using WebP, webmasters and web developers can create smaller, richer images that make the web faster.
 >  
@@ -16,7 +20,7 @@ Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png image
 
    — source: https://developers.google.com/speed/webp/
 
-# Installation
+## Installation
 
 Add via composer: 
 
@@ -26,7 +30,7 @@ Add via composer:
 * Flush TYPO3 and PHP Cache
 * Clear the processed files in the Install Tool or Maintenance module
 
-# Requirements
+## Requirements
 
 You can either use the installed Imagemagick or GraphicsMagick you already use for TYPO3 image manipulation if it supports webp (see below) or you can use any other external binary available on your server (e.g. [_cwebp_](https://developers.google.com/speed/webp/docs/cwebp)).
 
@@ -44,11 +48,11 @@ or using ImageMagick with e.g.:
 
 These are examples, check your system documentation for further information on how to verify webp support on your platform.
 
-# Extension manager configuration
+## Extension manager configuration
 
 You can set parameters for the conversion in the extension configuration. 
 
-## `parameters`
+### `parameters`
 
 ```
 parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 15 -define webp:lossless=true
@@ -74,25 +78,25 @@ Try to set a higher value for `quality` first if the image does not fit your exp
 before trying to use `webp:lossless=true`, as this could even lead to a
 higher filesize than the original!
 
-## `convert_all`
+### `convert_all`
 
     # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy in Webp format; disable to convert images in the _processed_ folder only
     convert_all = 1
     
 Since version `1.1.0` all images in every local and writable storage will be saved as a copy in Webp format by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 
-## `silent`
+### `silent`
 
     # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command
     silent = 1
     
 Since version `2.2.0` you can suppress output (stdout, stderr) from the external converter (Linux only).
 
-# Webserver example configuration
+## Webserver example configuration
 
 Please **adapt** the following to _your specific needs_, this is **only an example** configuration.
 
-## nginx
+### nginx
 
 Add a map directive in your global nginx configuration:
 
@@ -114,7 +118,7 @@ and add these rules to your `server` configuration:
 
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
-## Apache (.htaccess example)
+### Apache (.htaccess example)
 
     <IfModule mod_rewrite.c>
         RewriteEngine On
@@ -131,7 +135,7 @@ Make sure that there are no other rules that already apply to the specified imag
     
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
-# Troubleshooting and logging
+## Troubleshooting and logging
 
 If something does not work as expected take a look at the log file.
 Every problem is logged to the TYPO3 log (since version 2.0), normally found in `var/log/typo3_*.log`
@@ -139,16 +143,9 @@ Every problem is logged to the TYPO3 log (since version 2.0), normally found in 
 Converted files that are larger than the original are removed automatically (since version 2.1.0)
 and the conversion will not be retried with the same configuration.
 
-# Removing processed files
+## Removing processed files
 
 You can remove the created .webp files at any time within the TYPO3 CMS backend.
-
-## TYPO3 CMS LTS 8.7
-
-* Go to System > Install > Clean up
-* Click the _Clear processed files_ button
-
-## TYPO3 CMS LTS 9.5
 
 * Go to Admin Tools > Remove Temporary Assets
 * Click the _Scan temporary files_ button
@@ -156,7 +153,7 @@ You can remove the created .webp files at any time within the TYPO3 CMS backend.
 
 Although the button names only the path of the `_processed_` folder, all processed files of the storage are actually deleted!
 
-# Alternatives
+## Alternatives
 
 You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_pagespeed_ modules from Google https://developers.google.com/speed/pagespeed/module/ with a configuration like:
 
@@ -165,15 +162,15 @@ You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_
     
 but that requires more knowledge to set up.
 
-# Drawbacks to keep in mind
+## Drawbacks to keep in mind
 
 Note that this extension produces an additional load on your server (each processed image is reprocessed) and possibly creates a lot of additional files that consume disk space (size varies depending on your! configuration).
 
-# Inspiration
+## Inspiration
 
 This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/agentur/)'s _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-) 
 
-# Changelog (features only, see history for bugfixes)
+## Changelog (features only, see history for bugfixes)
 
 | Release       | Changes
 | ------------- |-------------
@@ -184,8 +181,9 @@ This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/age
 |               | :fire: Renamed configuration options. Save the configuration again once!
 | 2.1.0         | Converted files larger than the original are removed and conversion will not be retried with the same configuration
 | 2.2.0         | Suppress output (stdout, stderr) from the external converter command
+| 3.0.0         | Drop support for TYPO3 < 10 and PHP < 7.2
 
-# Spread some love
+## Spread some love
 
 Send us a postcard from your favourite place and tell us how much you love TYPO3 and OpenSource:
 > plan2net GmbH, Sieveringerstraße 37, 1190 Vienna, Austria

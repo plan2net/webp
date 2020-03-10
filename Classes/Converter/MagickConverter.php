@@ -31,7 +31,7 @@ class MagickConverter implements Converter
     /**
      * @inheritdoc
      */
-    public function convert(string $originalFilePath, string $targetFilePath)
+    public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
