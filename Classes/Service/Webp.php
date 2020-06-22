@@ -11,6 +11,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function strtolower;
 
 /**
  * Class Webp
@@ -20,11 +21,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class Webp
 {
-    protected const SUPPORTED_MIME_TYPES = [
-        'image/jpeg',
-        'image/png'
-    ];
-
     /**
      * Perform image conversion
      *
@@ -80,7 +76,12 @@ class Webp
      */
     public static function isSupportedMimeType(string $mimeType): bool
     {
-        return in_array(strtolower($mimeType), self::SUPPORTED_MIME_TYPES, true);
+        $supportedMimeTypes = (string)Configuration::get('mime_types');
+        if (!empty($supportedMimeTypes)) {
+            return in_array(strtolower($mimeType), explode(',', strtolower($supportedMimeTypes)), true);
+        }
+
+        return false;
     }
 
     /**

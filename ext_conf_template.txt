@@ -6,3 +6,5 @@ parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-qua
 convert_all = 1
 # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command (Linux only)
 silent = 0
+# cat=basic; type=string; label=Supported mime types (comma separated)
+mime_types = image/jpeg,image/png
