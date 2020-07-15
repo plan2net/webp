@@ -1,8 +1,10 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 namespace Plan2net\Webp\Converter;
 
+use RuntimeException;
+use TypeError;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -34,7 +36,10 @@ class PhpGdConverter implements Converter
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         if (!$this->isRunnable()) {
-            return;
+            throw new RuntimeException(sprintf('File "%s" was not created: %s!',
+                $targetFilePath,
+                'PHP GD: Converter is not available!'
+            ));
         }
 
         // Get quality
@@ -44,19 +49,23 @@ class PhpGdConverter implements Converter
         // Get image object from file path
         $image = $this->getGraphicalFunctionsObject()->imageCreateFromFile($originalFilePath);
 
-        ob_start();
-        imagewebp($image, null, $quality);
-        if (ob_get_length() % 2 === 1) {
-            throw new \RuntimeException(sprintf('File "%s" was not created: %s!',
+        // Generate webp image
+        try {
+            ob_start();
+            imagewebp($image, null, $quality);
+            $result = ob_get_clean();
+            imagedestroy($image);
+        } catch (TypeError $e) {
+            throw new RuntimeException(sprintf('File "%s" was not created: %s!',
                 $targetFilePath,
-                'PHP GD not installed?'
+                $e->getMessage()
             ));
         }
-        $result = ob_get_clean();
-        GeneralUtility::writeFile($targetFilePath, $result, true);
 
-        if (!@is_file($targetFilePath)) {
-            throw new \RuntimeException(sprintf('File "%s" was not created: %s!',
+        // Save image
+        $fileWritten = GeneralUtility::writeFile($targetFilePath, $result, true);
+        if (!$fileWritten) {
+            throw new RuntimeException(sprintf('File "%s" was not created: %s!',
                 $targetFilePath,
                 $result ?: 'PHP GD: Could not write file!'
             ));
