@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Uses the php gd library to generate webp images
  *
  * @package Plan2net\Webp\Converter
- * @author André Schließer <a.schliesser@zeroseven.de>
+ * @author Wolfgang Klinger <wk@plan2.net>
  */
 class PhpGdConverter implements Converter
 {
@@ -48,6 +48,11 @@ class PhpGdConverter implements Converter
 
         // Get image object from file path
         $image = $this->getGraphicalFunctionsObject()->imageCreateFromFile($originalFilePath);
+
+        // Convert CMYK to RGB
+        if (!imageistruecolor($image)) {
+            imagepalettetotruecolor($image);
+        }
 
         // Generate webp image
         try {
