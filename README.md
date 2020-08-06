@@ -55,7 +55,7 @@ You can set parameters for the conversion in the extension configuration.
 ### `parameters`
 
 ```
-parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 15 -define webp:lossless=true
+parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 75 -define webp:lossless=true
 ```
 
 You find a list of possible options here:
