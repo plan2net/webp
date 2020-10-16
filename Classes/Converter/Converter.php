@@ -12,16 +12,11 @@ use RuntimeException;
  */
 interface Converter
 {
-    /**
-     * @param string $parameters
-     */
     public function __construct(string $parameters);
 
     /**
      * Converts a file $originalFilePath to webp in $targetFilePath.
      *
-     * @param string $originalFilePath
-     * @param string $targetFilePath
      * @throws RuntimeException
      */
     public function convert(string $originalFilePath, string $targetFilePath): void;

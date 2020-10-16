@@ -16,15 +16,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * @package Plan2net\Webp\Adapter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
-class ExternalConverter implements Converter
+final class ExternalConverter extends AbstractConverter
 {
     /**
-     * @var string
-     */
-    protected $parameters;
-
-    /**
-     * @param string $parameters
      * @throws InvalidArgumentException
      */
     public function __construct(string $parameters)
@@ -37,12 +31,9 @@ class ExternalConverter implements Converter
             throw new InvalidArgumentException(sprintf('Binary "%s" is not executable!', $binary));
         }
 
-        $this->parameters = $parameters;
+        parent::__construct($parameters);
     }
 
-    /**
-     * @inheritdoc
-     */
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $silent = filter_var(Configuration::get('silent'), FILTER_VALIDATE_BOOLEAN);

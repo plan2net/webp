@@ -1,4 +1,4 @@
-# cat=basic; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,External converter=Plan2net\Webp\Converter\ExternalConverter]; label=Conversion adapter (see documentation)
+# cat=basic; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,PHP GD=Plan2net\Webp\Converter\PhpGdConverter,External converter=Plan2net\Webp\Converter\ExternalConverter]; label=Conversion adapter (see documentation)
 converter = Plan2net\Webp\Converter\MagickConverter
 # cat=basic; type=string; label=For each mime type conversion parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
 parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true

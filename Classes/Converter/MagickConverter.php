@@ -13,30 +13,10 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * @package Plan2net\Webp\Converter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
-class MagickConverter implements Converter
+final class MagickConverter extends AbstractConverter
 {
-    /**
-     * @var
-     */
-    protected $parameters;
-
-    /**
-     * @param string $parameters
-     */
-    public function __construct(string $parameters)
-    {
-        $this->parameters = $parameters;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
-        if (!is_file($originalFilePath)) {
-            return;
-        }
-
         $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
             $targetFilePath,
@@ -51,10 +31,7 @@ class MagickConverter implements Converter
         }
     }
 
-    /**
-     * @return GraphicalFunctions
-     */
-    protected function getGraphicalFunctionsObject(): GraphicalFunctions
+    private function getGraphicalFunctionsObject(): GraphicalFunctions
     {
         static $graphicalFunctionsObject = null;
 

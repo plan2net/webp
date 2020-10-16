@@ -35,6 +35,10 @@ class Webp
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
+        if (!@is_file($originalFilePath)) {
+            return;
+        }
+
         $targetFilePath = "$originalFilePath.webp";
 
         $converterClass = Configuration::get('converter');
