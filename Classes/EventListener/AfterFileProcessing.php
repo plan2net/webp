@@ -48,10 +48,19 @@ class AfterFileProcessing
         array $configuration
     ): void {
         if ($this->shouldProcess($taskType, $processedFile)) {
+            // Check if we are processing the original file
+            if (!$this->isFileInProcessingFolder($processedFile)) {
+                // In this case the processed file has the wrong storage record attached
+                // and the file would not be found in the next steps,
+                // so we use the original file then
+                $processedFile = $file;
+                // Reset configuration (file was not modified) to prevent duplicate entries
+                $configuration = [];
+            }
+
             /** @var ProcessedFileRepository $processedFileRepository */
             $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
-            // This will either return an existing file
-            // or create a new one
+            // This will either return an existing file or create a new one
             $processedFileWebp = $processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $file,
                 $taskType,
@@ -62,14 +71,6 @@ class AfterFileProcessing
             // Check if reprocessing is required
             if (!$this->needsReprocessing($processedFileWebp)) {
                 return;
-            }
-
-            // Check if we are processing the original file
-            if (!$this->isFileInProcessingFolder($processedFile)) {
-                // In this case the processed file has the wrong storage record attached
-                // and the file would not be found in the next steps,
-                // so we use the original file then
-                $processedFile = $file;
             }
 
             $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
