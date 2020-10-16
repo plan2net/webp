@@ -33,6 +33,10 @@ class MagickConverter implements Converter
      */
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
+        if (!is_file($originalFilePath)) {
+            return;
+        }
+
         $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
             $targetFilePath,
