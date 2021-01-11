@@ -135,6 +135,28 @@ Make sure that there are no other rules that already apply to the specified imag
     
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
+## Verify successful webp image generation and delivery
+
+To make sure that everything works as expected you need to check two things:
+
+1. WebP image generation on the webserver
+2. successful delivery of WebP images to the client
+
+### WebP image generation
+
+Go to `fileadmin/_processed_` and check the subfolders for files with `.webp` extension. For every processed image file there should be a second file with the same filename plus `.webp` extension:
+
+```
+csm_foo-bar_4f3d6bb7d0.jpg
+csm_foo-bar_4f3d6bb7d0.jpg.webp
+```
+
+### Delivery of WebP images to the client
+
+Open a processed jpg or png image (see above) in your browser, e.g. `https://domain.tld/fileadmin/_processed_/b/2/csm_foo-bar_4f3d6bb7d0.jpg`
+
+Check the response headers in the developer tools of your browser. Despite the file suffix `.jpg`, you should get `Content-Type: image/webp`.
+
 ## Troubleshooting and logging
 
 If something does not work as expected take a look at the log file.
