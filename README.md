@@ -159,6 +159,8 @@ Open a processed jpg or png image (see above) in your browser, e.g. `https://dom
 
 Check the response headers in the developer tools of your browser. Despite the file suffix `.jpg`, you should get `Content-Type: image/webp`.
 
+![Extension settings](Resources/Public/Documentation/headers.png)
+
 ## Troubleshooting and logging
 
 If something does not work as expected take a look at the log file.
