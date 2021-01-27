@@ -48,7 +48,9 @@ or using ImageMagick with e.g.:
 
 These are examples, check your system documentation for further information on how to verify webp support on your platform.
 
-## Extension manager configuration
+## Extension settings
+
+![Extension settings](Resources/Public/Documentation/extension_settings.png)
 
 You can set parameters for the conversion in the extension configuration. 
 
