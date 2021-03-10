@@ -26,5 +26,10 @@
     "psr-4": {
       "Plan2net\\Webp\\": "Classes/"
     }
+  },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "webp"
+    }
   }
 }
