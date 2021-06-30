@@ -1,10 +1,10 @@
 # cat=basic; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,PHP GD=Plan2net\Webp\Converter\PhpGdConverter,External converter=Plan2net\Webp\Converter\ExternalConverter]; label=Conversion adapter (see documentation)
 converter = Plan2net\Webp\Converter\MagickConverter
 # cat=basic; type=string; label=For each mime type conversion parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
-parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true
+parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
 # cat=basic; type=boolean; label=Convert all images in local and writable storages (see documentation)
 convert_all = 1
 # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command (Linux only)
 silent = 0
 # cat=basic; type=string; label=Supported mime types (comma separated)
-mime_types = image/jpeg,image/png
+mime_types = image/jpeg,image/png,image/gif
