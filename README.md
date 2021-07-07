@@ -122,18 +122,17 @@ Make sure that there are no other rules that already apply to the specified imag
 
 ### Apache (.htaccess example)
 
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
-        RewriteCond %{HTTP_ACCEPT} image/webp
-        RewriteCond %{DOCUMENT_ROOT}/$1.$3.webp -f
-        RewriteRule ^((fileadmin|other-storage)/.+)\.(png|jpg|jpeg)$ $1.$3.webp [L]
-    </IfModule>
-
     <IfModule mod_headers.c>
         Header append Vary Accept env=REDIRECT_accept
     </IfModule>
-
-    AddType image/webp .webp
+    
+    <IfModule mod_rewrite.c>
+        RewriteEngine On # presumably already exists!
+        
+        RewriteCond %{HTTP_ACCEPT} image/webp
+        RewriteCond %{REQUEST_FILENAME}\.webp -f
+        RewriteRule ^ %{REQUEST_FILENAME}.webp [L]
+    </IfModule>
     
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
 
