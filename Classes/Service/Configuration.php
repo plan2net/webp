@@ -23,16 +23,16 @@ class Configuration implements SingletonInterface
     /**
      * Returns the whole extension configuration or a specific key
      *
-     * @param string|null $key
      * @return array|string|null
      */
-    public static function get($key = null)
+    public static function get(?string $key = null)
     {
         if (empty(self::$configuration)) {
             try {
                 self::$configuration = GeneralUtility::makeInstance(ExtensionConfiguration::class)
                     ->get('webp');
             } catch (\Exception $e) {
+                // Ignore
             }
         }
 

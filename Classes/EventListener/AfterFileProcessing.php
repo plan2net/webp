@@ -35,11 +35,6 @@ class AfterFileProcessing
 
     /**
      * Process a file using the configured adapter to create a webp copy
-     *
-     * @param ProcessedFile $processedFile
-     * @param FileInterface $file
-     * @param string $taskType
-     * @param array $configuration
      */
     protected function processFile(
         ProcessedFile $processedFile,
@@ -102,11 +97,6 @@ class AfterFileProcessing
         }
     }
 
-    /**
-     * @param string $taskType
-     * @param ProcessedFile $processedFile
-     * @return bool
-     */
     protected function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
     {
         if ($taskType !== 'Image.CropScaleMask') {
@@ -131,33 +121,21 @@ class AfterFileProcessing
         return true;
     }
 
-    /**
-     * @param ProcessedFile $processedFile
-     * @return bool
-     */
-    protected function needsReprocessing($processedFile): bool
+    protected function needsReprocessing(ProcessedFile $processedFile): bool
     {
         return $processedFile->isNew() ||
             (!$processedFile->usesOriginalFile() && !$processedFile->exists()) ||
             $processedFile->isOutdated();
     }
 
-    /**
-     * @param ProcessedFile $file
-     * @return bool
-     */
-    protected function isFileInProcessingFolder($file): bool
+    protected function isFileInProcessingFolder(ProcessedFile $file): bool
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
 
         return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) === 0;
     }
 
-    /**
-     * @param ProcessedFile $file
-     * @return bool
-     */
-    protected function isStorageLocalAndWritable($file): bool
+    protected function isStorageLocalAndWritable(ProcessedFile $file): bool
     {
         $storage = $file->getStorage();
         // Ignore files in fallback storage (e.g. files from extensions)
@@ -168,12 +146,6 @@ class AfterFileProcessing
         return $storage->getDriverType() === 'Local' && $storage->isWritable();
     }
 
-    /**
-     * @param FileInterface $file
-     * @param ProcessedFile $processedFile
-     * @param array $configuration
-     * @return array
-     */
     protected function getChecksumData(FileInterface $file, ProcessedFile $processedFile, array $configuration): array
     {
         return [
@@ -183,9 +155,6 @@ class AfterFileProcessing
         ];
     }
 
-    /**
-     * @param ProcessedFile $processedFile
-     */
     protected function removeProcessedFile(ProcessedFile $processedFile): void
     {
         try {
