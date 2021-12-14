@@ -6,7 +6,7 @@ Use version 2.* for TYPO3 CMS LTS 8 and 9 and >= 3.* for TYPO3 CMS >= 10.4
 
 ## What does it do?
 
-Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png image in the format
+Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png/gif image in the format
 
     original.ext.webp
     
@@ -57,7 +57,7 @@ You can set parameters for the conversion in the extension configuration.
 ### `parameters`
 
 ```
-parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 75 -define webp:lossless=true
+parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
 ```
 
 You find a list of possible options here:
@@ -113,7 +113,7 @@ and add these rules to your `server` configuration:
             add_header Vary Accept;
             try_files $uri$webp_suffix $uri =404;
     }
-    location ~* ^/other-storage/.+\.(png|jpg|jpeg)$ {
+    location ~* ^/other-storage/.+\.(png|jpg|jpeg|gif)$ {
             add_header Vary Accept;
             try_files $uri$webp_suffix $uri =404;
     }
@@ -122,10 +122,6 @@ Make sure that there are no other rules that already apply to the specified imag
 
 ### Apache (.htaccess example)
 
-    <IfModule mod_headers.c>
-        Header append Vary Accept env=REDIRECT_accept
-    </IfModule>
-    
     <IfModule mod_rewrite.c>
         RewriteEngine On # presumably already exists!
         

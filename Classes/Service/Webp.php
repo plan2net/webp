@@ -24,8 +24,6 @@ class Webp
     /**
      * Perform image conversion
      *
-     * @param FileInterface $originalFile
-     * @param ProcessedFile $processedFile
      * @throws ConvertedFileLargerThanOriginalException
      * @throws WillNotRetryWithConfigurationException
      */
@@ -74,10 +72,6 @@ class Webp
         }
     }
 
-    /**
-     * @param $mimeType
-     * @return bool
-     */
     public static function isSupportedMimeType(string $mimeType): bool
     {
         $supportedMimeTypes = (string)Configuration::get('mime_types');
@@ -88,10 +82,6 @@ class Webp
         return false;
     }
 
-    /**
-     * @param string $mimeType
-     * @return string|null
-     */
     protected function getParametersForMimeType(string $mimeType): ?string
     {
         $parameters = explode('|', Configuration::get('parameters'));
@@ -109,10 +99,6 @@ class Webp
         return null;
     }
 
-    /**
-     * @param int $fileId
-     * @param string $configuration
-     */
     protected function saveFailedAttempt(int $fileId, string $configuration): void
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
@@ -126,11 +112,6 @@ class Webp
             ->execute();
     }
 
-    /**
-     * @param int $fileId
-     * @param string $configuration
-     * @return bool
-     */
     protected function hasFailedAttempt(int $fileId, string $configuration): bool
     {
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)

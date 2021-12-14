@@ -20,7 +20,8 @@
   ],
   "require": {
     "php": ">=7.2.0",
-    "typo3/cms-core": "^10.4"
+    "ext-gd": "*",
+    "typo3/cms-core": "^10.4|^11.5"
   },
   "autoload": {
     "psr-4": {
