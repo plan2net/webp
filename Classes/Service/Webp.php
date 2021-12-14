@@ -39,37 +39,37 @@ class Webp
 
         $targetFilePath = "$originalFilePath.webp";
 
-        $converterClass = Configuration::get('converter');
+        $converterClass = (string)Configuration::get('converter');
         $parameters = Configuration::getParametersForMimeType($originalFile->getMimeType());
-        if (!empty($parameters)) {
-            if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(
-                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
-                        $targetFilePath, $originalFilePath)
-                );
-            }
-
-            /** @var Converter $converter */
-            $converter = GeneralUtility::makeInstance($converterClass, $parameters);
-            $converter->convert($originalFilePath, $targetFilePath);
-            $fileSizeTargetFile = @filesize($targetFilePath);
-            if ($originalFile->getSize() <= $fileSizeTargetFile) {
-                $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(
-                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
-                        $targetFilePath, $originalFilePath)
-                );
-            }
-            $processedFile->updateProperties(
-                [
-                    'width' => $originalFile->getProperty('width'),
-                    'height' => $originalFile->getProperty('height'),
-                    'size' => $fileSizeTargetFile
-                ]
-            );
-        } else {
+        if (empty($parameters)) {
             throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
         }
+
+        if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
+            throw new WillNotRetryWithConfigurationException(
+                sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
+                    $targetFilePath, $originalFilePath)
+            );
+        }
+
+        /** @var Converter $converter */
+        $converter = GeneralUtility::makeInstance($converterClass, $parameters);
+        $converter->convert($originalFilePath, $targetFilePath);
+        $fileSizeTargetFile = @filesize($targetFilePath);
+        if ($originalFile->getSize() <= $fileSizeTargetFile) {
+            $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
+            throw new ConvertedFileLargerThanOriginalException(
+                sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
+                    $targetFilePath, $originalFilePath)
+            );
+        }
+        $processedFile->updateProperties(
+            [
+                'width' => $originalFile->getProperty('width'),
+                'height' => $originalFile->getProperty('height'),
+                'size' => $fileSizeTargetFile
+            ]
+        );
     }
 
     protected function saveFailedAttempt(int $fileId, string $configuration): void
