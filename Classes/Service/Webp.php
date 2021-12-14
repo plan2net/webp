@@ -40,7 +40,7 @@ class Webp
         $targetFilePath = "$originalFilePath.webp";
 
         $converterClass = Configuration::get('converter');
-        $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
+        $parameters = Configuration::getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
             if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
                 throw new WillNotRetryWithConfigurationException(
@@ -70,33 +70,6 @@ class Webp
         } else {
             throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
         }
-    }
-
-    public static function isSupportedMimeType(string $mimeType): bool
-    {
-        $supportedMimeTypes = (string)Configuration::get('mime_types');
-        if (!empty($supportedMimeTypes)) {
-            return in_array(strtolower($mimeType), explode(',', strtolower($supportedMimeTypes)), true);
-        }
-
-        return false;
-    }
-
-    protected function getParametersForMimeType(string $mimeType): ?string
-    {
-        $parameters = explode('|', Configuration::get('parameters'));
-        foreach ($parameters as $parameter) {
-            [$type, $options] = explode('::', $parameter, 2);
-            // Fallback to old options format
-            if (empty($options)) {
-                return $type;
-            }
-            if ($type === $mimeType) {
-                return $options;
-            }
-        }
-
-        return null;
     }
 
     protected function saveFailedAttempt(int $fileId, string $configuration): void
