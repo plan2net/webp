@@ -21,6 +21,8 @@ use function strtolower;
  */
 class Webp
 {
+    protected const FILE_EXTENSION = '.webp';
+
     /**
      * Perform image conversion
      *
@@ -29,15 +31,15 @@ class Webp
      */
     public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
-        $processedFile->setName($originalFile->getName() . '.webp');
-        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
+        $processedFile->setName($originalFile->getName() . FILE_EXTENSION);
+        $processedFile->setIdentifier($originalFile->getIdentifier() . FILE_EXTENSION);
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         if (!@is_file($originalFilePath)) {
             return;
         }
 
-        $targetFilePath = "$originalFilePath.webp";
+        $targetFilePath = $originalFilePath . FILE_EXTENSION;
 
         $converterClass = (string)Configuration::get('converter');
         $parameters = Configuration::getParametersForMimeType($originalFile->getMimeType());
