@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
+use Plan2net\Webp\Domain\Repository\FailedRepository;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -47,7 +48,8 @@ class Webp
             throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
         }
 
-        if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
+        $repository = GeneralUtility::makeInstance(FailedRepository::class);
+        if ($repository->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
             throw new WillNotRetryWithConfigurationException(
                 sprintf('Failed before; Will not retry with this configuration!',
                     $targetFilePath, $originalFilePath)
@@ -59,7 +61,7 @@ class Webp
         $converter->convert($originalFilePath, $targetFilePath);
         $fileSizeTargetFile = @filesize($targetFilePath);
         if ($originalFile->getSize() <= $fileSizeTargetFile) {
-            $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
+            $repository->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
             throw new ConvertedFileLargerThanOriginalException(
                 sprintf('Converted file (%s) is larger than the original (%s)!',
                     $targetFilePath, $originalFilePath)
@@ -72,34 +74,5 @@ class Webp
                 'size' => $fileSizeTargetFile
             ]
         );
-    }
-
-    protected function saveFailedAttempt(int $fileId, string $configuration): void
-    {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('tx_webp_failed');
-        $queryBuilder->insert('tx_webp_failed')
-            ->values([
-                'file_id' => $fileId,
-                'configuration' => $configuration,
-                'configuration_hash' => sha1($configuration)
-            ])
-            ->execute();
-    }
-
-    protected function hasFailedAttempt(int $fileId, string $configuration): bool
-    {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('tx_webp_failed');
-
-        return (bool)$queryBuilder->count('uid')
-            ->from('tx_webp_failed')
-            ->where(
-                $queryBuilder->expr()->eq('file_id', $fileId),
-                $queryBuilder->expr()->eq('configuration_hash',
-                    $queryBuilder->createNamedParameter(sha1($configuration)))
-            )
-            ->execute()
-            ->fetchColumn();
     }
 }
