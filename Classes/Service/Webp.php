@@ -47,7 +47,7 @@ class Webp
 
         if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
             throw new WillNotRetryWithConfigurationException(
-                sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
+                sprintf('Failed before; Will not retry with this configuration!',
                     $targetFilePath, $originalFilePath)
             );
         }
@@ -59,7 +59,7 @@ class Webp
         if ($originalFile->getSize() <= $fileSizeTargetFile) {
             $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
             throw new ConvertedFileLargerThanOriginalException(
-                sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
+                sprintf('Converted file (%s) is larger than the original (%s)!',
                     $targetFilePath, $originalFilePath)
             );
         }
