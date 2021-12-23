@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Core\Filter;
 
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
+use function strlen;
+use function strpos;
 
 /**
  * Class FileNameFilter

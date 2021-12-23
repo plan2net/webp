@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Plan2net\Webp\Converter;
+namespace Plan2net\Webp\Converter\Exception;
 
 use Exception;
 

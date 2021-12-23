@@ -6,6 +6,8 @@ namespace Plan2net\Webp\Converter;
 
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function is_file;
+use function sprintf;
 
 /**
  * Class MagickAdapter

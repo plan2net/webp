@@ -5,13 +5,20 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Service;
 
 use InvalidArgumentException;
-use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Converter;
-use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
+use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
+use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function explode;
+use function filesize;
+use function in_array;
+use function is_file;
+use function sha1;
+use function sprintf;
 use function strtolower;
 
 /**
@@ -22,7 +29,7 @@ use function strtolower;
 class Webp
 {
     /**
-     * Perform image conversion
+     * @param FileInterface|File $originalFile
      *
      * @throws ConvertedFileLargerThanOriginalException
      * @throws WillNotRetryWithConfigurationException

@@ -4,8 +4,18 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
+use RuntimeException;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function defined;
+use function function_exists;
+use function imageistruecolor;
+use function imagepalettetotruecolor;
+use function imagetypes;
+use function imagewebp;
+use function is_file;
+use function preg_match;
+use function sprintf;
 
 /**
  * Class PhpGdConverter
@@ -28,7 +38,7 @@ final class PhpGdConverter extends AbstractConverter
         $result = imagewebp($image, $targetFilePath, $this->getQuality());
 
         if (!$result || !@is_file($targetFilePath)) {
-            throw new \RuntimeException(sprintf('File "%s" was not created!', $targetFilePath));
+            throw new RuntimeException(sprintf('File "%s" was not created!', $targetFilePath));
         }
     }
 

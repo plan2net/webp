@@ -9,6 +9,13 @@ use Plan2net\Webp\Service\Configuration;
 use RuntimeException;
 use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function escapeshellcmd;
+use function explode;
+use function filter_var;
+use function is_executable;
+use function is_file;
+use function sprintf;
+use function substr_count;
 
 /**
  * Class ExternalAdapter
