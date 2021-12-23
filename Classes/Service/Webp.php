@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
@@ -16,7 +17,6 @@ use function strtolower;
 /**
  * Class Webp
  *
- * @package Plan2net\Webp\Service
  * @author  Wolfgang Klinger <wk@plan2.net>
  */
 class Webp
@@ -42,11 +42,8 @@ class Webp
         $converterClass = Configuration::get('converter');
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
-            if ($this->hasFailedAttempt((int)$originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(
-                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
-                        $targetFilePath, $originalFilePath)
-                );
+            if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
+                throw new WillNotRetryWithConfigurationException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
             }
 
             /** @var Converter $converter */
@@ -54,11 +51,8 @@ class Webp
             $converter->convert($originalFilePath, $targetFilePath);
             $fileSizeTargetFile = @filesize($targetFilePath);
             if ($originalFile->getSize() <= $fileSizeTargetFile) {
-                $this->saveFailedAttempt((int)$originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(
-                    sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!',
-                        $targetFilePath, $originalFilePath)
-                );
+                $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
+                throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
             }
             $processedFile->updateProperties(
                 [
@@ -74,7 +68,7 @@ class Webp
 
     public static function isSupportedMimeType(string $mimeType): bool
     {
-        $supportedMimeTypes = (string)Configuration::get('mime_types');
+        $supportedMimeTypes = (string) Configuration::get('mime_types');
         if (!empty($supportedMimeTypes)) {
             return in_array(strtolower($mimeType), explode(',', strtolower($supportedMimeTypes)), true);
         }
@@ -117,7 +111,7 @@ class Webp
         $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
             ->getQueryBuilderForTable('tx_webp_failed');
 
-        return (bool)$queryBuilder->count('uid')
+        return (bool) $queryBuilder->count('uid')
             ->from('tx_webp_failed')
             ->where(
                 $queryBuilder->expr()->eq('file_id', $fileId),

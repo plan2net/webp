@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\EventListener;
@@ -18,7 +19,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * Class AfterFileProcessing
  *
- * @package Plan2net\Webp\EventListener
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class AfterFileProcessing
@@ -99,7 +99,7 @@ class AfterFileProcessing
 
     protected function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
     {
-        if ($taskType !== 'Image.CropScaleMask') {
+        if ('Image.CropScaleMask' !== $taskType) {
             return false;
         }
 
@@ -108,7 +108,7 @@ class AfterFileProcessing
         }
 
         // Convert images in any folder or only in the _processed_ folder
-        $convertAllImages = (bool)Configuration::get('convert_all');
+        $convertAllImages = (bool) Configuration::get('convert_all');
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
             return false;
         }
@@ -132,18 +132,18 @@ class AfterFileProcessing
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
 
-        return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) === 0;
+        return 0 === strpos($file->getIdentifier(), $processingFolder->getIdentifier());
     }
 
     protected function isStorageLocalAndWritable(ProcessedFile $file): bool
     {
         $storage = $file->getStorage();
         // Ignore files in fallback storage (e.g. files from extensions)
-        if ($storage->getStorageRecord()['uid'] === 0) {
+        if (0 === $storage->getStorageRecord()['uid']) {
             return false;
         }
 
-        return $storage->getDriverType() === 'Local' && $storage->isWritable();
+        return 'Local' === $storage->getDriverType() && $storage->isWritable();
     }
 
     protected function getChecksumData(FileInterface $file, ProcessedFile $processedFile, array $configuration): array

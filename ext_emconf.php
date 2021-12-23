@@ -1,6 +1,6 @@
 <?php
 
-$EM_CONF[$_EXTKEY] = [
+$EM_CONF['webp'] = [
     'title' => 'Creates WebP copies for images',
     'description' => 'Creates WebP copies of all jpeg and png images',
     'category' => 'fe',

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
@@ -13,7 +14,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Class ExternalAdapter
  * Uses an external binary (e.g. cwebp)
  *
- * @package Plan2net\Webp\Adapter
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 final class ExternalConverter extends AbstractConverter
@@ -23,7 +23,7 @@ final class ExternalConverter extends AbstractConverter
      */
     public function __construct(string $parameters)
     {
-        if (substr_count($parameters, '%s') !== 2) {
+        if (2 !== substr_count($parameters, '%s')) {
             throw new InvalidArgumentException('Command string is invalid, supply 2 string (%s) placeholders!');
         }
         $binary = explode(' ', $parameters)[0];
