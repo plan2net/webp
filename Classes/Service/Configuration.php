@@ -50,25 +50,22 @@ class Configuration implements SingletonInterface
     /**
      * Checks if given mimeType is within configuration `parameters`
      *
-     * @return bool
+     * @return bool|null
      */
     public static function isSupportedMimeType(string $mimeType): ?bool
     {
-        $supportedMimeTypes = (string)self::get('mime_types');
-        if (empty($supportedMimeTypes)) {
-            return null;
-        }
+        $supportedMimeTypes = (string) self::get('mime_types');
 
-        return in_array($mimeType, explode(',', $supportedMimeTypes));
+        return empty($supportedMimeTypes) ? null : in_array($mimeType, explode(',', $supportedMimeTypes));
     }
 
     /**
      * Returns the specific command `parameters` for given mimeType
      *
-     * @return string
+     * @return string|null
      */
     public static function getParametersForMimeType(string $mimeType): ?string
     {
-        return false === preg_match('#'.$mimeType.'::(?<param>[^\|]+)#', (string)self::get('parameters'), $match) ? null : $match['param'];
+        return false === preg_match('#'.$mimeType.'::(?<param>[^\|]+)#', (string) self::get('parameters'), $match) ? null : $match['param'];
     }
 }

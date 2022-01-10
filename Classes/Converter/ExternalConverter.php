@@ -43,7 +43,7 @@ final class ExternalConverter extends AbstractConverter
 
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
-        $silent = (bool)Configuration::get('silent');
+        $silent = (bool) Configuration::get('silent');
         $command = sprintf(
                 escapeshellcmd($this->parameters),
                 CommandUtility::escapeShellArgument($originalFilePath),
