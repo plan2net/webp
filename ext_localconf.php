@@ -1,4 +1,6 @@
-<?php defined('TYPO3_MODE') || die();
+<?php
+
+defined('TYPO3_MODE') || exit('Access denied');
 
 (static function () {
     // Hide webp files in file lists

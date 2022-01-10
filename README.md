@@ -107,35 +107,57 @@ Add a map directive in your global nginx configuration:
         "~*webp"  ".webp";
     }
 
-and add these rules to your `server` configuration:
+If you use _Cloudflare_ the following might better suit your needs:
 
-    location ~* ^/fileadmin/.+\.(png|jpg|jpeg)$ {
-            add_header Vary Accept;
-            try_files $uri$webp_suffix $uri =404;
-    }
-    location ~* ^/other-storage/.+\.(png|jpg|jpeg|gif)$ {
-            add_header Vary Accept;
-            try_files $uri$webp_suffix $uri =404;
+    map $http_accept $webpok {
+        default   0;
+        "~*webp"  1;
     }
 
-Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
+    map $http_cf_cache_status $iscf {
+        default   1;
+        ""        0;
+    }
+
+    map $webpok$iscf $webp_suffix {
+        11          "";
+        10          ".webp";
+        01          "";
+        00          "";
+    }
+
+Add these rules to your `server` configuration:
+
+    location ~* ^.+\.(png|gif|jpe?g)$ {
+            add_header Vary "Accept";
+            add_header Cache-Control "public, no-transform";
+            try_files $uri$webp_suffix $uri =404;
+    }
+
+Make sure that there are no other rules that prevent further rules or already apply to the specified image formats and prevent further execution!
 
 ### Apache (.htaccess example)
 
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
-        RewriteCond %{HTTP_ACCEPT} image/webp
-        RewriteCond %{DOCUMENT_ROOT}/$1.$3.webp -f
-        RewriteRule ^((fileadmin|other-storage)/.+)\.(png|jpg|jpeg|gif)$ $1.$3.webp [L]
-    </IfModule>
+We assume that module `mod_rewrite.c` is enabled.
+
+    RewriteEngine On
+    AddType image/webp .webp
+
+is already part of the TYPO3 htaccess template in
+`typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`
+
+    RewriteCond %{HTTP_ACCEPT} image/webp
+    RewriteCond %{REQUEST_FILENAME} (.*)\.(png|gif|jpe?g)$
+    RewriteCond %{REQUEST_FILENAME}\.webp -f
+    RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
 
     <IfModule mod_headers.c>
-        Header append Vary Accept env=REDIRECT_accept
+        <FilesMatch "\.(png|gif|jpe?g)$">
+            Header append Vary Accept
+        </FilesMatch>
     </IfModule>
 
-    AddType image/webp .webp
-    
-Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
+Make sure that there are no other rules that prevent further rules or already apply to the specified image formats and prevent further execution!
 
 ## Verify successful webp image generation and delivery
 
@@ -208,6 +230,10 @@ This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/age
 | 2.1.0         | Converted files larger than the original are removed and conversion will not be retried with the same configuration
 | 2.2.0         | Suppress output (stdout, stderr) from the external converter command
 | 3.0.0         | Drop support for TYPO3 < 10 and PHP < 7.2
+
+Thanks to Xavier Perseguers for the _Cloudflare_ hint.
+
+Thanks to Marcus Förster for simplifying the Apache rewrite rules.
 
 ## Spread some love
 

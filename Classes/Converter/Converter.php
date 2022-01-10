@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
@@ -7,8 +8,6 @@ use RuntimeException;
 
 /**
  * Interface Converter
- *
- * @package Plan2net\Webp\Converter
  */
 interface Converter
 {
