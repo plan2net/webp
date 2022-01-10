@@ -1,24 +1,29 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\EventListener;
 
 use Exception;
-use Plan2net\Webp\Converter\ConvertedFileLargerThanOriginalException;
-use Plan2net\Webp\Converter\WillNotRetryWithConfigurationException;
+use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
+use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use function implode;
+use function serialize;
+use function sprintf;
+use function strpos;
 
 /**
  * Class AfterFileProcessing
  *
- * @package Plan2net\Webp\EventListener
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class AfterFileProcessing
@@ -35,6 +40,8 @@ class AfterFileProcessing
 
     /**
      * Process a file using the configured adapter to create a webp copy
+     *
+     * @param FileInterface|File $file
      */
     protected function processFile(
         ProcessedFile $processedFile,
@@ -99,7 +106,7 @@ class AfterFileProcessing
 
     protected function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
     {
-        if ($taskType !== 'Image.CropScaleMask') {
+        if ('Image.CropScaleMask' !== $taskType) {
             return false;
         }
 
@@ -108,7 +115,7 @@ class AfterFileProcessing
         }
 
         // Convert images in any folder or only in the _processed_ folder
-        $convertAllImages = (bool)Configuration::get('convert_all');
+        $convertAllImages = (bool) Configuration::get('convert_all');
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
             return false;
         }
@@ -132,20 +139,23 @@ class AfterFileProcessing
     {
         $processingFolder = $file->getStorage()->getProcessingFolder();
 
-        return strpos($file->getIdentifier(), $processingFolder->getIdentifier()) === 0;
+        return 0 === strpos($file->getIdentifier(), $processingFolder->getIdentifier());
     }
 
     protected function isStorageLocalAndWritable(ProcessedFile $file): bool
     {
         $storage = $file->getStorage();
         // Ignore files in fallback storage (e.g. files from extensions)
-        if ($storage->getStorageRecord()['uid'] === 0) {
+        if (0 === $storage->getStorageRecord()['uid']) {
             return false;
         }
 
-        return $storage->getDriverType() === 'Local' && $storage->isWritable();
+        return 'Local' === $storage->getDriverType() && $storage->isWritable();
     }
 
+    /**
+     * @param FileInterface|File $file
+     */
     protected function getChecksumData(FileInterface $file, ProcessedFile $processedFile, array $configuration): array
     {
         return [

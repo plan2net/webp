@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
@@ -10,7 +11,6 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * Class Configuration
  *
- * @package Plan2net\Webp\Service
  * @author Wolfgang Klinger <wk@plan2.net>
  */
 class Configuration implements SingletonInterface
@@ -38,7 +38,7 @@ class Configuration implements SingletonInterface
 
         if (!empty($key)) {
             if (isset(self::$configuration[$key])) {
-                return (string)self::$configuration[$key];
+                return (string) self::$configuration[$key];
             }
 
             return null;
