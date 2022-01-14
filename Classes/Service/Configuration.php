@@ -56,7 +56,7 @@ class Configuration implements SingletonInterface
     {
         $supportedMimeTypes = (string) self::get('mime_types');
 
-        return empty($supportedMimeTypes) ? null : in_array($mimeType, explode(',', $supportedMimeTypes));
+        return empty($supportedMimeTypes) ? null : \in_array($mimeType, explode(',', $supportedMimeTypes));
     }
 
     /**
