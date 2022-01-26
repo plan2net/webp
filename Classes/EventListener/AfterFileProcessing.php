@@ -94,7 +94,7 @@ class AfterFileProcessing
                             ),
                             0,
                             10
-                        );
+                        ),
                     ]
                 );
 
