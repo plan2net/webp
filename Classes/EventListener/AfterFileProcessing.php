@@ -85,8 +85,16 @@ class AfterFileProcessing
                 // but TYPO3 CMS core has a limit on this field
                 $processedFileWebp->updateProperties(
                     [
-                        'checksum' => GeneralUtility::shortMD5(implode('|',
-                            $this->getChecksumData($file, $processedFileWebp, $configuration)))
+                        'checksum' => substr(
+                            md5(
+                                implode(
+                                    '|',
+                                    $this->getChecksumData($file, $processedFileWebp, $configuration)
+                                )
+                            ),
+                            0,
+                            10
+                        );
                     ]
                 );
 
