@@ -82,7 +82,7 @@ class AfterFileProcessing
                 // This will add or update
                 $processedFileRepository->add($processedFileWebp);
             } catch (WillNotRetryWithConfigurationException $e) {
-                // silently ignore
+                $logger->notice($e->getMessage());
             } catch (ConvertedFileLargerThanOriginalException $e) {
                 $logger->warning($e->getMessage());
                 $this->removeProcessedFile($processedFileWebp);

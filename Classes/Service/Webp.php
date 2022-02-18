@@ -50,16 +50,16 @@ class Webp
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
             if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
+                throw new WillNotRetryWithConfigurationException(sprintf('Conversion for "%s" failed before! Will not retry with this configuration!', $originalFilePath));
             }
 
             /** @var Converter $converter */
             $converter = GeneralUtility::makeInstance($converterClass, $parameters);
             $converter->convert($originalFilePath, $targetFilePath);
             $fileSizeTargetFile = @filesize($targetFilePath);
-            if ($originalFile->getSize() <= $fileSizeTargetFile) {
+            if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
                 $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
+                throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
             }
             $processedFile->updateProperties(
                 [
@@ -108,7 +108,7 @@ class Webp
             ->values([
                 'file_id' => $fileId,
                 'configuration' => $configuration,
-                'configuration_hash' => sha1($configuration)
+                'configuration_hash' => md5($configuration)
             ])
             ->execute();
     }
@@ -123,7 +123,7 @@ class Webp
             ->where(
                 $queryBuilder->expr()->eq('file_id', $fileId),
                 $queryBuilder->expr()->eq('configuration_hash',
-                    $queryBuilder->createNamedParameter(sha1($configuration)))
+                    $queryBuilder->createNamedParameter(md5($configuration)))
             )
             ->execute()
             ->fetchColumn();
