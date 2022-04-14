@@ -51,7 +51,7 @@ class Webp
 
         $converterClass = Configuration::get('converter');
         $parameters = Configuration::getParametersForMimeType($originalFile->getMimeType());
-        if (!empty($parameters)) {
+        if (empty($parameters)) {
             throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
         }
 
@@ -68,7 +68,8 @@ class Webp
             $failedRepository->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
             throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
         }
-        $processedFile->updateProperties(
+
+        return $processedFile->updateProperties(
             [
                 'width' => $originalFile->getProperty('width'),
                 'height' => $originalFile->getProperty('height'),

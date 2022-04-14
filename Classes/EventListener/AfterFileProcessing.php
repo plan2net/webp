@@ -16,8 +16,6 @@ use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use function implode;
-use function serialize;
 use function sprintf;
 use function strpos;
 
@@ -81,19 +79,10 @@ class AfterFileProcessing
                 $service = GeneralUtility::makeInstance(WebpService::class);
                 $service->process($processedFile, $processedFileWebp);
 
-                // Be aware that using shortMD5 results in a very bad checksum,
-                // but TYPO3 CMS core has a limit on this field
-                $processedFileWebp->updateProperties(
-                    [
-                        'checksum' => GeneralUtility::shortMD5(implode('|',
-                            $this->getChecksumData($file, $processedFileWebp, $configuration)))
-                    ]
-                );
-
                 // This will add or update
                 $processedFileRepository->add($processedFileWebp);
             } catch (WillNotRetryWithConfigurationException $e) {
-                // silently ignore
+                $logger->notice($e->getMessage());
             } catch (ConvertedFileLargerThanOriginalException $e) {
                 $logger->warning($e->getMessage());
                 $this->removeProcessedFile($processedFileWebp);
@@ -145,24 +134,13 @@ class AfterFileProcessing
     protected function isStorageLocalAndWritable(ProcessedFile $file): bool
     {
         $storage = $file->getStorage();
+
         // Ignore files in fallback storage (e.g. files from extensions)
-        if (0 === $storage->getStorageRecord()['uid']) {
+        if (null === $storage || 0 === $storage->getStorageRecord()['uid']) {
             return false;
         }
 
         return 'Local' === $storage->getDriverType() && $storage->isWritable();
-    }
-
-    /**
-     * @param FileInterface|File $file
-     */
-    protected function getChecksumData(FileInterface $file, ProcessedFile $processedFile, array $configuration): array
-    {
-        return [
-            $file->getUid(),
-            'Image.Webp' . '.' . $processedFile->getName() . $file->getModificationTime(),
-            serialize($configuration)
-        ];
     }
 
     protected function removeProcessedFile(ProcessedFile $processedFile): void

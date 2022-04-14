@@ -29,6 +29,7 @@ Add via composer:
 * Install and activate the extension in the Extension manager
 * Flush TYPO3 and PHP Cache
 * Clear the processed files in the Install Tool or Maintenance module
+* Add rewrite rules for your webserver (see examples for Apache and nginx below)
 
 ## Requirements
 
