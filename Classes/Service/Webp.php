@@ -36,6 +36,9 @@ class Webp
      */
     public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
+        if ($originalFile->getExtension() === 'webp') {
+            return;
+        }
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 
