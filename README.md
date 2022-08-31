@@ -187,7 +187,7 @@ Check the response headers in the developer tools of your browser. Despite the f
 ## Troubleshooting and logging
 
 If something does not work as expected take a look at the log file.
-Every problem is logged to the TYPO3\log (since version 2.0), normally found in `var/log/typo3_*.log`
+Every problem is logged to the TYPO3 log (since version 2.0), normally found in `var/log/typo3_*.log`
 
 Converted files that are larger than the original are removed automatically (since version 2.1.0)
 and the conversion will not be retried with the same configuration.
