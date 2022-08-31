@@ -39,17 +39,17 @@ class Webp
      */
     public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
-        $processedFile->setName($originalFile->getName() . FILE_EXTENSION);
-        $processedFile->setIdentifier($originalFile->getIdentifier() . FILE_EXTENSION);
+        $processedFile->setName($originalFile->getName() . self::FILE_EXTENSION);
+        $processedFile->setIdentifier($originalFile->getIdentifier() . self::FILE_EXTENSION);
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         if (!@is_file($originalFilePath)) {
             return;
         }
 
-        $targetFilePath = $originalFilePath . FILE_EXTENSION;
-
+        $targetFilePath = $originalFilePath . self::FILE_EXTENSION;
         $converterClass = Configuration::get('converter');
+
         $parameters = Configuration::getParametersForMimeType($originalFile->getMimeType());
         if (empty($parameters)) {
             throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
@@ -69,7 +69,7 @@ class Webp
             throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
         }
 
-        return $processedFile->updateProperties(
+        $processedFile->updateProperties(
             [
                 'width' => $originalFile->getProperty('width'),
                 'height' => $originalFile->getProperty('height'),
