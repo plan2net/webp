@@ -26,7 +26,13 @@ class FileNameFilter
         DriverInterface $driverInstance
     ): int {
         if (strpos($itemIdentifier, '.webp') === strlen($itemIdentifier) - 5) {
-            return -1;
+            if (false !== strpos($itemIdentifier, '.gif.webp')
+                || false !== strpos($itemIdentifier, '.jpg.webp')
+                || false !== strpos($itemIdentifier, '.jpeg.webp')
+                || false !== strpos($itemIdentifier, '.png.webp')
+            ) {
+                return -1;
+            }
         }
 
         return 1;
