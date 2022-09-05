@@ -70,7 +70,7 @@ If you want to use an external binary, you have to supply an option string with 
 E.g.:
 
 ```
-image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossless %s -o %s
+image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossless %s -o %s|image/gif::/usr/bin/gif2webp %s -o %s
 ```
 
 https://developers.google.com/speed/webp/docs/cwebp
