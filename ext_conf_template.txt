@@ -8,3 +8,5 @@ convert_all = 1
 silent = 0
 # cat=basic; type=string; label=Supported mime types (comma separated)
 mime_types = image/jpeg,image/png,image/gif
+# cat=basic; type=boolean; label=Hide .webp files in backend file list module
+hide_webp = 1
