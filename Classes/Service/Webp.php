@@ -39,8 +39,9 @@ class Webp
      */
     public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
-        $processedFile->setName($originalFile->getName() . self::FILE_EXTENSION);
-        $processedFile->setIdentifier($originalFile->getIdentifier() . self::FILE_EXTENSION);
+        if ($originalFile->getExtension() === substr(self::FILE_EXTENSION, 1)) {
+            return;
+        }
 
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         if (!@is_file($originalFilePath)) {
@@ -68,6 +69,9 @@ class Webp
             $failedRepository->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
             throw new ConvertedFileLargerThanOriginalException(sprintf('Converted file (%s) is larger than the original (%s)! Will not retry with this configuration!', $targetFilePath, $originalFilePath));
         }
+
+        $processedFile->setName($originalFile->getName() . self::FILE_EXTENSION);
+        $processedFile->setIdentifier($originalFile->getIdentifier() . self::FILE_EXTENSION);
 
         $processedFile->updateProperties(
             [

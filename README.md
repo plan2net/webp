@@ -70,7 +70,7 @@ If you want to use an external binary, you have to supply an option string with 
 E.g.:
 
 ```
-image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossless %s -o %s
+image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossless %s -o %s|image/gif::/usr/bin/gif2webp %s -o %s
 ```
 
 https://developers.google.com/speed/webp/docs/cwebp
@@ -94,6 +94,17 @@ Since version `1.1.0` all images in every local and writable storage will be sav
     silent = 1
 
 Since version `2.2.0` you can suppress output (stdout, stderr) from the external converter (Linux only).
+
+### `hide_webp`
+
+    # cat=basic; type=boolean; label=Hide .webp files in backend file list module
+    hide_webp = 1
+
+`.webp` files are hidden by default in the backend file list module. If you want to show them to the users, disable this option.
+
+If you need a more customized behaviour for hiding or showing the generated files (e.g. for a specific BE user group),
+you can always remove or change the `$GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks']` settings
+(see `ext_localconf.php` for details) in your own extension.
 
 ## Webserver example configuration
 
