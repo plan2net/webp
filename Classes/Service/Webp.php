@@ -90,7 +90,13 @@ class Webp
     {
         $parameters = explode('|', Configuration::get('parameters'));
         foreach ($parameters as $parameter) {
-            [$type, $options] = explode('::', $parameter, 2);
+            $parts = explode('::', $parameter, 2);;
+            $type = $parts[0];
+            if (isset($parts[1])) {
+                $options = $parts[1];
+            } else {
+                $options = '';
+            }
             // Fallback to old options format
             if (empty($options)) {
                 return $type;
