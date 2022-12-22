@@ -17,7 +17,6 @@ use function explode;
 use function filesize;
 use function in_array;
 use function is_file;
-use function sha1;
 use function sprintf;
 use function strtolower;
 
@@ -36,7 +35,7 @@ class Webp
      */
     public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
     {
-        if ($originalFile->getExtension() === 'webp') {
+        if ('webp' === $originalFile->getExtension()) {
             return;
         }
         $processedFile->setName($originalFile->getName() . '.webp');
@@ -53,7 +52,7 @@ class Webp
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
             if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(sprintf('Conversion for "%s" failed before! Will not retry with this configuration!', $originalFilePath));
+                throw new WillNotRetryWithConfigurationException(sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
             }
 
             /** @var Converter $converter */
@@ -71,15 +70,11 @@ class Webp
                     'size' => $fileSizeTargetFile
                 ]
             );
-        } else {
-            throw new InvalidArgumentException(
-                sprintf(
-                    'No options given for adapter "%s" and mime type "%s"!',
-                    $converterClass,
-                    $originalFile->getMimeType()
-                )
-            );
+
+            return;
         }
+
+        throw new InvalidArgumentException(sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
     }
 
     public static function isSupportedMimeType(string $mimeType): bool

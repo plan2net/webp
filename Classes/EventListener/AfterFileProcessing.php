@@ -87,7 +87,13 @@ class AfterFileProcessing
                 $logger->warning($e->getMessage());
                 $this->removeProcessedFile($processedFileWebp);
             } catch (Exception $e) {
-                $logger->error(sprintf('Failed to convert image to webp: %s', $e->getMessage()));
+                $logger->error(
+                    sprintf(
+                        'Failed to convert image "%s" to webp with: %s',
+                        $processedFile->getIdentifier(),
+                        $e->getMessage()
+                    )
+                );
                 $this->removeProcessedFile($processedFileWebp);
             }
         }
@@ -126,7 +132,15 @@ class AfterFileProcessing
 
     protected function isFileInProcessingFolder(ProcessedFile $file): bool
     {
-        $processingFolder = $file->getStorage()->getProcessingFolder();
+        $storage = $file->getStorage();
+        if (null === $storage) {
+            return false;
+        }
+
+        $processingFolder = $storage->getProcessingFolder();
+        if (null === $processingFolder) {
+            return false;
+        }
 
         return 0 === strpos($file->getIdentifier(), $processingFolder->getIdentifier());
     }
