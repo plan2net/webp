@@ -106,6 +106,14 @@ If you need a more customized behaviour for hiding or showing the generated file
 you can always remove or change the `$GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks']` settings
 (see `ext_localconf.php` for details) in your own extension.
 
+### `use_system_settings`
+
+    # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
+    use_system_settings = 1
+
+When set (default) the value from `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` is appended 
+automatically to the configuration options for the `MagickConverter` converter, so you don't need to repeat the settings.
+
 ## Webserver example configuration
 
 Please **adapt** the following to _your specific needs_, this is **only an example** configuration.
@@ -229,19 +237,6 @@ Note that this extension produces an additional load on your server (each proces
 ## Inspiration
 
 This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/agentur/)'s _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-) 
-
-## Changelog (features only, see history for bugfixes)
-
-| Release       | Changes
-| ------------- |-------------
-| 1.1.0         | Convert all images in every local and writable storage<br>Fix fallback options for conversion<br>Update README
-| 1.2.0         | Add options for different conversion parameters per image mimetype
-| 2.0.0         | Cleanup, optimization and bugfixes. 
-|               | Added logging. 
-|               | :fire: Renamed configuration options. Save the configuration again once!
-| 2.1.0         | Converted files larger than the original are removed and conversion will not be retried with the same configuration
-| 2.2.0         | Suppress output (stdout, stderr) from the external converter command
-| 3.0.0         | Drop support for TYPO3 < 10 and PHP < 7.2
 
 Thanks to Xavier Perseguers for the _Cloudflare_ hint.
 

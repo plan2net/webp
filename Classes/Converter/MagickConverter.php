@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
+use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use function is_file;
@@ -19,10 +20,16 @@ final class MagickConverter extends AbstractConverter
 {
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
+        $parameters = $this->parameters;
+        if (Configuration::get('use_system_settings')) {
+            $parameters .= ' ' . $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'];
+            $parameters = trim($parameters);
+        }
+
         $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
             $originalFilePath,
             $targetFilePath,
-            $this->parameters
+            $parameters
         );
 
         if (!@is_file($targetFilePath)) {

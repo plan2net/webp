@@ -10,3 +10,5 @@ silent = 0
 mime_types = image/jpeg,image/png,image/gif
 # cat=basic; type=boolean; label=Hide .webp files in backend file list module
 hide_webp = 1
+# cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
+use_system_settings = 1
