@@ -72,7 +72,13 @@ class Webp
                 ]
             );
         } else {
-            throw new InvalidArgumentException(sprintf('No options given for adapter "%s"!', $converterClass));
+            throw new InvalidArgumentException(
+                sprintf(
+                    'No options given for adapter "%s" and mime type "%s"!',
+                    $converterClass,
+                    $originalFile->getMimeType()
+                )
+            );
         }
     }
 
