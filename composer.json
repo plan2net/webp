@@ -18,10 +18,19 @@
       "role": "Support and review"
     }
   ],
+  "config": {
+    "vendor-dir": ".Build/vendor",
+    "bin-dir": ".Build/bin",
+    "sort-packages": true,
+    "allow-plugins": {
+      "typo3/cms-composer-installers": true,
+      "typo3/class-alias-loader": true
+    }
+  },
   "require": {
-    "php": ">=7.2.0",
+    "php": ">=8.1",
     "ext-gd": "*",
-    "typo3/cms-core": "^10.4|^11.5"
+    "typo3/cms-core": "^12.4"
   },
   "autoload": {
     "psr-4": {
@@ -30,7 +39,12 @@
   },
   "extra": {
     "typo3/cms": {
-      "extension-key": "webp"
+      "extension-key": "webp",
+      "cms-package-dir": "{$vendor-dir}/typo3/cms",
+      "web-dir": ".Build/Web"
     }
+  },
+  "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.14"
   }
 }

@@ -4,25 +4,11 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
-use RuntimeException;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use function defined;
-use function function_exists;
-use function imageistruecolor;
-use function imagepalettetotruecolor;
-use function imagetypes;
-use function imagewebp;
-use function is_file;
-use function preg_match;
-use function sprintf;
 
 /**
- * Class PhpGdConverter
- * Uses the php gd library to generate webp images
- *
- * @author André Schließer <a.schliesser@zeroseven.de>
- * @author Wolfgang Klinger <wk@plan2.net>
+ * Uses the php gd library to generate webp images.
  */
 final class PhpGdConverter extends AbstractConverter
 {
@@ -31,14 +17,14 @@ final class PhpGdConverter extends AbstractConverter
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         if (!$this->gdSupportsWebp()) {
-            throw new RuntimeException(sprintf('File "%s" was not created: GD is not active or does not support webp!', $targetFilePath));
+            throw new \RuntimeException(\sprintf('File "%s" was not created: GD is not active or does not support webp!', $targetFilePath));
         }
 
         $image = $this->getImage($originalFilePath);
-        $result = imagewebp($image, $targetFilePath, $this->getQuality());
+        $result = \imagewebp($image, $targetFilePath, $this->getQuality());
 
-        if (!$result || !@is_file($targetFilePath)) {
-            throw new RuntimeException(sprintf('File "%s" was not created!', $targetFilePath));
+        if (!$result || !@\is_file($targetFilePath)) {
+            throw new \RuntimeException(\sprintf('File "%s" was not created!', $targetFilePath));
         }
     }
 
@@ -56,9 +42,9 @@ final class PhpGdConverter extends AbstractConverter
 
     private function gdSupportsWebp(): bool
     {
-        return function_exists('imagewebp')
-            && defined('IMG_WEBP')
-            && (imagetypes() & IMG_WEBP) === IMG_WEBP;
+        return \function_exists('imagewebp')
+            && \defined('IMG_WEBP')
+            && (\imagetypes() & IMG_WEBP) === IMG_WEBP;
     }
 
     /**
@@ -68,8 +54,8 @@ final class PhpGdConverter extends AbstractConverter
     {
         $image = $this->getGraphicalFunctionsObject()->imageCreateFromFile($originalFilePath);
         // Convert CMYK to RGB
-        if (!imageistruecolor($image)) {
-            imagepalettetotruecolor($image);
+        if (!\imageistruecolor($image)) {
+            \imagepalettetotruecolor($image);
         }
 
         return $image;
@@ -77,7 +63,7 @@ final class PhpGdConverter extends AbstractConverter
 
     private function getQuality(): int
     {
-        preg_match('/quality(\s|=)(\d{1,3})/', $this->parameters, $matches);
+        \preg_match('/quality(\s|=)(\d{1,3})/', $this->parameters, $matches);
 
         if (isset($matches[2]) && (int) $matches[2] > 0) {
             return (int) $matches[2];

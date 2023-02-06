@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
-use RuntimeException;
-
-/**
- * Interface Converter
- */
 interface Converter
 {
     public function __construct(string $parameters);
@@ -16,7 +11,7 @@ interface Converter
     /**
      * Converts a file $originalFilePath to webp in $targetFilePath.
      *
-     * @throws RuntimeException
+     * @throws \RuntimeException
      */
     public function convert(string $originalFilePath, string $targetFilePath): void;
 }

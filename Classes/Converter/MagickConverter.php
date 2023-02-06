@@ -7,14 +7,9 @@ namespace Plan2net\Webp\Converter;
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use function is_file;
-use function sprintf;
 
 /**
- * Class MagickAdapter
- * Uses the builtin TYPO3 graphical functions (imagemagick, graphicsmagick)
- *
- * @author Wolfgang Klinger <wk@plan2.net>
+ * Uses the builtin TYPO3 graphical functions (imagemagick, graphicsmagick).
  */
 final class MagickConverter extends AbstractConverter
 {
@@ -32,8 +27,8 @@ final class MagickConverter extends AbstractConverter
             $parameters
         );
 
-        if (!@is_file($targetFilePath)) {
-            throw new \RuntimeException(sprintf('File "%s" was not created: %s!', $targetFilePath, $result ?: 'maybe missing support for webp?'));
+        if (!@\is_file($targetFilePath)) {
+            throw new \RuntimeException(\sprintf('File "%s" was not created: %s!', $targetFilePath, $result ?: 'maybe missing support for webp?'));
         }
     }
 

@@ -8,24 +8,11 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-/**
- * Class Configuration
- *
- * @author Wolfgang Klinger <wk@plan2.net>
- */
-class Configuration implements SingletonInterface
+final class Configuration implements SingletonInterface
 {
-    /**
-     * @var array
-     */
-    protected static $configuration = [];
+    private static array $configuration = [];
 
-    /**
-     * Returns the whole extension configuration or a specific key
-     *
-     * @return array|string|null
-     */
-    public static function get(?string $key = null)
+    public static function get(?string $key = null): array|string|null
     {
         if (empty(self::$configuration)) {
             try {
