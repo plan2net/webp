@@ -105,7 +105,7 @@ class AfterFileProcessing
             return false;
         }
 
-        if (!WebpService::isSupportedMimeType($processedFile->getOriginalFile()->getMimeType())) {
+        if (!WebpService::isSupportedMimeType($processedFile->getMimeType())) {
             return false;
         }
 
