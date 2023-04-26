@@ -27,6 +27,7 @@ final class Webp
         if ('webp' === $originalFile->getExtension()) {
             return;
         }
+
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 

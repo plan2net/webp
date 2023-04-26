@@ -112,6 +112,10 @@ final class AfterFileProcessing
             return false;
         }
 
+        if ($this->originalFileIsInExcludedDirectory($processedFile->getOriginalFile())) {
+            return false;
+        }
+
         return true;
     }
 
@@ -147,6 +151,23 @@ final class AfterFileProcessing
         }
 
         return 'Local' === $storage->getDriverType() && $storage->isWritable();
+    }
+
+    private function originalFileIsInExcludedDirectory(FileInterface $file): bool
+    {
+        $storageBasePath = $file->getStorage()->getConfiguration()['basePath'];
+        $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
+        $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories')));
+
+        if (!empty($excludeDirectories)) {
+            foreach ($excludeDirectories as $excludedDirectory) {
+                if (str_starts_with($filePath, trim($excludedDirectory))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private function removeProcessedFile(ProcessedFile $processedFile): void

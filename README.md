@@ -1,9 +1,5 @@
 # WebP for TYPO3 CMS
 
-Use version 2.* for TYPO3 CMS LTS 8 and 9 and >= 3.* for TYPO3 CMS >= 10.4
-
-:fire: **If you update from a previous version to 2.0 you have to save the configuration again once!**
-
 ## What does it do?
 
 Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png/gif image in the format
@@ -106,6 +102,14 @@ If you need a more customized behaviour for hiding or showing the generated file
 you can always remove or change the `$GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks']` settings
 (see `ext_localconf.php` for details) in your own extension.
 
+### `exclude_directories`
+
+    # cat=basic; type=string; label=Exclude processing of images from specific directories (separated by semicolon)
+    exclude_directories =
+
+Here you can exclude processing of images from specific directories.
+Example value: `/fileadmin/demo/special;/another-storage/demo/exclusive`
+
 ### `use_system_settings`
 
     # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
@@ -156,6 +160,14 @@ Add these rules to your `server` configuration:
 
 Make sure that there are no other rules that prevent further rules or already apply to the specified image formats and prevent further execution!
 
+You can also add a browser restriction if your audience uses old versions of Safari, etc., so no _webp_ is served to them.
+
+    location ~* ^.+\.(png|gif|jpe?g)$ {
+        if ($http_user_agent !~* (Chrome|Firefox|Edge)) {
+            set $webp_suffix "";
+        }
+        …
+
 ### Apache (.htaccess example)
 
 We assume that module `mod_rewrite.c` is enabled.
@@ -178,6 +190,12 @@ is already part of the TYPO3 htaccess template in
     </IfModule>
 
 Make sure that there are no other rules that prevent further rules or already apply to the specified image formats and prevent further execution!
+
+You can also add a browser restriction if your audience uses old versions of Safari, etc., so no _webp_ is served to them.
+
+    RewriteCond %{HTTP_ACCEPT} image/webp
+    RewriteCond %{HTTP_USER_AGENT} ^.*(Chrome|Firefox|Edge).*$ [NC]
+    …
 
 ## Verify successful webp image generation and delivery
 
@@ -210,6 +228,8 @@ Every problem is logged to the TYPO3 log (since version 2.0), normally found in 
 
 Converted files that are larger than the original are removed automatically (since version 2.1.0)
 and the conversion will not be retried with the same configuration.
+
+If you find that your webp images don't look like the original images (much darker, for example), make sure you have the correct profile set in the system setting `GFX/processor_colorspace` (e.g. `sRGB`). Remember to clean up any processed files after this change.
 
 ## Removing processed files
 
