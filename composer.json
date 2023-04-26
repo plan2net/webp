@@ -29,8 +29,10 @@
   },
   "require": {
     "php": ">=8.1",
-    "ext-gd": "*",
     "typo3/cms-core": "^12.4"
+  },
+  "suggest": {
+    "ext-gd": "Use GD for image processing"
   },
   "autoload": {
     "psr-4": {
