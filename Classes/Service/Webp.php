@@ -106,7 +106,7 @@ final class Webp
                 'configuration' => $configuration,
                 'configuration_hash' => md5($configuration),
             ])
-            ->executeQuery();
+            ->executeStatement();
     }
 
     private function hasFailedAttempt(int $fileId, string $configuration): bool
