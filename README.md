@@ -5,24 +5,24 @@
 Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png/gif image in the format
 
     original.ext.webp
-    
+
 ## What is WebP and why do I want it?
 
 > WebP is a modern image format that provides superior lossless and lossy compression for images on the web. Using WebP, webmasters and web developers can create smaller, richer images that make the web faster.
->  
+>
 >  WebP lossless images are 26% smaller in size compared to PNGs. WebP lossy images are 25-34% smaller than comparable JPEG images at equivalent SSIM quality index.
->  
+>
 >  Lossless WebP supports transparency (also known as alpha channel) at a cost of just 22% additional bytes. For cases when lossy RGB compression is acceptable, lossy WebP also supports transparency, typically providing 3× smaller file sizes compared to PNG.
 
    — source: https://developers.google.com/speed/webp/
 
 ## Installation
 
-Add via composer: 
+Add via composer:
 
     composer require "plan2net/webp"
 
-* Install and activate the extension in the Extension manager 
+* Install and activate the extension in the Extension manager
 * Flush TYPO3 and PHP Cache
 * Clear the processed files in the Install Tool or Maintenance module
 * Add rewrite rules for your webserver (see examples for Apache and nginx below)
@@ -37,7 +37,7 @@ You can test the support of GraphicsMagick with e.g.:
 
 (should return `yes`)
 
-or using ImageMagick with e.g.: 
+or using ImageMagick with e.g.:
 
     convert version | grep webp
 
@@ -49,7 +49,7 @@ These are examples, check your system documentation for further information on h
 
 ![Extension settings](Resources/Public/Documentation/extension_settings.png)
 
-You can set parameters for the conversion in the extension configuration. 
+You can set parameters for the conversion in the extension configuration.
 
 ### `parameters`
 
@@ -81,14 +81,14 @@ higher filesize than the original!
 
     # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy in Webp format; disable to convert images in the _processed_ folder only
     convert_all = 1
-    
+
 Since version `1.1.0` all images in every local and writable storage will be saved as a copy in Webp format by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 
 ### `silent`
 
     # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command
     silent = 1
-    
+
 Since version `2.2.0` you can suppress output (stdout, stderr) from the external converter (Linux only).
 
 ### `hide_webp`
@@ -115,7 +115,7 @@ Example value: `/fileadmin/demo/special;/another-storage/demo/exclusive`
     # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
     use_system_settings = 1
 
-When set (default) the value from `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` is appended 
+When set (default) the value from `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` is appended
 automatically to the configuration options for the `MagickConverter` converter, so you don't need to repeat the settings.
 
 ## Webserver example configuration
@@ -247,7 +247,7 @@ You can get an equal result with using the Apache _mod_pagespeed_ or nginx _ngx_
 
     pagespeed EnableFilters convert_jpeg_to_webp;
     pagespeed EnableFilters convert_to_webp_lossless;
-    
+
 but that requires more knowledge to set up.
 
 ## Drawbacks to keep in mind
@@ -256,7 +256,7 @@ Note that this extension produces an additional load on your server (each proces
 
 ## Inspiration
 
-This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/agentur/)'s _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-) 
+This extension was inspired by [Angela Dudtkowski](https://www.clickstorm.de/agentur/)'s _cs_webp_ extension that has some flaws and got no update since early 2017. Thanks Angela :-)
 
 Thanks to Xavier Perseguers for the _Cloudflare_ hint.
 
