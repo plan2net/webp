@@ -36,35 +36,34 @@ final class Webp
             return;
         }
 
+        $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
+        if (empty($parameters)) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
+        }
+
+        if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
+            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
+        }
+
         $targetFilePath = "{$originalFilePath}.webp";
 
         $converterClass = Configuration::get('converter');
-        $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
-        if (!empty($parameters)) {
-            if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
-            }
 
-            /** @var Converter $converter */
-            $converter = GeneralUtility::makeInstance($converterClass, $parameters);
-            $converter->convert($originalFilePath, $targetFilePath);
-            $fileSizeTargetFile = @\filesize($targetFilePath);
-            if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
-                $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
-            }
-            $processedFile->updateProperties(
-                [
-                    'width' => $originalFile->getProperty('width'),
-                    'height' => $originalFile->getProperty('height'),
-                    'size' => $fileSizeTargetFile,
-                ]
-            );
-
-            return;
+        /** @var Converter $converter */
+        $converter = GeneralUtility::makeInstance($converterClass, $parameters);
+        $converter->convert($originalFilePath, $targetFilePath);
+        $fileSizeTargetFile = @\filesize($targetFilePath);
+        if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
+            $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
+            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
         }
-
-        throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
+        $processedFile->updateProperties(
+            [
+                'width' => $originalFile->getProperty('width'),
+                'height' => $originalFile->getProperty('height'),
+                'size' => $fileSizeTargetFile,
+            ]
+        );
     }
 
     public static function isSupportedMimeType(string $mimeType): bool
