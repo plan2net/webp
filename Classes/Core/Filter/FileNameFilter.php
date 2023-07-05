@@ -18,7 +18,7 @@ final class FileNameFilter
         array $additionalInformation,
         DriverInterface $driverInstance
     ): int {
-        if (\strpos($itemIdentifier, '.webp') === \strlen($itemIdentifier) - 5) {
+        if (str_ends_with($itemIdentifier, '.webp')) {
             return -1;
         }
 
