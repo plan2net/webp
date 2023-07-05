@@ -47,7 +47,7 @@ final class Webp
 
         $targetFilePath = "{$originalFilePath}.webp";
 
-        $converterClass = Configuration::get('converter');
+        $converterClass = (string) Configuration::get('converter');
 
         /** @var Converter $converter */
         $converter = GeneralUtility::makeInstance($converterClass, $parameters);
@@ -78,7 +78,7 @@ final class Webp
 
     private function getParametersForMimeType(string $mimeType): ?string
     {
-        $parameters = \explode('|', Configuration::get('parameters'));
+        $parameters = \explode('|', (string) Configuration::get('parameters'));
         foreach ($parameters as $parameter) {
             $typeAndOptions = \explode('::', $parameter, 2);
             $type = $typeAndOptions[0] ?? null;

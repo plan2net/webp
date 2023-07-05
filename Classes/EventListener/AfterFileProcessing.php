@@ -157,7 +157,7 @@ final class AfterFileProcessing
     {
         $storageBasePath = $file->getStorage()->getConfiguration()['basePath'];
         $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
-        $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories')));
+        $excludeDirectories = array_filter(explode(';', (string) Configuration::get('exclude_directories')));
 
         if (!empty($excludeDirectories)) {
             foreach ($excludeDirectories as $excludedDirectory) {
