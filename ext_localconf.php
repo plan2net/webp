@@ -1,6 +1,4 @@
-<?php
-
-defined('TYPO3') || die;
+<?php defined('TYPO3') || die;
 
 use Plan2net\Webp\Core\Filter\FileNameFilter;
 use Plan2net\Webp\Service\Configuration;
