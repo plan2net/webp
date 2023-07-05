@@ -11,7 +11,7 @@ $EM_CONF['webp'] = [
     'version' => '5.0.1',
     'constraints' => [
         'depends' => [
-            'typo3' => '12.4.0-12.4.99',
+            'typo3' => '11.5.0-12.4.99',
             'php' => '8.1.0-8.99.99',
         ],
         'conflicts' => [
