@@ -28,9 +28,6 @@ final class Webp
             return;
         }
 
-        $processedFile->setName($originalFile->getName() . '.webp');
-        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
-
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         if (!@\is_file($originalFilePath)) {
             return;
@@ -52,11 +49,15 @@ final class Webp
         /** @var Converter $converter */
         $converter = GeneralUtility::makeInstance($converterClass, $parameters);
         $converter->convert($originalFilePath, $targetFilePath);
+
         $fileSizeTargetFile = @\filesize($targetFilePath);
         if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
             $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
             throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
         }
+
+        $processedFile->setName($originalFile->getName() . '.webp');
+        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
         $processedFile->updateProperties(
             [
                 'width' => $originalFile->getProperty('width'),
