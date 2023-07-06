@@ -9,7 +9,8 @@ use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 final class FileNameFilter
 {
     /**
-     * Remove webp files from file lists.
+     * Remove generated webp files from file lists,
+     * i.e. files that end in .suffix.webp, but not .webp solely.
      */
     public static function filterWebpFiles(
         string $itemName,
@@ -18,7 +19,7 @@ final class FileNameFilter
         array $additionalInformation,
         DriverInterface $driverInstance
     ): int {
-        if (\strpos($itemIdentifier, '.webp') === \strlen($itemIdentifier) - 5) {
+        if (preg_match('/\.[^\.]*\.webp$/', $itemIdentifier) === 1) {
             return -1;
         }
 
