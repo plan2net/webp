@@ -19,7 +19,7 @@ final class FileNameFilter
         array $additionalInformation,
         DriverInterface $driverInstance
     ): int {
-        if (preg_match('/\.[^\.]*\.webp$/', $itemIdentifier) === 1) {
+        if (preg_match('/\.[^\.]+\.webp$/', $itemIdentifier) === 1) {
             return -1;
         }
 
