@@ -27,6 +27,10 @@ Add via composer:
 * Clear the processed files in the Install Tool or Maintenance module
 * Add rewrite rules for your webserver (see examples for Apache and nginx below)
 
+## Update
+
+* Save the extension settings at least once (through `Admin Tools > Settings > Extension Configuration > webp`) after an update to save the new default settings in your local configuration
+
 ## Requirements
 
 You can either use the installed Imagemagick or GraphicsMagick you already use for TYPO3 image manipulation if it supports webp (see below) or you can use any other external binary available on your server (e.g. [_cwebp_](https://developers.google.com/speed/webp/docs/cwebp)).

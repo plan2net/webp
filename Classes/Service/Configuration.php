@@ -25,7 +25,7 @@ final class Configuration implements SingletonInterface
 
         if (!empty($key)) {
             if (isset(self::$configuration[$key])) {
-                return (string) self::$configuration[$key];
+                return trim((string) self::$configuration[$key]);
             }
 
             return null;

@@ -8,9 +8,11 @@ convert_all = 1
 silent = 0
 # cat=basic; type=string; label=Supported mime types (comma separated)
 mime_types = image/jpeg,image/png,image/gif
-# cat=basic; type=boolean; label=Hide .webp files in backend file list module
-hide_webp = 1
 # cat=basic; type=string; label=Exclude processing of images from specific directories (separated by semicolon)
 exclude_directories =
 # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
 use_system_settings = 1
+# cat=basic; type=boolean; label=Hide .webp files matching the below pattern in backend file list module
+hide_webp = 1
+# cat=basic; type=string; label=Pattern to filter out files
+filter_pattern = /\.(jpe?g|png|gif)\.webp$/i
