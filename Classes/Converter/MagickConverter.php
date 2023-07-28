@@ -16,7 +16,7 @@ final class MagickConverter extends AbstractConverter
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $parameters = $this->parameters;
-        if (Configuration::get('use_system_settings')) {
+        if ((bool) Configuration::get('use_system_settings')) {
             $parameters .= ' ' . $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'];
             $parameters = trim($parameters);
         }

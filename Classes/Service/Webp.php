@@ -28,43 +28,43 @@ final class Webp
             return;
         }
 
-        $processedFile->setName($originalFile->getName() . '.webp');
-        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
-
         $originalFilePath = $originalFile->getForLocalProcessing(false);
         if (!@\is_file($originalFilePath)) {
             return;
         }
 
-        $targetFilePath = "{$originalFilePath}.webp";
-
-        $converterClass = Configuration::get('converter');
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
-        if (!empty($parameters)) {
-            if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
-            }
-
-            /** @var Converter $converter */
-            $converter = GeneralUtility::makeInstance($converterClass, $parameters);
-            $converter->convert($originalFilePath, $targetFilePath);
-            $fileSizeTargetFile = @\filesize($targetFilePath);
-            if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
-                $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
-            }
-            $processedFile->updateProperties(
-                [
-                    'width' => $originalFile->getProperty('width'),
-                    'height' => $originalFile->getProperty('height'),
-                    'size' => $fileSizeTargetFile,
-                ]
-            );
-
-            return;
+        if (empty($parameters)) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
         }
 
-        throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
+        if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
+            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
+        }
+
+        $targetFilePath = "{$originalFilePath}.webp";
+
+        $converterClass = (string) Configuration::get('converter');
+
+        /** @var Converter $converter */
+        $converter = GeneralUtility::makeInstance($converterClass, $parameters);
+        $converter->convert($originalFilePath, $targetFilePath);
+
+        $fileSizeTargetFile = @\filesize($targetFilePath);
+        if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
+            $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
+            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
+        }
+
+        $processedFile->setName($originalFile->getName() . '.webp');
+        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
+        $processedFile->updateProperties(
+            [
+                'width' => $originalFile->getProperty('width'),
+                'height' => $originalFile->getProperty('height'),
+                'size' => $fileSizeTargetFile,
+            ]
+        );
     }
 
     public static function isSupportedMimeType(string $mimeType): bool
@@ -79,7 +79,7 @@ final class Webp
 
     private function getParametersForMimeType(string $mimeType): ?string
     {
-        $parameters = \explode('|', Configuration::get('parameters'));
+        $parameters = \explode('|', (string) Configuration::get('parameters'));
         foreach ($parameters as $parameter) {
             $typeAndOptions = \explode('::', $parameter, 2);
             $type = $typeAndOptions[0] ?? null;
