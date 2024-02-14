@@ -116,11 +116,12 @@ Example value: `/fileadmin/demo/special;/another-storage/demo/exclusive`
 
 ### `use_system_settings`
 
-    # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand" setting for the MagickConverter converter
+    # cat=basic; type=boolean; label=Use the system GFX "processor_stripColorProfileCommand"/"processor_stripColorProfileParameters" setting for the MagickConverter converter
     use_system_settings = 1
 
-When set (default) the value from `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` is appended 
-automatically to the configuration options for the `MagickConverter` converter, so you don't need to repeat the settings.
+When set (default) the value from `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` or
+`$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileParameters']` is appended automatically to the
+configuration options for the `MagickConverter` converter, so you don't need to repeat the settings.
 
 ## Webserver example configuration
 
