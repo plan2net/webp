@@ -168,7 +168,7 @@ is already part of the TYPO3 htaccess template in
 `typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`
 
     RewriteCond %{HTTP_ACCEPT} image/webp
-    RewriteCond %{REQUEST_FILENAME} (.*)\.(png|gif|jpe?g)$
+    RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
     RewriteCond %{REQUEST_FILENAME}\.webp -f
     RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
 
