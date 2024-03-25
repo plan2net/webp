@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Converter;
 
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
+use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -17,7 +18,7 @@ final class MagickConverter extends AbstractConverter
     {
         $parameters = $this->parameters;
         if (Configuration::get('use_system_settings')) {
-            $parameters .= ' ' . $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'];
+            $parameters .= ' ' . $this->parseStripColorProfileCommand();
             $parameters = trim($parameters);
         }
 
@@ -42,5 +43,23 @@ final class MagickConverter extends AbstractConverter
         }
 
         return $graphicalFunctionsObject;
+    }
+
+    /**
+     * @see https://typo3.org/security/advisory/typo3-core-sa-2024-002
+     */
+    private function parseStripColorProfileCommand(): string
+    {
+        if (is_string($GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'] ?? null)) {
+            return $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'];
+        }
+
+        return implode(
+                ' ',
+                array_map(
+                    CommandUtility::escapeShellArgument(...),
+                    $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileParameters'] ?? [],
+                ),
+            );
     }
 }
