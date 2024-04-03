@@ -59,7 +59,7 @@ final class MagickConverter extends AbstractConverter
             implode(
                 ' ',
                 array_map(
-                    CommandUtility::escapeShellArgument(...),
+                    \Closure::fromCallable([CommandUtility::class, 'escapeShellArgument']),
                     $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileParameters'] ?? [],
                 ),
             );
