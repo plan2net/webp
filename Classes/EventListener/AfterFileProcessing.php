@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\EventListener;
 
-use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
-use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
+use Plan2net\Webp\Service\CreateWebp;
 use Plan2net\Webp\Service\Webp as WebpService;
+use Symfony\Component\Messenger\MessageBusInterface;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
 use TYPO3\CMS\Core\Resource\File;
@@ -18,6 +18,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class AfterFileProcessing
 {
+    public function __construct(
+        private readonly MessageBusInterface $bus
+    ) {
+    }
+
     public function __invoke(AfterFileProcessingEvent $event): void
     {
         $this->processFile(
@@ -65,29 +70,8 @@ final class AfterFileProcessing
                 return;
             }
 
-            $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
-            try {
-                /** @var WebpService $service */
-                $service = GeneralUtility::makeInstance(WebpService::class);
-                $service->process($processedFile, $processedFileWebp);
-
-                // This will add or update
-                $processedFileRepository->add($processedFileWebp);
-            } catch (WillNotRetryWithConfigurationException $e) {
-                $logger->notice($e->getMessage());
-            } catch (ConvertedFileLargerThanOriginalException $e) {
-                $logger->warning($e->getMessage());
-                $this->removeProcessedFile($processedFileWebp);
-            } catch (\Exception $e) {
-                $logger->error(
-                    \sprintf(
-                        'Failed to convert image "%s" to webp with: %s',
-                        $processedFile->getIdentifier(),
-                        $e->getMessage()
-                    )
-                );
-                $this->removeProcessedFile($processedFileWebp);
-            }
+            // If not, queue the processing instructions
+            $this->bus->dispatch(new CreateWebp($processedFile->getCombinedIdentifier(), $file->getCombinedIdentifier(), $taskType, $configuration));
         }
     }
 

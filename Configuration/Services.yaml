@@ -4,3 +4,10 @@ services:
       - name: event.listener
         identifier: 'webp.after-file-processing'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent
+    autowire: true
+  Plan2net\Webp\Service\CreateWebpHandler:
+    tags:
+      - name: 'messenger.message_handler'
+    autowire: true
+  Plan2net\Webp\Service\Webp:
+    autowire: true

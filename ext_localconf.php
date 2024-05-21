@@ -2,6 +2,7 @@
 
 use Plan2net\Webp\Core\Filter\FileNameFilter;
 use Plan2net\Webp\Service\Configuration;
+use Plan2net\Webp\Service\CreateWebp;
 
 defined('TYPO3') || exit;
 
@@ -14,3 +15,6 @@ defined('TYPO3') || exit;
         ];
     }
 })();
+
+// Set CreateWebp to asynchronous transport via doctrine
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['messenger']['routing'][CreateWebp::class] = 'doctrine';
