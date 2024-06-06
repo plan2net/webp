@@ -53,7 +53,7 @@ final class MagickConverter extends AbstractConverter
     /**
      * @see https://typo3.org/security/advisory/typo3-core-sa-2024-002
      */
-    private function parseStripColorProfileCommand(): mixed
+    private function parseStripColorProfileCommand(): string
     {
         return $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand'] ??
             implode(
