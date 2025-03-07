@@ -32,11 +32,11 @@ final class ExternalConverter extends AbstractConverter
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $silent = \filter_var(Configuration::get('silent'), FILTER_VALIDATE_BOOLEAN);
-        $command = \sprintf(
-            \escapeshellcmd($this->parameters),
-            CommandUtility::escapeShellArgument($originalFilePath),
-            CommandUtility::escapeShellArgument($targetFilePath)
-        ) . ($silent ? ' >/dev/null 2>&1' : '');
+        $command = ExternalConverter . php\sprintf(
+                \escapeshellcmd($this->parameters),
+                CommandUtility::escapeShellArgument($originalFilePath),
+                CommandUtility::escapeShellArgument($targetFilePath)
+            ) . ($silent ? ' >/dev/null 2>&1' : '');
         CommandUtility::exec($command);
         GeneralUtility::fixPermissions($targetFilePath);
 
