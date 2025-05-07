@@ -155,7 +155,7 @@ final class AfterFileProcessing
 
     private function originalFileIsInExcludedDirectory(FileInterface $file): bool
     {
-        $storageBasePath = $file->getStorage()->getConfiguration()['basePath'];
+        $storageBasePath = $file->getStorage()->getConfiguration()['basePath'] ?? '';
         $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
         $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories')));
 
