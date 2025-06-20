@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Converter;
 
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Imaging\GifBuilder;
 
 /**
  * Uses the php gd library to generate webp images.
@@ -28,13 +29,13 @@ final class PhpGdConverter extends AbstractConverter
         }
     }
 
-    private function getGraphicalFunctionsObject(): GraphicalFunctions
+    private function getGraphicalFunctionsObject(): GifBuilder
     {
         static $graphicalFunctionsObject = null;
 
         if (null === $graphicalFunctionsObject) {
-            /** @var GraphicalFunctions $graphicalFunctionsObject */
-            $graphicalFunctionsObject = GeneralUtility::makeInstance(GraphicalFunctions::class);
+            /** @var GifBuilder $graphicalFunctionsObject */
+            $graphicalFunctionsObject = GeneralUtility::makeInstance(GifBuilder::class);
         }
 
         return $graphicalFunctionsObject;
@@ -48,7 +49,7 @@ final class PhpGdConverter extends AbstractConverter
     }
 
     /**
-     * @return resource
+     * @return \GdImage
      */
     private function getImage(string $originalFilePath)
     {
