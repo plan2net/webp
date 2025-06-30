@@ -18,7 +18,7 @@ final class FileNameFilter
         string $itemIdentifier,
         string $parentIdentifier = '',
         array $additionalInformation = [],
-        ?DriverInterface $driverInstance = null
+        ?DriverInterface $driverInstance = null,
     ): int {
         $pattern = self::getPattern();
         if (null !== $pattern && 1 === \preg_match($pattern, $itemIdentifier)) {

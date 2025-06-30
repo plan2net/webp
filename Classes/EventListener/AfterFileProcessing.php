@@ -37,7 +37,7 @@ final class AfterFileProcessing
         ProcessedFile $processedFile,
         FileInterface $file,
         string $taskType,
-        array $configuration
+        array $configuration,
     ): void {
         if ($this->shouldProcess($taskType, $processedFile)) {
             // Check if we are processing the original file

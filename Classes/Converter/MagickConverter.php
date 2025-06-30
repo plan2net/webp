@@ -55,11 +55,11 @@ final class MagickConverter extends AbstractConverter
         }
 
         return implode(
-                ' ',
-                array_map(
-                    CommandUtility::escapeShellArgument(...),
-                    $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileParameters'] ?? [],
-                ),
-            );
+            ' ',
+            array_map(
+                CommandUtility::escapeShellArgument(...),
+                $GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileParameters'] ?? [],
+            ),
+        );
     }
 }

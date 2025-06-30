@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
-use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Imaging\GifBuilder;
 
@@ -64,7 +63,7 @@ final class PhpGdConverter extends AbstractConverter
 
     private function getQuality(): int
     {
-        \preg_match('/quality(\s|=)(\d{1,3})/', $this->parameters, $matches);
+        \preg_match('/quality(\\s|=)(\\d{1,3})/', $this->parameters, $matches);
 
         if (isset($matches[2]) && (int) $matches[2] > 0) {
             return (int) $matches[2];
