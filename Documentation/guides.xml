@@ -7,5 +7,5 @@
                project-repository="https://github.com/plan2net/webp"
                project-issues="https://github.com/plan2net/webp/issues" edit-on-github-branch="latest"
                edit-on-github="plan2net/webp" typo3-core-preferred="stable"/>
-    <project title="WebP" release="13.0.0" version="1.0" copyright="since 2018"/>
+    <project title="WebP" release="13.0.1" version="1.0" copyright="since 2018"/>
 </guides>
