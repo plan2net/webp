@@ -24,9 +24,6 @@ Extension Name
 	:Keywords:
 		webp,jpg,jpeg,image,performance
 
-	:Copyright:
-		2019
-
 	:Author:
 		Wolfgang Klinger
 

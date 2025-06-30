@@ -1,6 +1,3 @@
-.. include:: ../Includes.txt
-
-
 .. _introduction:
 
 Introduction
@@ -53,4 +50,4 @@ Inspiration
 This extension was inspired by Angela Dudtkowski's `cs_webp <https://extensions.typo3.org/extension/cs_webp/>`_ extension that has some flaws
 and got no update since early 2017.
 
-Thanks Angela :-) 
+Thanks Angela :-)

@@ -1,6 +1,3 @@
-.. include:: ../Includes.txt
-
-
 .. _admin-manual:
 
 Administration Manual
@@ -13,7 +10,7 @@ Target group: **Administrators**
 Requirements
 ------------
 
-Your version of ImageMagick or GraphicsMagick on the server needs to support WebP. 
+Your version of ImageMagick or GraphicsMagick on the server needs to support WebP.
 
 How to test
 ^^^^^^^^^^^
@@ -41,9 +38,9 @@ This should return a list of supported formats including WebP.
 Installation
 ------------
 
-Add via composer.json: 
+Add via composer.json:
 
-.. code-block:: javascript
+.. code-block:: bash
 
   composer require "plan2net/webp"
 
@@ -58,7 +55,7 @@ Configuration
 Extension manager configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can set parameters for the conversion in the extension configuration. 
+You can set parameters for the conversion in the extension configuration.
 
 .. code-block:: none
 
@@ -125,11 +122,11 @@ Add the following lines to the *.htaccess* file of the document root:
     RewriteRule ^(fileadmin/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
     RewriteRule ^(other-storage/.+)\.(png|jpg|jpeg)$ $1.$2.webp [T=image/webp,E=accept:1]
   </IfModule>
-  
+
   <IfModule mod_headers.c>
     Header append Vary Accept env=REDIRECT_accept
   </IfModule>
-  
+
   AddType image/webp .webp
 
 
