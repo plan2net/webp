@@ -4,6 +4,6 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter\Exception;
 
-class ConvertedFileLargerThanOriginalException extends \Exception
+final class ConvertedFileLargerThanOriginalException extends \Exception
 {
 }
