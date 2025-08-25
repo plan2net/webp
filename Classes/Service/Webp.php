@@ -119,8 +119,10 @@ final class Webp
                 ->from('tx_webp_failed')
                 ->where(
                     $queryBuilder->expr()->eq('file_id', $fileId),
-                    $queryBuilder->expr()->eq('configuration_hash',
-                        $queryBuilder->createNamedParameter(md5($configuration)))
+                    $queryBuilder->expr()->eq(
+                        'configuration_hash',
+                        $queryBuilder->createNamedParameter(md5($configuration))
+                    )
                 )
                 ->executeQuery()
                 ->fetchOne();

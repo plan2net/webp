@@ -7,6 +7,7 @@ namespace Plan2net\Webp\EventListener;
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
+use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\Webp as WebpService;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
@@ -15,9 +16,20 @@ use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 
-final class AfterFileProcessing
+final class AfterFileProcessing implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
+    public function __construct(
+        private readonly PathMatcher $pathMatcher,
+        private readonly WebpService $webpService,
+        private readonly ProcessedFileRepository $processedFileRepository,
+    ) {
+    }
+
     public function __invoke(AfterFileProcessingEvent $event): void
     {
         $this->processFile(
@@ -50,10 +62,8 @@ final class AfterFileProcessing
                 $configuration = [];
             }
 
-            /** @var ProcessedFileRepository $processedFileRepository */
-            $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
             // This will either return an existing file or create a new one
-            $processedFileWebp = $processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
+            $processedFileWebp = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $file,
                 $taskType,
                 $configuration + [
@@ -65,21 +75,18 @@ final class AfterFileProcessing
                 return;
             }
 
-            $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
             try {
-                /** @var WebpService $service */
-                $service = GeneralUtility::makeInstance(WebpService::class);
-                $service->process($processedFile, $processedFileWebp);
+                $this->webpService->process($processedFile, $processedFileWebp);
 
                 // This will add or update
-                $processedFileRepository->add($processedFileWebp);
+                $this->processedFileRepository->add($processedFileWebp);
             } catch (WillNotRetryWithConfigurationException $e) {
-                $logger->notice($e->getMessage());
+                $this->logger->notice($e->getMessage());
             } catch (ConvertedFileLargerThanOriginalException $e) {
-                $logger->warning($e->getMessage());
+                $this->logger->warning($e->getMessage());
                 $this->removeProcessedFile($processedFileWebp);
             } catch (\Exception $e) {
-                $logger->error(
+                $this->logger->error(
                     \sprintf(
                         'Failed to convert image "%s" to webp with: %s',
                         $processedFile->getIdentifier(),
@@ -138,7 +145,7 @@ final class AfterFileProcessing
             return false;
         }
 
-        return str_starts_with($file->getIdentifier(), $processingFolder->getIdentifier());
+        return $this->pathMatcher->matches($file->getIdentifier(), $processingFolder->getIdentifier());
     }
 
     private function isStorageLocalAndWritable(ProcessedFile $file): bool
@@ -157,17 +164,10 @@ final class AfterFileProcessing
     {
         $storageBasePath = $file->getStorage()->getConfiguration()['basePath'] ?? '';
         $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
-        $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories')));
 
-        if (!empty($excludeDirectories)) {
-            foreach ($excludeDirectories as $excludedDirectory) {
-                if (str_starts_with($filePath, trim($excludedDirectory))) {
-                    return true;
-                }
-            }
-        }
+        $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories') ?? ''));
 
-        return false;
+        return $this->pathMatcher->matchesAny($filePath, $excludeDirectories);
     }
 
     private function removeProcessedFile(ProcessedFile $processedFile): void
@@ -176,7 +176,8 @@ final class AfterFileProcessing
             $processedFile->delete(true);
         } catch (\Exception $e) {
             $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
-            $logger->error(\sprintf('Failed to remove processed file "%s": %s',
+            $logger->error(\sprintf(
+                'Failed to remove processed file "%s": %s',
                 $processedFile->getIdentifier(),
                 $e->getMessage()
             ));

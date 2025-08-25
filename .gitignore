@@ -3,3 +3,5 @@
 /php-cs-fixer.json
 /composer.lock
 /vendor
+/.phpunit.cache
+/.php-cs-fixer.cache

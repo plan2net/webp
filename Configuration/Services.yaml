@@ -1,6 +1,19 @@
 services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
   Plan2net\Webp\EventListener\AfterFileProcessing:
     tags:
       - name: event.listener
         identifier: 'webp.after-file-processing'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent
+        method: '__invoke'
+        priority: 100
+
+  Plan2net\Webp\Service\Webp:
+    public: true
+
+  Plan2net\Webp\Service\PathMatcher:
+    public: true
