@@ -153,7 +153,12 @@ final class AfterFileProcessing implements LoggerAwareInterface
         $storage = $file->getStorage();
 
         // Ignore files in fallback storage (e.g. files from extensions)
-        if (null === $storage || 0 === $storage->getStorageRecord()['uid']) {
+        if (null === $storage) {
+            return false;
+        }
+        
+        $storageRecord = $storage->getStorageRecord();
+        if (!is_array($storageRecord) || !isset($storageRecord['uid']) || 0 === $storageRecord['uid']) {
             return false;
         }
 

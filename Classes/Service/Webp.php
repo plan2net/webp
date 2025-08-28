@@ -39,6 +39,10 @@ final class Webp
         $targetFilePath = "{$originalFilePath}.webp";
 
         $converterClass = Configuration::get('converter');
+        if (empty($converterClass)) {
+            throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
+        }
+        
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
             if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
@@ -79,7 +83,7 @@ final class Webp
 
     private function getParametersForMimeType(string $mimeType): ?string
     {
-        $parameters = \explode('|', Configuration::get('parameters'));
+        $parameters = \explode('|', Configuration::get('parameters') ?? '');
         foreach ($parameters as $parameter) {
             $typeAndOptions = \explode('::', $parameter, 2);
             $type = $typeAndOptions[0] ?? null;
