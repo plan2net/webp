@@ -175,9 +175,10 @@ You can also add a browser restriction if your audience uses old versions of Saf
 
 ### Apache (.htaccess example)
 
-We assume that module `mod_rewrite.c` is enabled.
+We assume that module `mod_rewrite.c` is enabled and Apache associates the MIME type `image/web` with file extension `.webp`.
 
     RewriteEngine On
+    # This directive is part of TYPO3's default root .htaccess configuration
     AddType image/webp .webp
 
 is already part of the TYPO3 htaccess template in
