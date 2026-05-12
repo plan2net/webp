@@ -16,6 +16,12 @@ Adds an automagically created _WebP_ copy for every processed jpg/jpeg/png/gif i
 
    — source: https://developers.google.com/speed/webp/
 
+## TYPO3 14 compatibility
+
+This extension supports TYPO3 v12, v13, and v14 from a single code path.
+
+TYPO3 v14 introduced native webp support via `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imageFileConversionFormats']`. That core mechanism converts processed image *output* to webp — the processed file's extension is `.webp` and the URL changes accordingly. This extension solves a different problem: it produces sibling `original.jpg.webp` files served via webserver content negotiation, so the URL stays the same and non-webp browsers transparently fall back to the original format. Use the core mechanism when you can change URLs; use this extension when you can't.
+
 ## Installation
 
 Add via composer: 

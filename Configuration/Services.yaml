@@ -17,3 +17,5 @@ services:
 
   Plan2net\Webp\Service\PathMatcher:
     public: true
+
+  Plan2net\Webp\Service\ProcessedFileWriter: ~

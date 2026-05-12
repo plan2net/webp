@@ -8,16 +8,18 @@ use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
+use Plan2net\Webp\Service\ProcessedFileWriter;
 use Plan2net\Webp\Service\Webp as WebpService;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
+use TYPO3\CMS\Core\Resource\FileReference;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use Psr\Log\LoggerAwareInterface;
-use Psr\Log\LoggerAwareTrait;
 
 final class AfterFileProcessing implements LoggerAwareInterface
 {
@@ -27,6 +29,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         private readonly PathMatcher $pathMatcher,
         private readonly WebpService $webpService,
         private readonly ProcessedFileRepository $processedFileRepository,
+        private readonly ProcessedFileWriter $processedFileWriter,
     ) {
     }
 
@@ -62,9 +65,18 @@ final class AfterFileProcessing implements LoggerAwareInterface
                 $configuration = [];
             }
 
+            // Normalize FileReference -> File for the repository lookup (mirrors
+            // FileProcessingService::processFile in core). This satisfies v14's
+            // narrowed File parameter and also fixes a latent v12/v13 bug where
+            // a FileReference UID would be looked up against sys_file_processedfile.
+            $originalFile = $file instanceof FileReference ? $file->getOriginalFile() : $file;
+            if (!$originalFile instanceof File) {
+                return;
+            }
+
             // This will either return an existing file or create a new one
             $processedFileWebp = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
-                $file,
+                $originalFile,
                 $taskType,
                 $configuration + [
                     'webp' => true,
@@ -78,8 +90,12 @@ final class AfterFileProcessing implements LoggerAwareInterface
             try {
                 $this->webpService->process($processedFile, $processedFileWebp);
 
-                // This will add or update
-                $this->processedFileRepository->add($processedFileWebp);
+                // This will add or update; the writer hides the v14 signature change.
+                $this->processedFileWriter->add(
+                    $processedFileWebp,
+                    $taskType,
+                    $configuration + ['webp' => true],
+                );
             } catch (WillNotRetryWithConfigurationException $e) {
                 $this->logger->notice($e->getMessage());
             } catch (ConvertedFileLargerThanOriginalException $e) {
@@ -156,7 +172,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         if (null === $storage) {
             return false;
         }
-        
+
         $storageRecord = $storage->getStorageRecord();
         if (!is_array($storageRecord) || !isset($storageRecord['uid']) || 0 === $storageRecord['uid']) {
             return false;

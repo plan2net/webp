@@ -8,10 +8,10 @@ $EM_CONF['webp'] = [
     'author_email' => 'wk@plan2.net',
     'state' => 'stable',
     'author_company' => 'plan2net GmbH',
-    'version' => '13.0.1',
+    'version' => '14.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '12.4.0-13.9.99',
+            'typo3' => '12.4.0-14.99.99',
         ],
         'conflicts' => [
         ],
