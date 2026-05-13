@@ -12,6 +12,7 @@ use Plan2net\Webp\Service\ProcessedFileWriter;
 use Plan2net\Webp\Service\Webp as WebpService;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
 use TYPO3\CMS\Core\Resource\File;
@@ -21,6 +22,7 @@ use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
+#[AsEventListener('webp.after-file-processing')]
 final class AfterFileProcessing implements LoggerAwareInterface
 {
     use LoggerAwareTrait;

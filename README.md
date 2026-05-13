@@ -105,6 +105,8 @@ Only source files whose mime type is in this comma-separated list are considered
     
 Since version `1.1.0` all images in every local and writable storage will be saved as a copy in Webp format by default (instead of just images modified by TYPO3 in the storage's processed folder). If you want to revert to the previous behaviour, set this flag to `false` (disable the checkbox).
 
+Since version `14.0.0` the extension also keeps these source-folder siblings in sync with TYPO3's FAL operations: moving an image moves its `.webp` to the new folder, deleting it removes the `.webp`, and replacing it drops the now-stale `.webp` so the next render produces a fresh one. When a storage has a recycler, the `.webp` follows the file into the recycler instead of being deleted, so restoring keeps the pair intact. No configuration needed.
+
 ### `silent`
 
     # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command

@@ -9,8 +9,32 @@ services:
       - name: event.listener
         identifier: 'webp.after-file-processing'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent
-        method: '__invoke'
-        priority: 100
+
+  Plan2net\Webp\Service\WebpSiblingFile: ~
+
+  Plan2net\Webp\EventListener\BeforeFileMoved:
+    tags:
+      - name: event.listener
+        identifier: 'webp.before-file-moved'
+        event: TYPO3\CMS\Core\Resource\Event\BeforeFileMovedEvent
+
+  Plan2net\Webp\EventListener\AfterFileMoved:
+    tags:
+      - name: event.listener
+        identifier: 'webp.after-file-moved'
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileMovedEvent
+
+  Plan2net\Webp\EventListener\AfterFileDeleted:
+    tags:
+      - name: event.listener
+        identifier: 'webp.after-file-deleted'
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileDeletedEvent
+
+  Plan2net\Webp\EventListener\AfterFileReplaced:
+    tags:
+      - name: event.listener
+        identifier: 'webp.after-file-replaced'
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileReplacedEvent
 
   Plan2net\Webp\Service\Webp:
     public: true
