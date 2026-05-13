@@ -1,0 +1,71 @@
+name: Publish to TER
+
+on:
+  release:
+    # 'released' (vs. 'published') skips prereleases and fires when a
+    # prerelease is promoted to a full release — gives a window to fix
+    # bad release notes or version numbers before TER publishes.
+    types: [released]
+
+jobs:
+  publish:
+    name: Publish to TER
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get release info
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          REPO_FULL_NAME: ${{ github.repository }}
+        run: |
+          version="$RELEASE_TAG"
+          if ! [[ "$version" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+            echo "Tag does not match semver format: $version"
+            exit 1
+          fi
+          echo "TER_VERSION=$version" >> "$GITHUB_ENV"
+
+          body="$RELEASE_BODY"
+          if [[ -z "${body//[[:space:]]/}" ]]; then
+            echo "TER_COMMENT=Release $version" >> "$GITHUB_ENV"
+          else
+            # Convert GitHub markdown to plain text for TER display:
+            # - Strip ## headings but keep them as section titles with blank line before
+            # - Remove bold markers, inline code backticks, and markdown links
+            # - Replace list dashes with bullets, drop "Full Changelog" line
+            plain=$(echo "$body" \
+              | sed '/^## /{s/^## //;s/^/\n/;}' \
+              | sed '/^### /{s/^### //;s/^/\n/;}' \
+              | sed '/^!\[.*\](.*)/d' \
+              | sed 's/\*\*\([^*]*\)\*\*/\1/g' \
+              | sed 's/\*\([^*]*\)\*/\1/g' \
+              | sed 's/\[\([^]]*\)\]([^)]*)/\1/g' \
+              | sed 's/^- /• /g' \
+              | sed 's/`\([^`]*\)`/\1/g' \
+              | sed '/^Full Changelog:/d' \
+              | cat -s)
+            plain=$(printf '%s\n\nFull release notes: https://github.com/%s/releases/tag/%s' "$plain" "$REPO_FULL_NAME" "$version")
+            delimiter="TER_COMMENT_$(date +%s)_$RANDOM"
+            {
+              echo "TER_COMMENT<<$delimiter"
+              echo "$plain"
+              echo "$delimiter"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install Tailor
+        run: composer global require typo3/tailor --no-interaction
+
+      - name: Publish to TER
+        run: php ~/.composer/vendor/bin/tailor ter:publish --comment "$TER_COMMENT" "$TER_VERSION" webp
+        env:
+          TYPO3_API_TOKEN: ${{ secrets.TYPO3_API_TOKEN }}
