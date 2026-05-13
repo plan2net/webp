@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
-use Doctrine\DBAL\Exception;
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
-use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -18,6 +16,7 @@ final class Webp
 {
     public function __construct(
         private readonly Configuration $configuration,
+        private readonly FailedAttemptsRepository $failedAttempts,
     ) {
     }
 
@@ -49,31 +48,30 @@ final class Webp
         }
 
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
-        if (!empty($parameters)) {
-            if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {
-                throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
-            }
-
-            /** @var Converter $converter */
-            $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
-            $converter->convert($originalFilePath, $targetFilePath);
-            $fileSizeTargetFile = @\filesize($targetFilePath);
-            if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
-                $this->saveFailedAttempt((int) $originalFile->getUid(), $parameters);
-                throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
-            }
-            $processedFile->updateProperties(
-                [
-                    'width' => $originalFile->getProperty('width'),
-                    'height' => $originalFile->getProperty('height'),
-                    'size' => $fileSizeTargetFile,
-                ]
-            );
-
-            return;
+        if (empty($parameters)) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
         }
 
-        throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
+        $fileUid = (int) $originalFile->getUid();
+        if ($this->failedAttempts->wasAttempted($fileUid, $parameters)) {
+            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
+        }
+
+        /** @var Converter $converter */
+        $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
+        $converter->convert($originalFilePath, $targetFilePath);
+
+        $fileSizeTargetFile = @\filesize($targetFilePath);
+        if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
+            $this->failedAttempts->record($fileUid, $parameters);
+            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
+        }
+
+        $processedFile->updateProperties([
+            'width' => $originalFile->getProperty('width'),
+            'height' => $originalFile->getProperty('height'),
+            'size' => $fileSizeTargetFile,
+        ]);
     }
 
     private function getParametersForMimeType(string $mimeType): ?string
@@ -93,40 +91,5 @@ final class Webp
         }
 
         return null;
-    }
-
-    private function saveFailedAttempt(int $fileId, string $configuration): void
-    {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('tx_webp_failed');
-        $queryBuilder->insert('tx_webp_failed')
-            ->values([
-                'file_id' => $fileId,
-                'configuration' => $configuration,
-                'configuration_hash' => md5($configuration),
-            ])
-            ->executeStatement();
-    }
-
-    private function hasFailedAttempt(int $fileId, string $configuration): bool
-    {
-        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-            ->getQueryBuilderForTable('tx_webp_failed');
-
-        try {
-            return (bool) $queryBuilder->count('uid')
-                ->from('tx_webp_failed')
-                ->where(
-                    $queryBuilder->expr()->eq('file_id', $fileId),
-                    $queryBuilder->expr()->eq(
-                        'configuration_hash',
-                        $queryBuilder->createNamedParameter(md5($configuration))
-                    )
-                )
-                ->executeQuery()
-                ->fetchOne();
-        } catch (Exception $e) {
-            return false;
-        }
     }
 }

@@ -147,6 +147,12 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         self::assertSame(1, $this->countFailedRows((int) $file->getUid()));
         self::assertFileDoesNotExist($processed->getForLocalProcessing(false) . '.webp');
         self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+
+        // Second invocation: wasAttempted() must return true and short-circuit
+        // before record() is called again, otherwise the failed-row count would grow.
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(1, $this->countFailedRows((int) $file->getUid()), 'wasAttempted() must short-circuit; no duplicate insert');
     }
 
     protected function setUp(): void
