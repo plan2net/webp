@@ -28,18 +28,6 @@ final class PhpGdConverter extends AbstractConverter
         }
     }
 
-    private function getGraphicalFunctionsObject(): GifBuilder
-    {
-        static $graphicalFunctionsObject = null;
-
-        if (null === $graphicalFunctionsObject) {
-            /** @var GifBuilder $graphicalFunctionsObject */
-            $graphicalFunctionsObject = GeneralUtility::makeInstance(GifBuilder::class);
-        }
-
-        return $graphicalFunctionsObject;
-    }
-
     private function gdSupportsWebp(): bool
     {
         return \function_exists('imagewebp')
@@ -52,7 +40,7 @@ final class PhpGdConverter extends AbstractConverter
      */
     private function getImage(string $originalFilePath)
     {
-        $image = $this->getGraphicalFunctionsObject()->imageCreateFromFile($originalFilePath);
+        $image = GeneralUtility::makeInstance(GifBuilder::class)->imageCreateFromFile($originalFilePath);
         // Convert CMYK to RGB
         if (!\imageistruecolor($image)) {
             \imagepalettetotruecolor($image);

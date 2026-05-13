@@ -21,7 +21,7 @@ final class MagickConverter extends AbstractConverter
             $parameters = trim($parameters);
         }
 
-        $result = $this->getGraphicalFunctionsObject()->imageMagickExec(
+        $result = GeneralUtility::makeInstance(GraphicalFunctions::class)->imageMagickExec(
             $originalFilePath,
             $targetFilePath,
             $parameters
@@ -30,18 +30,6 @@ final class MagickConverter extends AbstractConverter
         if (!@\is_file($targetFilePath)) {
             throw new \RuntimeException(\sprintf('File "%s" was not created: %s!', $targetFilePath, $result ?: 'maybe missing support for webp?'));
         }
-    }
-
-    private function getGraphicalFunctionsObject(): GraphicalFunctions
-    {
-        static $graphicalFunctionsObject = null;
-
-        if (null === $graphicalFunctionsObject) {
-            /** @var GraphicalFunctions $graphicalFunctionsObject */
-            $graphicalFunctionsObject = GeneralUtility::makeInstance(GraphicalFunctions::class);
-        }
-
-        return $graphicalFunctionsObject;
     }
 
     /**
