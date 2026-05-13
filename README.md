@@ -64,8 +64,10 @@ You can set parameters for the conversion in the extension configuration.
 ### `parameters`
 
 ```
-parameters = image/jpeg:-quality 85 -define webp:lossless=false|image/png:-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
+parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
 ```
+
+Each entry uses `mime/type::params` separated by `|`. The `::` is significant — a single colon does not match the per-mime-type parser and silently falls through to the fallback branch.
 
 You find a list of possible options here:
 
@@ -86,6 +88,13 @@ https://developers.google.com/speed/webp/docs/cwebp
 Try to set a higher value for `quality` first if the image does not fit your expectations,
 before trying to use `webp:lossless=true`, as this could even lead to a
 higher filesize than the original!
+
+### `mime_types`
+
+    # cat=basic; type=string; label=Supported mime types (comma separated)
+    mime_types = image/jpeg,image/png,image/gif
+
+Only source files whose mime type is in this comma-separated list are considered for conversion.
 
 ### `convert_all`
 
@@ -111,6 +120,13 @@ Since version `2.2.0` you can suppress output (stdout, stderr) from the external
 If you need a more customized behaviour for hiding or showing the generated files (e.g. for a specific BE user group),
 you can always remove or change the `$GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks']` settings
 (see `ext_localconf.php` for details) in your own extension.
+
+### `filter_pattern`
+
+    # cat=basic; type=string; label=Pattern to filter out files
+    filter_pattern = /\.(jpe?g|png|gif)\.webp$/i
+
+PCRE pattern matched against the file identifier when `hide_webp` is enabled. The default matches the sibling-file naming this extension produces (e.g. `photo.jpg.webp`) without hiding standalone `.webp` files. Override if you have your own naming scheme. Invalid patterns are silently ignored (no files hidden).
 
 ### `exclude_directories`
 
