@@ -33,7 +33,7 @@ final class FileNameFilter
         $pattern = (string) Configuration::get('filter_pattern');
         // Test validity
         try {
-            if (empty($pattern) || false === \preg_match($pattern, '')) {
+            if (empty($pattern) || false === @\preg_match($pattern, '')) {
                 return null;
             }
         } catch (\Throwable) {

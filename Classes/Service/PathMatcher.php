@@ -15,8 +15,8 @@ final class PathMatcher implements SingletonInterface
 
         // Check if path starts with prefix and is either the same or has a following slash
         return str_starts_with($normalizedPath, $normalizedPrefix) && (
-            $normalizedPath === $normalizedPrefix ||
-            str_starts_with($normalizedPath, $normalizedPrefix . '/')
+            $normalizedPath === $normalizedPrefix
+            || str_starts_with($normalizedPath, $normalizedPrefix . '/')
         );
     }
 

@@ -120,6 +120,10 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return false;
         }
 
+        if ('webp' === $processedFile->getOriginalFile()->getExtension()) {
+            return false;
+        }
+
         if (!WebpService::isSupportedMimeType($processedFile->getOriginalFile()->getMimeType())) {
             return false;
         }

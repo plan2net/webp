@@ -42,7 +42,7 @@ final class Webp
         if (empty($converterClass)) {
             throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
         }
-        
+
         $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
         if (!empty($parameters)) {
             if ($this->hasFailedAttempt((int) $originalFile->getUid(), $parameters)) {

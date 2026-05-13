@@ -6,7 +6,9 @@ if (PHP_SAPI !== 'cli') {
 
 // https://cs.symfony.com/doc/config.html
 $finder = PhpCsFixer\Finder::create()
+    ->exclude('.Build')
     ->exclude('Resources')
+    ->exclude('var')
     ->name('*.php')
     ->in([
         __DIR__,

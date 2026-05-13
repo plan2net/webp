@@ -34,49 +34,49 @@ final class PathMatcherTest extends TestCase
                 'fileadmin/processed',
                 'fileadmin/processed',
                 true,
-                'Should match when paths are identical'
+                'Should match when paths are identical',
             ],
             'path within directory' => [
                 'fileadmin/processed/image.jpg',
                 'fileadmin/processed',
                 true,
-                'Should match when path is within directory'
+                'Should match when path is within directory',
             ],
             'deep nested path' => [
                 'fileadmin/processed/subfolder/deep/image.jpg',
                 'fileadmin/processed',
                 true,
-                'Should match deeply nested paths'
+                'Should match deeply nested paths',
             ],
             'different path' => [
                 'fileadmin/other/image.jpg',
                 'fileadmin/processed',
                 false,
-                'Should not match different paths'
+                'Should not match different paths',
             ],
             'partial name match avoided' => [
                 'fileadmin/processed_extra/image.jpg',
                 'fileadmin/processed',
                 false,
-                'Should not match partial directory names'
+                'Should not match partial directory names',
             ],
             'prefix with leading slash' => [
                 'fileadmin/processed/image.jpg',
                 '/fileadmin/processed',
                 true,
-                'Should normalize and match with leading slash'
+                'Should normalize and match with leading slash',
             ],
             'both with leading slashes' => [
                 '/fileadmin/processed/image.jpg',
                 '/fileadmin/processed',
                 true,
-                'Should normalize and match when both have leading slashes'
+                'Should normalize and match when both have leading slashes',
             ],
             'trailing slashes ignored' => [
                 'fileadmin/processed/image.jpg',
                 'fileadmin/processed/',
                 true,
-                'Should normalize and match with trailing slash'
+                'Should normalize and match with trailing slash',
             ],
         ];
     }
@@ -97,25 +97,25 @@ final class PathMatcherTest extends TestCase
                 'fileadmin/excluded/image.jpg',
                 ['fileadmin/excluded', 'fileadmin/other'],
                 true,
-                'Should match when first pattern matches'
+                'Should match when first pattern matches',
             ],
             'matches second pattern' => [
                 'fileadmin/special/image.jpg',
                 ['fileadmin/other', 'fileadmin/special'],
                 true,
-                'Should match when second pattern matches'
+                'Should match when second pattern matches',
             ],
             'no match' => [
                 'fileadmin/allowed/image.jpg',
                 ['fileadmin/excluded', 'fileadmin/special'],
                 false,
-                'Should not match when no patterns match'
+                'Should not match when no patterns match',
             ],
             'empty patterns' => [
                 'any/path/file.jpg',
                 [],
                 false,
-                'Should return false for empty patterns array'
+                'Should return false for empty patterns array',
             ],
         ];
     }
@@ -126,7 +126,7 @@ final class PathMatcherTest extends TestCase
         string $filePath,
         string $excludedPath,
         bool $expectedResult,
-        string $description
+        string $description,
     ): void {
         $result = $this->pathMatcher->matchesAny($filePath, [$excludedPath]);
 
@@ -140,49 +140,49 @@ final class PathMatcherTest extends TestCase
                 'fileadmin/user_upload/OpenGraph/image.jpg',
                 'fileadmin/user_upload/OpenGraph',
                 true,
-                'Should match when paths have no leading slashes'
+                'Should match when paths have no leading slashes',
             ],
             'excluded path with leading slash' => [
                 'fileadmin/user_upload/OpenGraph/image.jpg',
                 '/fileadmin/user_upload/OpenGraph',
                 true,
-                'Should match when excluded path has leading slash (GitHub issue #112)'
+                'Should match when excluded path has leading slash (GitHub issue #112)',
             ],
             'file path with leading slash' => [
                 '/fileadmin/user_upload/OpenGraph/image.jpg',
                 'fileadmin/user_upload/OpenGraph',
                 true,
-                'Should match when file path has leading slash'
+                'Should match when file path has leading slash',
             ],
             'both with leading slashes' => [
                 '/fileadmin/user_upload/OpenGraph/image.jpg',
                 '/fileadmin/user_upload/OpenGraph',
                 true,
-                'Should match when both paths have leading slashes'
+                'Should match when both paths have leading slashes',
             ],
             'excluded path with trailing slash' => [
                 'fileadmin/user_upload/OpenGraph/image.jpg',
                 'fileadmin/user_upload/OpenGraph/',
                 true,
-                'Should match when excluded path has trailing slash'
+                'Should match when excluded path has trailing slash',
             ],
             'subdirectory match' => [
                 'fileadmin/user_upload/OpenGraph/subfolder/deep/image.jpg',
                 'fileadmin/user_upload/OpenGraph',
                 true,
-                'Should match files in subdirectories'
+                'Should match files in subdirectories',
             ],
             'different path' => [
                 'fileadmin/user_upload/Other/image.jpg',
                 'fileadmin/user_upload/OpenGraph',
                 false,
-                'Should not match different paths'
+                'Should not match different paths',
             ],
             'partial path match avoided' => [
                 'fileadmin/user_upload/OpenGraphExtended/image.jpg',
                 'fileadmin/user_upload/OpenGraph',
                 false,
-                'Should not match partial directory names'
+                'Should not match partial directory names',
             ],
         ];
     }
@@ -194,7 +194,7 @@ final class PathMatcherTest extends TestCase
         $excludedPaths = [
             '/fileadmin/user_upload/OpenGraph',
             'fileadmin/user_upload/Special',  // This one should match
-            '/fileadmin/user_upload/Other'
+            '/fileadmin/user_upload/Other',
         ];
 
         $result = $this->pathMatcher->matchesAny($filePath, $excludedPaths);
