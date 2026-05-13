@@ -6,12 +6,17 @@ namespace Plan2net\Webp\Tests\Unit\Core\Filter;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Plan2net\Webp\Core\Filter\FileNameFilter;
 use Plan2net\Webp\Service\Configuration;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class FileNameFilterTest extends TestCase
 {
+    private MockObject $extensionConfiguration;
+
     #[Test]
     public function filterReturnsNegativeOneForJpegWebpSibling(): void
     {
@@ -71,28 +76,25 @@ final class FileNameFilterTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resetConfigurationCache();
+        $this->extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        // One Configuration instance per test — filterWebpFiles() consumes it on
+        // its first GeneralUtility::makeInstance call. Each #[Test] body in this
+        // class calls filterWebpFiles exactly once, so one addInstance suffices.
+        GeneralUtility::addInstance(
+            Configuration::class,
+            new Configuration($this->extensionConfiguration),
+        );
     }
 
     protected function tearDown(): void
     {
-        $this->resetConfigurationCache();
+        GeneralUtility::purgeInstances();
     }
 
-    /**
-     * HACK: Service\Configuration uses a private static cache populated lazily
-     * from ExtensionConfiguration. Reflection is the only way to seed it without
-     * bootstrapping TYPO3. Remove once Configuration's static state is refactored.
-     */
     private function seedPattern(string $pattern): void
     {
-        $property = (new \ReflectionClass(Configuration::class))->getProperty('configuration');
-        $property->setValue(null, ['filter_pattern' => $pattern]);
-    }
-
-    private function resetConfigurationCache(): void
-    {
-        $property = (new \ReflectionClass(Configuration::class))->getProperty('configuration');
-        $property->setValue(null, []);
+        $this->extensionConfiguration->method('get')
+            ->with('webp')
+            ->willReturn(['filter_pattern' => $pattern]);
     }
 }

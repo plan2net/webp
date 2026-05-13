@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Plan2net\Webp\Tests\Unit\Service;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Plan2net\Webp\Service\Configuration;
+use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationExtensionNotConfiguredException;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+
+final class ConfigurationTest extends TestCase
+{
+    #[Test]
+    public function getConverterReturnsConfiguredClass(): void
+    {
+        $config = $this->configurationWith(['converter' => 'Plan2net\\Webp\\Converter\\PhpGdConverter']);
+
+        self::assertSame('Plan2net\\Webp\\Converter\\PhpGdConverter', $config->getConverter());
+    }
+
+    #[Test]
+    public function getConverterReturnsEmptyStringWhenKeyMissing(): void
+    {
+        $config = $this->configurationWith([]);
+
+        self::assertSame('', $config->getConverter());
+    }
+
+    #[Test]
+    public function getParametersReturnsRawString(): void
+    {
+        $config = $this->configurationWith(['parameters' => 'image/jpeg::-quality 85|image/png::-quality 75']);
+
+        self::assertSame('image/jpeg::-quality 85|image/png::-quality 75', $config->getParameters());
+    }
+
+    #[Test]
+    public function getParametersReturnsEmptyStringWhenKeyMissing(): void
+    {
+        $config = $this->configurationWith([]);
+
+        self::assertSame('', $config->getParameters());
+    }
+
+    #[Test]
+    public function isSupportedMimeTypeMatchesCaseInsensitively(): void
+    {
+        $config = $this->configurationWith(['mime_types' => 'image/jpeg,image/png']);
+
+        self::assertTrue($config->isSupportedMimeType('IMAGE/JPEG'));
+        self::assertTrue($config->isSupportedMimeType('image/png'));
+        self::assertFalse($config->isSupportedMimeType('image/gif'));
+    }
+
+    #[Test]
+    public function isSupportedMimeTypeReturnsFalseWhenListEmpty(): void
+    {
+        $config = $this->configurationWith([]);
+
+        self::assertFalse($config->isSupportedMimeType('image/jpeg'));
+    }
+
+    #[Test]
+    #[DataProvider('booleanAccessorProvider')]
+    public function booleanAccessorsCoerceStringFlag(string $key, string $accessor): void
+    {
+        self::assertTrue($this->configurationWith([$key => '1'])->{$accessor}());
+        self::assertFalse($this->configurationWith([$key => '0'])->{$accessor}());
+        self::assertFalse($this->configurationWith([])->{$accessor}());
+    }
+
+    public static function booleanAccessorProvider(): array
+    {
+        return [
+            'convert_all' => ['convert_all', 'isConvertAll'],
+            'silent' => ['silent', 'isSilent'],
+            'use_system_settings' => ['use_system_settings', 'isUseSystemSettings'],
+            'hide_webp' => ['hide_webp', 'isHideWebp'],
+        ];
+    }
+
+    #[Test]
+    public function getExcludeDirectoriesSplitsOnSemicolonAndTrims(): void
+    {
+        $config = $this->configurationWith(['exclude_directories' => '/fileadmin/foo; /fileadmin/bar ;']);
+
+        self::assertSame(['/fileadmin/foo', '/fileadmin/bar'], $config->getExcludeDirectories());
+    }
+
+    #[Test]
+    public function getExcludeDirectoriesReturnsEmptyArrayWhenKeyMissing(): void
+    {
+        $config = $this->configurationWith([]);
+
+        self::assertSame([], $config->getExcludeDirectories());
+    }
+
+    #[Test]
+    public function getFilterPatternReturnsValidPattern(): void
+    {
+        $config = $this->configurationWith(['filter_pattern' => '/\\.(jpe?g|png|gif)\\.webp$/i']);
+
+        self::assertSame('/\\.(jpe?g|png|gif)\\.webp$/i', $config->getFilterPattern());
+    }
+
+    #[Test]
+    public function getFilterPatternReturnsNullForInvalidRegex(): void
+    {
+        $config = $this->configurationWith(['filter_pattern' => '/[invalid/']);
+
+        self::assertNull($config->getFilterPattern());
+    }
+
+    #[Test]
+    public function getFilterPatternReturnsNullForEmptyString(): void
+    {
+        $config = $this->configurationWith(['filter_pattern' => '']);
+
+        self::assertNull($config->getFilterPattern());
+    }
+
+    #[Test]
+    public function accessorsReturnDefaultsWhenExtensionConfigurationThrows(): void
+    {
+        $extConfig = $this->createMock(ExtensionConfiguration::class);
+        $extConfig->method('get')
+            ->with('webp')
+            ->willThrowException(new ExtensionConfigurationExtensionNotConfiguredException('not configured'));
+        $config = new Configuration($extConfig);
+
+        self::assertSame('', $config->getConverter());
+        self::assertSame('', $config->getParameters());
+        self::assertFalse($config->isSupportedMimeType('image/jpeg'));
+        self::assertFalse($config->isConvertAll());
+        self::assertSame([], $config->getExcludeDirectories());
+        self::assertFalse($config->isSilent());
+        self::assertFalse($config->isUseSystemSettings());
+        self::assertFalse($config->isHideWebp());
+        self::assertNull($config->getFilterPattern());
+    }
+
+    private function configurationWith(array $settings): Configuration
+    {
+        $extConfig = $this->createMock(ExtensionConfiguration::class);
+        $extConfig->method('get')->with('webp')->willReturn($settings);
+
+        return new Configuration($extConfig);
+    }
+}

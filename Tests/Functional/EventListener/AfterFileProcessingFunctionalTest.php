@@ -7,7 +7,6 @@ namespace Plan2net\Webp\Tests\Functional\EventListener;
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\EventListener\AfterFileProcessing;
-use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\RecordingConverter;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
@@ -185,12 +184,10 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
             'hide_webp' => '1',
             'filter_pattern' => '/\\.(jpe?g|png|gif)\\.webp$/i',
         ];
-        $this->resetConfigurationStaticCache();
     }
 
     protected function tearDown(): void
     {
-        $this->resetConfigurationStaticCache();
         parent::tearDown();
     }
 
@@ -249,16 +246,5 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     private function applyConfigOverride(string $key, string $value): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp'][$key] = $value;
-        $this->resetConfigurationStaticCache();
-    }
-
-    /**
-     * HACK: Service\Configuration uses a private static cache populated lazily.
-     * Resetting it between tests prevents stale config bleed.
-     */
-    private function resetConfigurationStaticCache(): void
-    {
-        $property = (new \ReflectionClass(Configuration::class))->getProperty('configuration');
-        $property->setValue(null, []);
     }
 }

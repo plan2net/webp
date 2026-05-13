@@ -16,6 +16,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class Webp
 {
+    public function __construct(
+        private readonly Configuration $configuration,
+    ) {
+    }
+
     /**
      * @param FileInterface|File $originalFile
      *
@@ -38,7 +43,7 @@ final class Webp
 
         $targetFilePath = "{$originalFilePath}.webp";
 
-        $converterClass = Configuration::get('converter');
+        $converterClass = $this->configuration->getConverter();
         if (empty($converterClass)) {
             throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
         }
@@ -50,7 +55,7 @@ final class Webp
             }
 
             /** @var Converter $converter */
-            $converter = GeneralUtility::makeInstance($converterClass, $parameters);
+            $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
             $converter->convert($originalFilePath, $targetFilePath);
             $fileSizeTargetFile = @\filesize($targetFilePath);
             if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
@@ -71,19 +76,9 @@ final class Webp
         throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
     }
 
-    public static function isSupportedMimeType(string $mimeType): bool
-    {
-        $supportedMimeTypes = (string) Configuration::get('mime_types');
-        if (!empty($supportedMimeTypes)) {
-            return \in_array(\strtolower($mimeType), \explode(',', \strtolower($supportedMimeTypes)), true);
-        }
-
-        return false;
-    }
-
     private function getParametersForMimeType(string $mimeType): ?string
     {
-        $parameters = \explode('|', Configuration::get('parameters') ?? '');
+        $parameters = \explode('|', $this->configuration->getParameters());
         foreach ($parameters as $parameter) {
             $typeAndOptions = \explode('::', $parameter, 2);
             $type = $typeAndOptions[0] ?? null;

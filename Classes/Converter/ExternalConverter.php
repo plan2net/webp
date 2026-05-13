@@ -16,7 +16,7 @@ final class ExternalConverter extends AbstractConverter
     /**
      * @throws \InvalidArgumentException
      */
-    public function __construct(string $parameters)
+    public function __construct(string $parameters, Configuration $configuration)
     {
         if (2 !== \substr_count($parameters, '%s')) {
             throw new \InvalidArgumentException('Command string is invalid, supply 2 string (%s) placeholders!');
@@ -26,12 +26,12 @@ final class ExternalConverter extends AbstractConverter
             throw new \InvalidArgumentException(\sprintf('Binary "%s" is not executable!', $binary));
         }
 
-        parent::__construct($parameters);
+        parent::__construct($parameters, $configuration);
     }
 
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
-        $silent = \filter_var(Configuration::get('silent'), FILTER_VALIDATE_BOOLEAN);
+        $silent = $this->configuration->isSilent();
         $command = \sprintf(
             \escapeshellcmd($this->parameters),
             CommandUtility::escapeShellArgument($originalFilePath),

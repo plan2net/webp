@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
-use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -17,7 +16,7 @@ final class MagickConverter extends AbstractConverter
     public function convert(string $originalFilePath, string $targetFilePath): void
     {
         $parameters = $this->parameters;
-        if (Configuration::get('use_system_settings')) {
+        if ($this->configuration->isUseSystemSettings()) {
             $parameters .= ' ' . $this->parseStripColorProfileCommand();
             $parameters = trim($parameters);
         }

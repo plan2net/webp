@@ -19,3 +19,9 @@ services:
     public: true
 
   Plan2net\Webp\Service\ProcessedFileWriter: ~
+
+  # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
+  # the service from the container (called from FileNameFilter::filterWebpFiles and from
+  # ext_localconf.php — neither has a DI constructor injection point).
+  Plan2net\Webp\Service\Configuration:
+    public: true

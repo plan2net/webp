@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Core\Filter;
 
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class FileNameFilter
 {
@@ -20,26 +21,11 @@ final class FileNameFilter
         array $additionalInformation = [],
         ?DriverInterface $driverInstance = null,
     ): int {
-        $pattern = self::getPattern();
+        $pattern = GeneralUtility::makeInstance(Configuration::class)->getFilterPattern();
         if (null !== $pattern && 1 === \preg_match($pattern, $itemIdentifier)) {
             return -1;
         }
 
         return 1;
-    }
-
-    public static function getPattern(): ?string
-    {
-        $pattern = (string) Configuration::get('filter_pattern');
-        // Test validity
-        try {
-            if (empty($pattern) || false === @\preg_match($pattern, '')) {
-                return null;
-            }
-        } catch (\Throwable) {
-            return null;
-        }
-
-        return $pattern;
     }
 }

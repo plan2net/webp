@@ -30,6 +30,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         private readonly WebpService $webpService,
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly ProcessedFileWriter $processedFileWriter,
+        private readonly Configuration $configuration,
     ) {
     }
 
@@ -124,12 +125,12 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return false;
         }
 
-        if (!WebpService::isSupportedMimeType($processedFile->getOriginalFile()->getMimeType())) {
+        if (!$this->configuration->isSupportedMimeType($processedFile->getOriginalFile()->getMimeType())) {
             return false;
         }
 
         // Convert images in any folder or only in the _processed_ folder
-        $convertAllImages = (bool) Configuration::get('convert_all');
+        $convertAllImages = $this->configuration->isConvertAll();
         if (!$convertAllImages && !$this->isFileInProcessingFolder($processedFile)) {
             return false;
         }
@@ -190,9 +191,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         $storageBasePath = $file->getStorage()->getConfiguration()['basePath'] ?? '';
         $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
 
-        $excludeDirectories = array_filter(explode(';', Configuration::get('exclude_directories') ?? ''));
-
-        return $this->pathMatcher->matchesAny($filePath, $excludeDirectories);
+        return $this->pathMatcher->matchesAny($filePath, $this->configuration->getExcludeDirectories());
     }
 
     private function removeProcessedFile(ProcessedFile $processedFile): void
