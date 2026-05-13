@@ -197,13 +197,10 @@ You can also add a browser restriction if your audience uses old versions of Saf
 
 ### Apache (.htaccess example)
 
-We assume that module `mod_rewrite.c` is enabled.
+The first two directives are already part of TYPO3's default `.htaccess` template (`typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`); they're shown here for completeness. We assume `mod_rewrite.c` is enabled.
 
     RewriteEngine On
     AddType image/webp .webp
-
-is already part of the TYPO3 htaccess template in
-`typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`
 
     RewriteCond %{HTTP_ACCEPT} image/webp
     RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
