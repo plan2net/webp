@@ -96,6 +96,8 @@ higher filesize than the original!
 
 Only source files whose mime type is in this comma-separated list are considered for conversion.
 
+**Animated GIFs:** the bundled converters produce single-frame webp output, so the served `.gif.webp` is a still image. If you need animated GIFs to keep playing, remove `image/gif` from `mime_types` (and from the `gif` group in your webserver's rewrite rule).
+
 ### `convert_all`
 
     # cat=basic; type=boolean; label=Convert all images in local and writable storage and save a copy in Webp format; disable to convert images in the _processed_ folder only
@@ -214,6 +216,18 @@ The first two directives are already part of TYPO3's default `.htaccess` templat
     </IfModule>
 
 Make sure that there are no other rules that prevent further rules or already apply to the specified image formats and prevent further execution!
+
+#### When `%{REQUEST_FILENAME}` doesn't resolve
+
+Some environments — shared hosting (IONOS etc.), Windows Apache, or setups where the rewrite runs before path resolution — return 403/404 with the `%{REQUEST_FILENAME}` form because Apache can't map the request to a filesystem path at that stage. Two portable alternatives:
+
+    RewriteRule ^ %{REQUEST_URI}.webp [L,T=image/webp]
+
+or:
+
+    RewriteRule ^(.*)$ $1.webp [L,T=image/webp]
+
+Substitute either form for the `RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]` line above.
 
 You can also add a browser restriction if your audience uses old versions of Safari, etc., so no _webp_ is served to them.
 
