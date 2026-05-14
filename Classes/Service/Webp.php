@@ -41,30 +41,21 @@ final class Webp
         }
 
         $targetFilePath = "{$originalFilePath}.webp";
-
-        $converterClass = $this->configuration->getConverter();
-        if (empty($converterClass)) {
-            throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
-        }
-
-        $parameters = $this->getParametersForMimeType($originalFile->getMimeType());
-        if (empty($parameters)) {
-            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $originalFile->getMimeType(), $originalFile->getIdentifier()));
-        }
+        $mimeType = $originalFile->getMimeType();
+        $parameters = $this->getParametersForMimeType($mimeType);
 
         $fileUid = (int) $originalFile->getUid();
-        if ($this->failedAttempts->wasAttempted($fileUid, $parameters)) {
+        if (null !== $parameters && $this->failedAttempts->wasAttempted($fileUid, $parameters)) {
             throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
         }
 
-        /** @var Converter $converter */
-        $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
-        $converter->convert($originalFilePath, $targetFilePath);
-
-        $fileSizeTargetFile = @\filesize($targetFilePath);
-        if ($fileSizeTargetFile && $originalFile->getSize() <= $fileSizeTargetFile) {
-            $this->failedAttempts->record($fileUid, $parameters);
-            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetFilePath, $fileSizeTargetFile, $originalFile->getSize(), $originalFilePath));
+        try {
+            $fileSizeTargetFile = $this->convertFilePath($originalFilePath, $targetFilePath, $mimeType);
+        } catch (ConvertedFileLargerThanOriginalException $e) {
+            if (null !== $parameters) {
+                $this->failedAttempts->record($fileUid, $parameters);
+            }
+            throw $e;
         }
 
         $processedFile->updateProperties([
@@ -72,6 +63,46 @@ final class Webp
             'height' => $originalFile->getProperty('height'),
             'size' => $fileSizeTargetFile,
         ]);
+    }
+
+    public function needsReprocessing(ProcessedFile $processedFile): bool
+    {
+        return $processedFile->isNew()
+            || (!$processedFile->usesOriginalFile() && !$processedFile->exists())
+            || $processedFile->isOutdated();
+    }
+
+    /**
+     * Low-level converter invocation usable without a FAL `File` (e.g., folder-mode sweeps).
+     *
+     * @return int Size in bytes of the converted file
+     *
+     * @throws ConvertedFileLargerThanOriginalException if the WebP output is not smaller than the source — the oversize target is removed before the exception is thrown
+     */
+    public function convertFilePath(string $sourcePath, string $targetPath, string $mimeType): int
+    {
+        $converterClass = $this->configuration->getConverter();
+        if (empty($converterClass)) {
+            throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
+        }
+
+        $parameters = $this->getParametersForMimeType($mimeType);
+        if (empty($parameters)) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $mimeType, $sourcePath));
+        }
+
+        /** @var Converter $converter */
+        $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
+        $converter->convert($sourcePath, $targetPath);
+
+        $sourceSize = (int) @\filesize($sourcePath);
+        $targetSize = (int) @\filesize($targetPath);
+        if ($targetSize > 0 && $sourceSize > 0 && $sourceSize <= $targetSize) {
+            @\unlink($targetPath);
+            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetPath, $targetSize, $sourceSize, $sourcePath));
+        }
+
+        return $targetSize;
     }
 
     private function getParametersForMimeType(string $mimeType): ?string
