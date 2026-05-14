@@ -20,6 +20,9 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
+use TYPO3\CMS\Core\Locking\LockFactory;
+use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -40,6 +43,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
         private readonly ProcessedFileWriter $processedFileWriter,
         private readonly Configuration $configuration,
         private readonly FolderScanner $folderScanner,
+        private readonly LockFactory $lockFactory,
     ) {
         parent::__construct();
     }
@@ -52,11 +56,30 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $folder = $input->getOption('folder');
-        if (\is_string($folder) && $folder !== '') {
-            return $this->runFolderMode($folder, $output);
+        $locker = $this->lockFactory->createLocker(
+            'webp.queue.worker',
+            LockingStrategyInterface::LOCK_CAPABILITY_EXCLUSIVE | LockingStrategyInterface::LOCK_CAPABILITY_NOBLOCK
+        );
+        try {
+            $acquired = $locker->acquire(
+                LockingStrategyInterface::LOCK_CAPABILITY_EXCLUSIVE | LockingStrategyInterface::LOCK_CAPABILITY_NOBLOCK
+            );
+        } catch (LockAcquireWouldBlockException) {
+            $acquired = false;
         }
-        return $this->runQueueMode(\max(1, (int) $input->getOption('batch')), $output);
+        if (!$acquired) {
+            $output->writeln('<info>Another webp:process-queue is running; exiting.</info>');
+            return Command::SUCCESS;
+        }
+        try {
+            $folder = $input->getOption('folder');
+            if (\is_string($folder) && $folder !== '') {
+                return $this->runFolderMode($folder, $output);
+            }
+            return $this->runQueueMode(\max(1, (int) $input->getOption('batch')), $output);
+        } finally {
+            $locker->release();
+        }
     }
 
     private function runQueueMode(int $batch, OutputInterface $output): int

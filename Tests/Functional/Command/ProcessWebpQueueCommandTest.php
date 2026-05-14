@@ -108,6 +108,17 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function commandSurvivesEmptyQueue(): void
+    {
+        // Smoke test: with no rows and no folder argument, the command exits
+        // cleanly. Exercises the lock acquisition + release path. True
+        // cross-process lock contention is not testable in a single-PID
+        // PHPUnit run because flock() is process-reentrant; production
+        // correctness rests on the LockingStrategy contract.
+        self::assertSame(0, $this->runCommand([]));
+    }
+
+    #[Test]
     public function folderModeRejectsPathOutsideWebRoot(): void
     {
         $exitCode = $this->runCommand(['--folder' => '../../../etc']);
