@@ -23,6 +23,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install image binaries (ImageMagick + GraphicsMagick)
+        if: ${{ !env.ACT }}
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: imagemagick graphicsmagick
+          version: 1.0
+
+      - name: Install image binaries locally (act)
+        if: ${{ env.ACT }}
         run: sudo apt-get update && sudo apt-get install -y imagemagick graphicsmagick
 
       - name: Set up PHP ${{ matrix.php }}
@@ -34,6 +42,7 @@ jobs:
           coverage: none
 
       - name: Cache Composer downloads
+        if: ${{ !env.ACT }}
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache
@@ -41,6 +50,14 @@ jobs:
           restore-keys: |
             composer-${{ matrix.php }}-${{ matrix.typo3 }}-
             composer-${{ matrix.php }}-
+
+      - name: Cache vendor
+        if: ${{ !env.ACT }}
+        uses: actions/cache@v4
+        with:
+          path: .Build/vendor
+          key: vendor-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json') }}
+          restore-keys: vendor-${{ matrix.php }}-${{ matrix.typo3 }}-
 
       - name: Pin TYPO3 version
         run: composer require --no-update typo3/cms-core:"${{ matrix.typo3 }}"
