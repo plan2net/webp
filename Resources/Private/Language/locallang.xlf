@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file source-language="en" datatype="plaintext" original="EXT:webp/Resources/Private/Language/locallang.xlf" product-name="webp">
+    <header/>
+    <body>
+      <trans-unit id="task.processQueue.title">
+        <source>Process conversion queue</source>
+      </trans-unit>
+      <trans-unit id="task.processQueue.description">
+        <source>Drains pending tx_webp_queue entries created by the AfterFileProcessing listener when async = 1.</source>
+      </trans-unit>
+      <trans-unit id="task.processQueue.batchSize.label">
+        <source>Batch size (entries per run)</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

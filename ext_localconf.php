@@ -12,4 +12,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
             'filterWebpFiles',
         ];
     }
+
+    $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['scheduler']['tasks'][Plan2net\Webp\Task\ProcessWebpQueueTask::class] = [
+        'extension' => 'webp',
+        'title' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:task.processQueue.title',
+        'description' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:task.processQueue.description',
+        'icon' => 'mimetypes-x-tx_scheduler_task_group',
+        'additionalFields' => Plan2net\Webp\Task\ProcessWebpQueueTaskAdditionalFieldProvider::class,
+    ];
 })();

@@ -19,6 +19,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use TYPO3\CMS\Core\Attribute\AsNonSchedulableCommand;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
@@ -31,6 +32,7 @@ use TYPO3\CMS\Core\Resource\ResourceFactory;
     name: 'webp:process-queue',
     description: 'Drain the WebP conversion queue or sweep a filesystem folder.'
 )]
+#[AsNonSchedulableCommand]
 final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterface
 {
     use LoggerAwareTrait;

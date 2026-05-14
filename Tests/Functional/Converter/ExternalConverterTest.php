@@ -14,6 +14,7 @@ final class ExternalConverterTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = [
         'install',
+        'scheduler',
     ];
 
     protected array $testExtensionsToLoad = [

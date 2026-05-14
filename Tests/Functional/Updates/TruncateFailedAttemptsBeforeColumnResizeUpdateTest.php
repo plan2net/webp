@@ -12,6 +12,7 @@ final class TruncateFailedAttemptsBeforeColumnResizeUpdateTest extends Functiona
 {
     protected array $coreExtensionsToLoad = [
         'install',
+        'scheduler',
     ];
 
     protected array $testExtensionsToLoad = [

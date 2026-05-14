@@ -15,6 +15,7 @@ final class SiblingCleanupFunctionalTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = [
         'install',
+        'scheduler',
     ];
 
     protected array $testExtensionsToLoad = [

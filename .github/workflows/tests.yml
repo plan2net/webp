@@ -63,6 +63,8 @@ jobs:
         run: composer require --no-update typo3/cms-core:"${{ matrix.typo3 }}"
 
       - name: Install dependencies
+        env:
+          TYPO3_SKIP_ASSET_PUBLISH: '1'
         run: composer update --no-interaction --no-progress --prefer-dist
 
       - name: Unit tests
@@ -96,5 +98,7 @@ jobs:
           extensions: mbstring, json
           tools: composer:v2
           coverage: none
-      - run: composer install --no-interaction --no-progress --prefer-dist
+      - env:
+          TYPO3_SKIP_ASSET_PUBLISH: '1'
+        run: composer install --no-interaction --no-progress --prefer-dist
       - run: .Build/bin/php-cs-fixer fix --config=php-cs-fixer.config.php --dry-run --diff

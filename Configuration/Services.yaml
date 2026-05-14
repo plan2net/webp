@@ -54,6 +54,9 @@ services:
     tags:
       - name: 'console.command'
 
+  Plan2net\Webp\Task\ProcessWebpQueueTaskAdditionalFieldProvider:
+    public: true
+
   Plan2net\Webp\Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate: ~
 
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
