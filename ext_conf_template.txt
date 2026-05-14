@@ -16,3 +16,7 @@ use_system_settings = 1
 hide_webp = 1
 # cat=basic; type=string; label=Pattern to filter out files
 filter_pattern = /\.(jpe?g|png|gif)\.webp$/i
+# cat=async; type=boolean; label=Enable asynchronous conversion via tx_webp_queue + the webp:process-queue scheduler task (decouples conversion from page render)
+async = 0
+# cat=async; type=int+; label=Random sleep (ms) between conversions in the worker (0 = no sleep); each pause is randomized between half and 1.5x of this value
+async_throttle_ms = 0

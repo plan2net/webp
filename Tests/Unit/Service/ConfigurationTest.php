@@ -79,7 +79,35 @@ final class ConfigurationTest extends TestCase
             'silent' => ['silent', 'isSilent'],
             'use_system_settings' => ['use_system_settings', 'isUseSystemSettings'],
             'hide_webp' => ['hide_webp', 'isHideWebp'],
+            'async' => ['async', 'isAsync'],
         ];
+    }
+
+    #[Test]
+    public function getAsyncThrottleMsReturnsZeroByDefault(): void
+    {
+        self::assertSame(0, $this->configurationWith([])->getAsyncThrottleMs());
+    }
+
+    #[Test]
+    public function getAsyncThrottleMsReturnsConfiguredInteger(): void
+    {
+        self::assertSame(500, $this->configurationWith(['async_throttle_ms' => '500'])->getAsyncThrottleMs());
+    }
+
+    #[Test]
+    public function getMimeTypesReturnsLowercasedList(): void
+    {
+        self::assertSame(
+            ['image/jpeg', 'image/png'],
+            $this->configurationWith(['mime_types' => ' Image/JPEG , image/png '])->getMimeTypes()
+        );
+    }
+
+    #[Test]
+    public function getMimeTypesReturnsEmptyListWhenMissing(): void
+    {
+        self::assertSame([], $this->configurationWith([])->getMimeTypes());
     }
 
     #[Test]
