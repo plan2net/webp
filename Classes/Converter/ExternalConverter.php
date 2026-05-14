@@ -34,8 +34,8 @@ final class ExternalConverter extends AbstractConverter
         $silent = $this->configuration->isSilent();
         $command = \sprintf(
             \escapeshellcmd($this->parameters),
-            CommandUtility::escapeShellArgument($originalFilePath),
-            CommandUtility::escapeShellArgument($targetFilePath)
+            self::quoteShellArgument($originalFilePath),
+            self::quoteShellArgument($targetFilePath)
         ) . ($silent ? ' >/dev/null 2>&1' : '');
         CommandUtility::exec($command);
         GeneralUtility::fixPermissions($targetFilePath);
@@ -43,5 +43,19 @@ final class ExternalConverter extends AbstractConverter
         if (!@\is_file($targetFilePath)) {
             throw new \RuntimeException(\sprintf('File "%s" was not created!', $targetFilePath));
         }
+    }
+
+    /**
+     * Byte-preserving POSIX shell quoting. PHP's escapeshellarg() is locale-aware
+     * and silently drops multibyte bytes when LC_CTYPE is C/POSIX, mangling
+     * filenames with umlauts before they reach the binary.
+     */
+    private static function quoteShellArgument(string $argument): string
+    {
+        if ('\\' === \DIRECTORY_SEPARATOR) {
+            return \escapeshellarg($argument);
+        }
+
+        return "'" . \str_replace("'", "'\\''", $argument) . "'";
     }
 }
