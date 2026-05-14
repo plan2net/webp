@@ -6,6 +6,7 @@ namespace Plan2net\Webp\EventListener;
 
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
+use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\ProcessedFileWriter;
@@ -33,6 +34,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly ProcessedFileWriter $processedFileWriter,
         private readonly Configuration $configuration,
+        private readonly WebpQueueRepository $queueRepository,
     ) {
     }
 
@@ -86,8 +88,31 @@ final class AfterFileProcessing implements LoggerAwareInterface
                 ]
             );
             // Check if reprocessing is required
-            if (!$this->needsReprocessing($processedFileWebp)) {
+            if (!$this->webpService->needsReprocessing($processedFileWebp)) {
                 return;
+            }
+
+            if ($this->configuration->isAsync()) {
+                $processedFileId = $processedFile instanceof ProcessedFile && !$processedFile->usesOriginalFile()
+                    ? (int) $processedFile->getUid()
+                    : 0;
+                try {
+                    $this->queueRepository->enqueue(
+                        (int) $originalFile->getUid(),
+                        $processedFileId,
+                        $taskType,
+                        $configuration + ['webp' => true]
+                    );
+                    return;
+                } catch (\Doctrine\DBAL\Exception $e) {
+                    $this->logger->notice(
+                        \sprintf(
+                            'webp: queue table unavailable, falling back to synchronous conversion: %s',
+                            $e->getMessage()
+                        )
+                    );
+                    // fall through to sync path
+                }
             }
 
             try {
@@ -147,13 +172,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         return true;
-    }
-
-    private function needsReprocessing(ProcessedFile $processedFile): bool
-    {
-        return $processedFile->isNew()
-            || (!$processedFile->usesOriginalFile() && !$processedFile->exists())
-            || $processedFile->isOutdated();
     }
 
     private function isFileInProcessingFolder(ProcessedFile $file): bool

@@ -159,6 +159,58 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         self::assertSame(1, $this->countFailedRows((int) $file->getUid()), 'wasAttempted() must short-circuit; no duplicate insert');
     }
 
+    #[Test]
+    public function enqueuesWhenAsyncEnabled(): void
+    {
+        $this->applyConfigOverride('async', '1');
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $queueRows = (int) $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->count('uid', 'tx_webp_queue', []);
+
+        self::assertSame(1, $queueRows, 'Async mode should enqueue exactly one row');
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()), 'No sys_file_processedfile webp row should be finalized yet');
+    }
+
+    #[Test]
+    public function processesSynchronouslyWhenAsyncDisabled(): void
+    {
+        $this->applyConfigOverride('async', '0');
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $queueRows = (int) $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->count('uid', 'tx_webp_queue', []);
+
+        self::assertSame(0, $queueRows);
+        self::assertSame(1, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
+    public function asyncSkipsEnqueueWhenWebpAlreadyCurrent(): void
+    {
+        $this->applyConfigOverride('async', '0');
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        self::assertSame(1, $this->countWebpRowsForOriginal((int) $file->getUid()));
+
+        // Now flip async on. A second process() with the same config must NOT enqueue
+        // because needsReprocessing() returns false for the existing webp row.
+        $this->applyConfigOverride('async', '1');
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $queueRows = (int) $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->count('uid', 'tx_webp_queue', []);
+
+        self::assertSame(0, $queueRows, 'Existing current webp must not be re-enqueued');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
