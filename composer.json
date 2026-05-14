@@ -48,8 +48,12 @@
   "extra": {
     "typo3/cms": {
       "extension-key": "webp",
+      "version": "14.0.0",
       "cms-package-dir": "{$vendor-dir}/typo3/cms",
-      "web-dir": ".Build/Web"
+      "web-dir": ".Build/Web",
+      "Package": {
+        "providesPackages": {}
+      }
     }
   },
   "require-dev": {
