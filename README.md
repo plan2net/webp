@@ -95,6 +95,8 @@ After a `composer update`, **save the extension settings at least once** via *Ad
 | [`filter_pattern`](#filter_pattern)           | `/\.(jpe?g\|png\|gif)\.webp$/i`             | PCRE for which `.webp` to hide (only when `hide_webp`) |
 | [`exclude_directories`](#exclude_directories) | _(empty)_                                   | Skip processing for matching paths                     |
 | [`use_system_settings`](#use_system_settings) | `1`                                         | Reuse GFX color profile settings (MagickConverter)     |
+| [`async`](#async)                             | `0`                                         | Queue conversions for a scheduler worker instead of running them on the page-render path |
+| [`async_throttle_ms`](#async_throttle_ms)     | `0`                                         | Random per-conversion sleep (ms) in the worker; 0 disables                |
 
 ### `parameters`
 
@@ -204,6 +206,47 @@ use_system_settings = 1
 Applies only to `MagickConverter`. When enabled, the value of `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` and `processor_stripColorProfileParameters` is appended to converter arguments automatically — no need to repeat the setting per mime type.
 
 `PhpGdConverter` and external-binary configurations ignore this flag.
+
+### `async`
+
+```
+# cat=async; type=boolean; label=Enable asynchronous conversion
+async = 0
+```
+
+When enabled, the `AfterFileProcessing` listener writes a row to `tx_webp_queue` instead of running the converter inside the request. Conversions then happen out-of-band via the `webp:process-queue` CLI command, typically registered as a TYPO3 Scheduler task. See [Async mode](#async-mode) below for setup.
+
+When disabled (default), conversions run synchronously exactly as before.
+
+### `async_throttle_ms`
+
+```
+# cat=async; type=int+; label=Random sleep (ms) between conversions
+async_throttle_ms = 0
+```
+
+Pause for a random interval between conversions inside the worker. Value `0` means no pause. Value `N > 0` means each pause is `random(N/2, N*3/2)` milliseconds — modeled on `wget --random-wait` to avoid lock-step bursts. Useful on tight-CPU servers when a batch of conversions would otherwise saturate the box. Applies to both queue mode and `--folder` mode.
+
+## Async mode
+
+By default the extension converts images synchronously inside the request that processes the source file. On image-heavy pages or large-fileadmin sites this adds latency to every render. Enabling `async = 1` moves the conversion off the render path:
+
+1. Set `async = 1` in the extension configuration.
+2. Run TYPO3's database analyzer so `tx_webp_queue` is created.
+3. Register a TYPO3 Scheduler task: **System → Scheduler → Add task → Type: "WebP: process conversion queue"**. Pick a frequency that matches your throughput (every minute for busy sites, hourly for low-traffic).
+4. Make sure the scheduler itself runs — either via `vendor/bin/typo3 scheduler:run` in cron, or a daemonized runner.
+
+The listener will now enqueue new conversions; the scheduler task drains the queue in the background. Existing siblings stay; the extension does not retroactively backfill.
+
+### Sweeping non-FAL folders
+
+Some image folders (notably `typo3temp/assets/online_media/` for YouTube/Vimeo preview thumbnails) live outside TYPO3's File Abstraction Layer, so the listener never sees them. The `--folder` argument bypasses the queue and converts files directly:
+
+```sh
+vendor/bin/typo3 webp:process-queue --folder=typo3temp/assets/online_media/
+```
+
+Register this as a second Scheduler task ("Execute console command") if you want it to run periodically. Paths resolve relative to the public web root and are restricted to it for safety.
 
 ## Webserver configuration
 

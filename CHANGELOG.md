@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Opt-in **async conversion mode** (`async = 1`): WebP conversions are queued in a new `tx_webp_queue` table and processed out-of-band by a TYPO3 Scheduler task. Closes [#17](https://github.com/plan2net/webp/issues/17).
+- New CLI command `webp:process-queue` with optional `--folder=PATH` argument to convert images in non-FAL folders (e.g., `typo3temp/assets/online_media/`). Closes [#73](https://github.com/plan2net/webp/issues/73).
+- New `async_throttle_ms` configuration to space conversions out with randomized jitter, preventing thundering-herd CPU/IO.
+
 ## [14.0.0] - 2026-05-14
 
 ### Added
