@@ -13,6 +13,10 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
 final class SiblingCleanupFunctionalTest extends FunctionalTestCase
 {
+    protected array $coreExtensionsToLoad = [
+        'install',
+    ];
+
     protected array $testExtensionsToLoad = [
         'plan2net/webp',
     ];

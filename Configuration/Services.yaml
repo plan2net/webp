@@ -46,6 +46,8 @@ services:
 
   Plan2net\Webp\Service\FailedAttemptsRepository: ~
 
+  Plan2net\Webp\Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate: ~
+
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
   # the service from the container (called from FileNameFilter::filterWebpFiles and from
   # ext_localconf.php — neither has a DI constructor injection point).
