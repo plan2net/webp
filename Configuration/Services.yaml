@@ -46,6 +46,8 @@ services:
 
   Plan2net\Webp\Service\FailedAttemptsRepository: ~
 
+  Plan2net\Webp\Domain\Queue\WebpQueueRepository: ~
+
   Plan2net\Webp\Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate: ~
 
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves

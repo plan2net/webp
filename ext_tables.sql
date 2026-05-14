@@ -8,3 +8,17 @@ CREATE TABLE tx_webp_failed
     PRIMARY KEY (uid),
     KEY configuration (file_id, configuration_hash)
 );
+
+CREATE TABLE tx_webp_queue
+(
+    uid                int(11)      NOT NULL auto_increment,
+    original_file_id   INT(11)      NOT NULL,
+    processed_file_id  INT(11)      NOT NULL DEFAULT 0,
+    task_type          VARCHAR(255) NOT NULL DEFAULT '',
+    configuration      TEXT,
+    configuration_hash VARCHAR(32)  NOT NULL,
+    enqueued_at        INT(11)      NOT NULL DEFAULT 0,
+    PRIMARY KEY (uid),
+    UNIQUE KEY queue_dedup (original_file_id, processed_file_id, task_type, configuration_hash),
+    KEY enqueued_at (enqueued_at)
+);
