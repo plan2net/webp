@@ -50,6 +50,10 @@ services:
 
   Plan2net\Webp\Service\FolderScanner: ~
 
+  Plan2net\Webp\Command\ProcessWebpQueueCommand:
+    tags:
+      - name: 'console.command'
+
   Plan2net\Webp\Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate: ~
 
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
