@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.1.1] - 2026-05-15
+
+### Changed
+
+- `typo3/cms-install` and `typo3/cms-scheduler` moved from `require` to `suggest`. The UpgradeWizard class only loads when cms-install's attribute-autoconfigure scans services, and the scheduler task wrapper only loads when cms-scheduler actually instantiates it — both are dormant on installs that don't have the packages. The scheduler-task registration in `ext_localconf.php` is now guarded with `class_exists` for explicit clarity. Users running async mode still need cms-scheduler installed; users running the upgrade wizard still need cms-install installed.
+
 ## [14.1.0] - 2026-05-15
 
 ### Added
@@ -38,5 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.1.1]: https://github.com/plan2net/webp/releases/tag/14.1.1
 [14.1.0]: https://github.com/plan2net/webp/releases/tag/14.1.0
 [14.0.0]: https://github.com/plan2net/webp/releases/tag/14.0.0
