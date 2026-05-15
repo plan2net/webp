@@ -51,14 +51,6 @@ jobs:
             composer-${{ matrix.php }}-${{ matrix.typo3 }}-
             composer-${{ matrix.php }}-
 
-      - name: Cache vendor
-        if: ${{ !env.ACT }}
-        uses: actions/cache@v4
-        with:
-          path: .Build/vendor
-          key: vendor-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json') }}
-          restore-keys: vendor-${{ matrix.php }}-${{ matrix.typo3 }}-
-
       - name: Pin TYPO3 version
         run: composer require --no-update typo3/cms-core:"${{ matrix.typo3 }}"
 
