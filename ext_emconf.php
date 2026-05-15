@@ -1,8 +1,8 @@
 <?php
 
 $EM_CONF['webp'] = [
-    'title' => 'Creates WebP copies for images',
-    'description' => 'Creates WebP copies of all jpeg and png images',
+    'title' => 'Drop-in WebP delivery',
+    'description' => 'Creates sibling WebP files next to each processed image. The webserver delivers them via Accept-header content negotiation, so image URLs and HTML stay unchanged.',
     'category' => 'fe',
     'author' => 'Wolfgang Klinger',
     'author_email' => 'wk@plan2.net',
