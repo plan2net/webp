@@ -30,12 +30,12 @@
   "require": {
     "php": ">=8.2",
     "symfony/finder": "^6.4 || ^7.0",
-    "typo3/cms-core": "^12.4 || ^13.4 || ^14.0",
-    "typo3/cms-install": "^12.4 || ^13.4 || ^14.0",
-    "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.0"
+    "typo3/cms-core": "^12.4 || ^13.4 || ^14.0"
   },
   "suggest": {
-    "ext-gd": "Use GD for image processing"
+    "ext-gd": "Use GD for image processing",
+    "typo3/cms-install": "Required only if you run the UpgradeWizard that clears legacy tx_webp_failed rows during a configuration_hash column resize",
+    "typo3/cms-scheduler": "Required only when async = 1; provides the scheduler task that drains tx_webp_queue out-of-band"
   },
   "autoload": {
     "psr-4": {
@@ -60,6 +60,8 @@
   },
   "require-dev": {
     "phpunit/phpunit": "^10.5 || ^11",
+    "typo3/cms-install": "^12.4 || ^13.4 || ^14.0",
+    "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.0",
     "typo3/testing-framework": "^8.0 || ^9.0",
     "friendsofphp/php-cs-fixer": "^3.75"
   }

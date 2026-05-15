@@ -11,7 +11,6 @@ use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\FolderScanner;
 use Plan2net\Webp\Service\ProcessedFileWriter;
 use Plan2net\Webp\Service\Webp as WebpService;
-use Plan2net\Webp\Task\ProcessWebpQueueTask;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -52,7 +51,10 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
 
     protected function configure(): void
     {
-        $this->addOption('batch', null, InputOption::VALUE_REQUIRED, 'Maximum number of queue entries to process per run', (string) ProcessWebpQueueTask::DEFAULT_BATCH_SIZE);
+        // Inline default mirrors ProcessWebpQueueTask::DEFAULT_BATCH_SIZE.
+        // Not a class-constant reference because the command must work even when
+        // typo3/cms-scheduler is absent (the Task class extends AbstractTask).
+        $this->addOption('batch', null, InputOption::VALUE_REQUIRED, 'Maximum number of queue entries to process per run', '50');
         $this->addOption('folder', null, InputOption::VALUE_REQUIRED, 'Filesystem folder to sweep (relative to public web root). When set, bypasses the queue.');
     }
 

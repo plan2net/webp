@@ -54,11 +54,6 @@ services:
     tags:
       - name: 'console.command'
 
-  Plan2net\Webp\Task\ProcessWebpQueueTaskAdditionalFieldProvider:
-    public: true
-
-  Plan2net\Webp\Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate: ~
-
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
   # the service from the container (called from FileNameFilter::filterWebpFiles and from
   # ext_localconf.php — neither has a DI constructor injection point).
