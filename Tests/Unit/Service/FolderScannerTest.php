@@ -122,12 +122,13 @@ final class FolderScannerTest extends TestCase
         }
         if (\is_dir($path)) {
             foreach (\scandir($path) ?: [] as $entry) {
-                if ($entry === '.' || $entry === '..') {
+                if ('.' === $entry || '..' === $entry) {
                     continue;
                 }
                 $this->removeRecursive($path . '/' . $entry);
             }
             \rmdir($path);
+
             return;
         }
         \unlink($path);

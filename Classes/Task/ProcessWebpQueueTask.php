@@ -20,6 +20,7 @@ final class ProcessWebpQueueTask extends AbstractTask
     {
         $command = GeneralUtility::makeInstance(ProcessWebpQueueCommand::class);
         $input = new ArrayInput(['--batch' => (string) $this->batchSize]);
+
         return 0 === $command->run($input, new NullOutput());
     }
 }

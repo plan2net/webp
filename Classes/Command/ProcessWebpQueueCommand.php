@@ -71,13 +71,15 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
         }
         if (!$acquired) {
             $output->writeln('<info>Another webp:process-queue is running; exiting.</info>');
+
             return Command::SUCCESS;
         }
         try {
             $folder = $input->getOption('folder');
-            if (\is_string($folder) && $folder !== '') {
+            if (\is_string($folder) && '' !== $folder) {
                 return $this->runFolderMode($folder, $output);
             }
+
             return $this->runQueueMode(\max(1, (int) $input->getOption('batch')), $output);
         } finally {
             $locker->release();
@@ -96,7 +98,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
                 $originalFile = $this->resourceFactory->getFileObject($entry->originalFileId);
                 $configuration = (array) \unserialize($entry->configuration, ['allowed_classes' => false]);
                 $source = $this->resolveSource($entry->processedFileId, $originalFile);
-                if ($source === null) {
+                if (null === $source) {
                     continue;
                 }
                 $processedFileWebp = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
@@ -131,14 +133,16 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
                 $this->applyThrottle($throttleMs, $index === $lastIndex);
             }
         }
+
         return Command::SUCCESS;
     }
 
     private function runFolderMode(string $folder, OutputInterface $output): int
     {
         $rootPath = $this->resolveAgainstWebRoot($folder);
-        if ($rootPath === null) {
+        if (null === $rootPath) {
             $output->writeln(\sprintf('<error>Folder "%s" not found or outside the public web root</error>', $folder));
+
             return Command::FAILURE;
         }
 
@@ -155,6 +159,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
             }
             $this->applyThrottle($throttleMs, $index === $lastIndex);
         }
+
         return Command::SUCCESS;
     }
 
@@ -163,7 +168,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
         if (!$originalFile instanceof \TYPO3\CMS\Core\Resource\FileInterface) {
             return null;
         }
-        if ($processedFileId === 0) {
+        if (0 === $processedFileId) {
             return $originalFile;
         }
         try {
@@ -176,7 +181,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
     private function resolveAgainstWebRoot(string $folder): ?string
     {
         $webRoot = \realpath(Environment::getPublicPath());
-        if ($webRoot === false) {
+        if (false === $webRoot) {
             return null;
         }
         $candidate = \realpath($webRoot . '/' . \ltrim($folder, '/'));

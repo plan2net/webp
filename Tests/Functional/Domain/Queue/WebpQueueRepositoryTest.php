@@ -149,6 +149,6 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
             ->select(['enqueued_at'], 'tx_webp_queue', ['original_file_id' => $originalFileId])
             ->fetchAssociative();
 
-        return $row !== false ? (int) $row['enqueued_at'] : 0;
+        return false !== $row ? (int) $row['enqueued_at'] : 0;
     }
 }

@@ -103,6 +103,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
                         $taskType,
                         $configuration + ['webp' => true]
                     );
+
                     return;
                 } catch (\Doctrine\DBAL\Exception $e) {
                     $this->logger->notice(

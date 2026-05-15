@@ -190,6 +190,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
     private function runCommand(array $arguments): int
     {
         $tester = new CommandTester($this->get(ProcessWebpQueueCommand::class));
+
         return $tester->execute($arguments);
     }
 
