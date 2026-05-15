@@ -1,4 +1,4 @@
 "sys_file"
 ,"uid","pid","storage","type","identifier","identifier_hash","folder_hash","extension","mime_type","name","sha1","size","creation_date","modification_date","missing"
-,1,0,1,"2","/tiny.png","c159fdbdc1b79fd4b106483361725b91bfe2c0ca","42099b4af021e53fd8fd4e056c2568d7c2e3ffa8","png","image/png","tiny.png","9e4bb70df26710bd02b9f46447ae7eb986c2d9ff",118,1700000000,1700000000,0
+,1,0,1,"2","/tiny.png","c159fdbdc1b79fd4b106483361725b91bfe2c0ca","42099b4af021e53fd8fd4e056c2568d7c2e3ffa8","png","image/png","tiny.png","7a27bacac2f08f7023dceb2b332f97621c543520",22929,1700000000,1700000000,0
 ,2,0,1,"2","/tiny.webp","5fe487572a52950d02990b09b5ced158957afc06","42099b4af021e53fd8fd4e056c2568d7c2e3ffa8","webp","image/webp","tiny.webp","8a2e204e521f187b69aff7df50eb201abfaf6dd3",84,1700000000,1700000000,0
