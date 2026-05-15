@@ -74,12 +74,12 @@ Then:
 
 1. Activate the extension if your TYPO3 is in non-Composer mode (Composer mode activates it automatically).
 2. Flush TYPO3 and PHP caches.
-3. Clear processed files (Admin Tools → Maintenance → Remove Temporary Assets).
+3. Clear processed files (*System → Maintenance → Remove Temporary Assets* on TYPO3 v14; *Admin Tools → Maintenance* on v12/v13).
 4. Add the [webserver rewrite rules](#webserver-configuration).
 
 ## Updating
 
-After a `composer update`, **save the extension settings at least once** via *Admin Tools → Settings → Extension Configuration → webp*. TYPO3 only writes default values to `LocalConfiguration` when you save the settings form, so any new defaults the upgraded version ships won't take effect until you do.
+After a `composer update`, **save the extension settings at least once** via the Extension Configuration backend module (*System → Settings → Extension Configuration → webp* on TYPO3 v14; *Admin Tools → Settings → Extension Configuration → webp* on v12/v13). TYPO3 only writes default values to `LocalConfiguration` when you save the settings form, so any new defaults the upgraded version ships won't take effect until you do.
 
 ## Configuration
 
@@ -233,7 +233,7 @@ By default the extension converts images synchronously inside the request that p
 
 1. Set `async = 1` in the extension configuration.
 2. Run TYPO3's database analyzer so `tx_webp_queue` is created.
-3. Register a TYPO3 Scheduler task: **System → Scheduler → Add task → Type: "WebP: process conversion queue"**. Pick a frequency that matches your throughput (every minute for busy sites, hourly for low-traffic).
+3. Register a TYPO3 Scheduler task: **System → Scheduler → Add task → Type: "Process conversion queue (webp)"**. Pick a frequency that matches your throughput (every minute for busy sites, hourly for low-traffic).
 4. Make sure the scheduler itself runs — either via `vendor/bin/typo3 scheduler:run` in cron, or a daemonized runner.
 
 The listener will now enqueue new conversions; the scheduler task drains the queue in the background. Existing siblings stay; the extension does not retroactively backfill.
@@ -398,7 +398,7 @@ Common cases:
 | File still served as JPEG after a successful generation | Webserver rewrite rule missing or shadowed by another rule          |
 | Sibling left behind after deleting the source | None — that's the bug fixed in 14.0.0; upgrade                              |
 
-After changing `processor_colorspace`, clean up any processed files (Admin Tools → Maintenance → Remove Temporary Assets) so the change takes effect on existing images.
+After changing `processor_colorspace`, clean up any processed files via the Maintenance backend module (*System → Maintenance → Remove Temporary Assets* on TYPO3 v14; *Admin Tools → Maintenance* on v12/v13) so the change takes effect on existing images.
 
 ## Known limitations
 
@@ -411,7 +411,7 @@ After changing `processor_colorspace`, clean up any processed files (Admin Tools
 
 To remove all generated `.webp` files (e.g. before a converter or quality change):
 
-1. *Admin Tools → Maintenance → Remove Temporary Assets*
+1. *System → Maintenance → Remove Temporary Assets* (TYPO3 v14) or *Admin Tools → Maintenance → Remove Temporary Assets* (v12/v13).
 2. Click *Scan temporary files*.
 3. Click the button labelled with the storage path.
 

@@ -5,13 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [14.1.0] - 2026-05-15
 
 ### Added
 
 - Opt-in **async conversion mode** (`async = 1`): WebP conversions are queued in a new `tx_webp_queue` table and processed out-of-band by a TYPO3 Scheduler task. Closes [#17](https://github.com/plan2net/webp/issues/17).
 - New CLI command `webp:process-queue` with optional `--folder=PATH` argument to convert images in non-FAL folders (e.g., `typo3temp/assets/online_media/`). Closes [#73](https://github.com/plan2net/webp/issues/73).
 - New `async_throttle_ms` configuration to space conversions out with randomized jitter, preventing thundering-herd CPU/IO.
+- UpgradeWizard `webp.truncateFailedAttemptsBeforeColumnResize` to unblock upgrades from older releases that shipped `tx_webp_failed.configuration_hash` as `VARCHAR(40)`; the wizard empties the cache of failed attempts so TYPO3's database analyzer can shrink the column to `VARCHAR(32)`. Closes [#95](https://github.com/plan2net/webp/issues/95).
+
+### Fixed
+
+- `ExternalConverter` now preserves non-ASCII bytes in filenames (e.g., German umlauts, accented characters) when passing paths to external converters like `cwebp`. PHP's `escapeshellarg()` silently drops multibyte bytes under `LC_CTYPE=C`, which mangled filenames like `Mövenpick.png` to `Mvenpick.png` and caused conversion to silently fail. Closes [#89](https://github.com/plan2net/webp/issues/89).
+- TYPO3 14.3 no longer logs an `ext_emconf.php` deprecation notice on every request; `composer.json` now declares `extra.typo3/cms.version` and `extra.typo3/cms.Package.providesPackages` so `PackageManager` recognises the extension as composer-only-capable.
 
 ## [14.0.0] - 2026-05-14
 
@@ -32,4 +38,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.1.0]: https://github.com/plan2net/webp/releases/tag/14.1.0
 [14.0.0]: https://github.com/plan2net/webp/releases/tag/14.0.0
