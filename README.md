@@ -355,6 +355,49 @@ RewriteCond %{HTTP_USER_AGENT} ^.*(Chrome|Firefox|Edge).*$ [NC]
 …
 ```
 
+## Remote storages (S3, Azure, custom FAL drivers)
+
+![Generate WebP variants storage setting](Resources/Public/Documentation/generate_webp_variants.png)
+
+Out of the box every Local writable storage produces `.webp` siblings — that's
+the default mode for the new *Generate WebP variants* field on each storage
+record. To opt in a non-Local storage (S3 mount, Azure mount, any custom FAL
+driver), edit the storage record and set the field to **Enabled**.
+
+| Storage record field | Value | Result |
+|---|---|---|
+| *Generate WebP variants* | **Auto** *(default)* | On for `driver = Local`, off for everything else. Identical to pre-14.2 behaviour. |
+| *Generate WebP variants* | **Enabled**          | On regardless of driver type. Use to opt a remote storage in. |
+| *Generate WebP variants* | **Disabled**         | Off regardless of driver type. Use to take a Local storage out of the pipeline temporarily. |
+
+Once enabled, behaviour is identical to a Local storage: the `.webp` lands at
+`<original>.webp` on the storage, and the four FAL lifecycle events (move,
+replace, delete, recycler) keep siblings in sync.
+
+> [!IMPORTANT]
+> Enable [`async = 1`](#async) for any storage with a non-Local driver.
+> Synchronous mode adds the driver's upload latency to every page render that
+> processes an image (typical S3 PUT: 100–500 ms, more on cold connections).
+> The async queue moves that work off the render path.
+
+### Serving the right format on a CDN
+
+This extension *writes* the sibling on the storage. Serving the right format
+per request — the `Accept`-header rewrite — is the edge's job. Sketches:
+
+- **CloudFront**: attach a CloudFront Function on viewer request that
+  inspects `Accept`, and when `image/webp` is present rewrites the URI from
+  `/path/photo.jpg` to `/path/photo.jpg.webp`. Pair with a viewer-response
+  function that sets `Vary: Accept`.
+- **Cloudflare**: a Worker doing the same rewrite, or an Image Resizing
+  policy if the account has it.
+- **Direct S3 origins without an edge function**: not supported by S3 itself;
+  you need a layer in front (CloudFront/equivalent or an origin proxy).
+
+The webserver-rewrite recipes above still apply when TYPO3's origin sits in
+front of the storage (e.g., S3 mounted only for backend uploads, but served
+through the TYPO3 instance).
+
 ## Verifying it works
 
 Two things to check: that WebP files are actually generated, and that the webserver serves them when the client supports it.

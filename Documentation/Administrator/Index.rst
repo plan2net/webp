@@ -131,3 +131,35 @@ Add the following lines to the *.htaccess* file of the document root:
 
 
 Make sure that there are no other rules that already apply to the specified image formats and prevent further execution!
+
+
+Remote storages (S3, Azure, custom FAL drivers)
+-----------------------------------------------
+
+Each storage record (*File > Storage*) carries a *Generate WebP variants*
+field that selects the per-storage mode:
+
+- **Auto** (default) — on for ``driver = Local``, off for everything else.
+  Matches pre-14.2 behaviour for every existing storage.
+- **Enabled** — on regardless of driver type. Use this to opt a non-Local
+  storage in.
+- **Disabled** — off regardless of driver type. Use this to temporarily
+  take a Local storage out of the pipeline.
+
+When enabled, behaviour on a non-Local storage is identical to Local: the
+``.webp`` lands at ``<original>.webp`` on the storage, and the FAL lifecycle
+events (move, replace, delete, recycler) keep siblings in sync.
+
+.. important::
+
+   Enable ``async = 1`` for any storage with a non-Local driver. Synchronous
+   mode adds the driver's upload latency to every page render that processes
+   an image (typical S3 PUT: 100–500 ms). The async queue moves that work off
+   the render path.
+
+The webserver rewrites above apply unchanged when TYPO3's origin sits in
+front of the storage. When the storage is served via a CDN directly (S3 +
+CloudFront, etc.), the ``Accept``-header rewrite has to be done at the edge —
+e.g. a CloudFront Function on viewer request, a Cloudflare Worker, or an
+origin proxy. The extension only writes the sibling on the storage; choosing
+which file to serve per request is the edge's job.
