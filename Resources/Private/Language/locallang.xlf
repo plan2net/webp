@@ -12,6 +12,21 @@
       <trans-unit id="task.processQueue.batchSize.label">
         <source>Batch size (entries per run)</source>
       </trans-unit>
+      <trans-unit id="sys_file_storage.tx_webp_mode">
+        <source>Generate WebP variants</source>
+      </trans-unit>
+      <trans-unit id="sys_file_storage.tx_webp_mode.description">
+        <source>When enabled, processed images on this storage get a .webp copy at the same path for transparent delivery to browsers that support WebP.</source>
+      </trans-unit>
+      <trans-unit id="sys_file_storage.tx_webp_mode.auto">
+        <source>Auto (Local drivers only)</source>
+      </trans-unit>
+      <trans-unit id="sys_file_storage.tx_webp_mode.enabled">
+        <source>Enabled</source>
+      </trans-unit>
+      <trans-unit id="sys_file_storage.tx_webp_mode.disabled">
+        <source>Disabled</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

@@ -22,3 +22,10 @@ CREATE TABLE tx_webp_queue
     UNIQUE KEY queue_dedup (original_file_id, processed_file_id, task_type, configuration_hash),
     KEY enqueued_at (enqueued_at)
 );
+
+# Per-storage WebP sibling mode override.
+# 0 = Auto (Local: on, others: off), 1 = Enabled, 2 = Disabled
+CREATE TABLE sys_file_storage
+(
+    tx_webp_mode smallint(5) unsigned DEFAULT '0' NOT NULL
+);
