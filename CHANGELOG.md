@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.3.0] - 2026-05-16
+
+### Added
+
+- `webp:diagnose` CLI command. Reports per-storage WebP mode (incl. phantom rows whose driver isn't registered), converter health (PHP GD / ImageMagick / GraphicsMagick / external binary), async pipeline + scheduler state, recent failed conversion attempts, an optional HTTP probe of the webserver's Accept-header rewrite (with `Vary: Accept` check), and an optional per-file deep dive. Single recommendation block points at the first finding; exit code is `1` only on real failures so the command works as a deployment gate. README and reST documentation updated.
+
 ## [14.2.0] - 2026-05-15
 
 ### Added
@@ -61,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.3.0]: https://github.com/plan2net/webp/releases/tag/14.3.0
 [14.2.0]: https://github.com/plan2net/webp/releases/tag/14.2.0
 [14.1.1]: https://github.com/plan2net/webp/releases/tag/14.1.1
 [14.1.0]: https://github.com/plan2net/webp/releases/tag/14.1.0
