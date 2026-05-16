@@ -6,8 +6,8 @@ namespace Plan2net\Webp\Tests\Functional\Command;
 
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Command\ProcessWebpQueueCommand;
-use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -173,7 +173,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
         \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $this->fileadminPath . 'tiny.png');
 
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp'] = [
-            'converter' => PhpGdConverter::class,
+            'converter' => DeterministicWebpConverter::class,
             'parameters' => 'image/jpeg::-quality 85|image/png::-quality 75|image/gif::-quality 85',
             'mime_types' => 'image/jpeg,image/png,image/gif',
             'convert_all' => '1',
