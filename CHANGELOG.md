@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.2.0] - 2026-05-15
+
+### Added
+
+- Per-storage opt-in for `.webp` generation on non-Local FAL drivers. A new `tx_webp_mode` field on `sys_file_storage` (Storage record → *Generate WebP variants*) selects **Auto** (default, preserves pre-14.2 behaviour — on for Local, off for everything else), **Enabled** (force on regardless of driver), or **Disabled** (force off). Closes [#108](https://github.com/plan2net/webp/issues/108).
+- README and reST documentation for remote storages and the CDN-edge serving recipe (CloudFront Function / Cloudflare Worker).
+
+### Changed
+
+- WebP publish step now routes through FAL APIs (`ResourceStorage::updateProcessedFile()` for processing-folder targets, `Folder::addFile(..., DuplicationBehavior::REPLACE)` for source-folder targets) instead of direct filesystem writes. The driver overwrites atomically on `REPLACE` — a transient upload failure no longer leaves the user without a previously-valid sibling.
+- WebP sibling lifecycle (move/rename/replace/delete/recycler) uses FAL public APIs (`ResourceStorage::moveFile`, `renameFile`, `getFile`, `deleteFile`) instead of direct filesystem ops. Works driver-agnostically; remote-driver storages no longer accumulate orphans on cross-storage moves.
+- Sibling now follows the original on rename too — previously only inter-folder moves were tracked, so a BE "rename" left the `.webp` stranded at the old filename.
+
+### Fixed
+
+- TYPO3 v12 ships `SYS/mediafile_ext` without `webp`, so the new FAL publish path tripped `ResourceConsistencyService::isFileExtensionAllowed`. `ext_localconf.php` now appends `webp` to that list if absent — no-op on v13/v14 where it's already there.
+
 ## [14.1.1] - 2026-05-15
 
 ### Changed
@@ -44,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.2.0]: https://github.com/plan2net/webp/releases/tag/14.2.0
 [14.1.1]: https://github.com/plan2net/webp/releases/tag/14.1.1
 [14.1.0]: https://github.com/plan2net/webp/releases/tag/14.1.0
 [14.0.0]: https://github.com/plan2net/webp/releases/tag/14.0.0
