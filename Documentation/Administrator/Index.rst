@@ -163,3 +163,42 @@ CloudFront, etc.), the ``Accept``-header rewrite has to be done at the edge —
 e.g. a CloudFront Function on viewer request, a Cloudflare Worker, or an
 origin proxy. The extension only writes the sibling on the storage; choosing
 which file to serve per request is the edge's job.
+
+
+Diagnosing your installation
+----------------------------
+
+The ``webp:diagnose`` CLI command walks the full WebP delivery chain
+end-to-end and points at the first failing link.
+
+.. code-block:: bash
+
+   vendor/bin/typo3 webp:diagnose                              # health check
+   vendor/bin/typo3 webp:diagnose --url=https://example.com    # also probe webserver delivery
+   vendor/bin/typo3 webp:diagnose --file=42                    # also investigate one file
+
+It reports:
+
+- Storages: mode, driver, sibling count, plus phantom rows with
+  unregistered drivers.
+- Converter: class, binary availability, parameter parsing.
+- Async pipeline: queue size, age, scheduler task state.
+- Failed-conversion cache: total, recent rows, dominant config hash.
+- Delivery probe (``--url=…``): two ``Accept`` HEADs + ``Vary: Accept``.
+- File deep dive (``--file=<uid>``): metadata + both sibling tables +
+  failed-attempts rows.
+
+.. note::
+
+   The probe runs from this machine. CDN behaviour at the edge can differ
+   from what we observe locally. Run the probe from a host inside your
+   CDN's pull zone for the most accurate read.
+
+Useful flags:
+
+``--insecure``
+   Disable TLS certificate verification on the HTTP probe -- for
+   self-signed or otherwise untrusted certs.
+
+``--probe-timeout=<sec>``
+   HTTP probe timeout (default: 10).
