@@ -66,6 +66,10 @@ services:
     tags:
       - name: 'console.command'
 
+  Plan2net\Webp\Command\DiagnoseCommand:
+    tags:
+      - name: 'console.command'
+
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
   # the service from the container (called from FileNameFilter::filterWebpFiles and from
   # ext_localconf.php — neither has a DI constructor injection point).

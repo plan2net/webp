@@ -108,6 +108,28 @@ final class Webp
         return $targetSize;
     }
 
+    /**
+     * @internal
+     */
+    public function getParametersForMimeType(string $mimeType): ?string
+    {
+        $parameters = \explode('|', $this->configuration->getParameters());
+        foreach ($parameters as $parameter) {
+            $typeAndOptions = \explode('::', $parameter, 2);
+            $type = $typeAndOptions[0] ?? null;
+            $options = $typeAndOptions[1] ?? null;
+            // Fallback to old options format
+            if (empty($options)) {
+                return $type;
+            }
+            if ($type === $mimeType) {
+                return $options;
+            }
+        }
+
+        return null;
+    }
+
     private function publishToStorage(FileInterface $sourceFile, ProcessedFile $processedFile, string $tempTarget): void
     {
         $storage = $sourceFile->getStorage();
@@ -151,24 +173,5 @@ final class Webp
         }
 
         return \TYPO3\CMS\Core\Resource\DuplicationBehavior::REPLACE;
-    }
-
-    private function getParametersForMimeType(string $mimeType): ?string
-    {
-        $parameters = \explode('|', $this->configuration->getParameters());
-        foreach ($parameters as $parameter) {
-            $typeAndOptions = \explode('::', $parameter, 2);
-            $type = $typeAndOptions[0] ?? null;
-            $options = $typeAndOptions[1] ?? null;
-            // Fallback to old options format
-            if (empty($options)) {
-                return $type;
-            }
-            if ($type === $mimeType) {
-                return $options;
-            }
-        }
-
-        return null;
     }
 }
