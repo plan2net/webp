@@ -5,6 +5,12 @@ use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 (static function () {
+    // TYPO3 v12 omits `webp` from SYS/mediafile_ext; v13+ added it.
+    $mediaFileExtensions = (string) ($GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] ?? '');
+    if (!\in_array('webp', GeneralUtility::trimExplode(',', $mediaFileExtensions, true), true)) {
+        $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] = '' === $mediaFileExtensions ? 'webp' : $mediaFileExtensions . ',webp';
+    }
+
     if (GeneralUtility::makeInstance(Configuration::class)->isHideWebp()) {
         // Hide webp files in file lists
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks'][] = [
