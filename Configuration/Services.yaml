@@ -36,6 +36,18 @@ services:
         identifier: 'webp.after-file-replaced'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileReplacedEvent
 
+  Plan2net\Webp\EventListener\BeforeFileRenamed:
+    tags:
+      - name: event.listener
+        identifier: 'webp.before-file-renamed'
+        event: TYPO3\CMS\Core\Resource\Event\BeforeFileRenamedEvent
+
+  Plan2net\Webp\EventListener\AfterFileRenamed:
+    tags:
+      - name: event.listener
+        identifier: 'webp.after-file-renamed'
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileRenamedEvent
+
   Plan2net\Webp\Service\Webp:
     public: true
 

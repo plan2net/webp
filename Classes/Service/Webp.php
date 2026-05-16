@@ -35,34 +35,36 @@ final class Webp
         $processedFile->setName($originalFile->getName() . '.webp');
         $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
 
-        $originalFilePath = $originalFile->getForLocalProcessing(false);
-        if (!@\is_file($originalFilePath)) {
+        $sourceLocalPath = $originalFile->getForLocalProcessing(false);
+        if (!@\is_file($sourceLocalPath)) {
             return;
         }
 
-        $targetFilePath = "{$originalFilePath}.webp";
         $mimeType = $originalFile->getMimeType();
         $parameters = $this->getParametersForMimeType($mimeType);
-
         $fileUid = (int) $originalFile->getUid();
         if (null !== $parameters && $this->failedAttempts->wasAttempted($fileUid, $parameters)) {
-            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $originalFilePath));
+            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $sourceLocalPath));
         }
 
+        $tempTarget = GeneralUtility::tempnam('webp-', '.webp');
         try {
-            $fileSizeTargetFile = $this->convertFilePath($originalFilePath, $targetFilePath, $mimeType);
+            $fileSize = $this->convertFilePath($sourceLocalPath, $tempTarget, $mimeType);
+            $this->publishToStorage($originalFile, $processedFile, $tempTarget);
+
+            $processedFile->updateProperties([
+                'width' => $originalFile->getProperty('width'),
+                'height' => $originalFile->getProperty('height'),
+                'size' => $fileSize,
+            ]);
         } catch (ConvertedFileLargerThanOriginalException $e) {
             if (null !== $parameters) {
                 $this->failedAttempts->record($fileUid, $parameters);
             }
             throw $e;
+        } finally {
+            GeneralUtility::unlink_tempfile($tempTarget);
         }
-
-        $processedFile->updateProperties([
-            'width' => $originalFile->getProperty('width'),
-            'height' => $originalFile->getProperty('height'),
-            'size' => $fileSizeTargetFile,
-        ]);
     }
 
     public function needsReprocessing(ProcessedFile $processedFile): bool
@@ -99,10 +101,56 @@ final class Webp
         $targetSize = (int) @\filesize($targetPath);
         if ($targetSize > 0 && $sourceSize > 0 && $sourceSize <= $targetSize) {
             @\unlink($targetPath);
+
             throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetPath, $targetSize, $sourceSize, $sourcePath));
         }
 
         return $targetSize;
+    }
+
+    private function publishToStorage(FileInterface $sourceFile, ProcessedFile $processedFile, string $tempTarget): void
+    {
+        $storage = $sourceFile->getStorage();
+
+        if ($storage->isWithinProcessingFolder($sourceFile->getIdentifier())) {
+            // The .webp lives alongside the processed variant inside the
+            // (potentially nested) processing folder. We call
+            // ResourceStorage::updateProcessedFile() directly — same method
+            // ProcessedFile::updateWithLocalFile() uses internally — to avoid
+            // a v12 path that NPEs on getProperties() for fresh ProcessedFile
+            // instances. ResourceStorage::addFile() isn't usable either: its
+            // post-write getFileByIdentifier() routes through
+            // ProcessedFileRepository inside the processing folder and
+            // returns null until our row is written downstream.
+            $processingFolder = $storage->getProcessingFolder($processedFile->getOriginalFile());
+            $storage->updateProcessedFile($tempTarget, $processedFile, $processingFolder);
+
+            return;
+        }
+
+        // The .webp lives alongside the original in the source folder.
+        // REPLACE conflict mode is atomic at the driver level (PHP copy()
+        // overwrites the destination); the previous sibling survives a
+        // transient upload failure.
+        $folder = $sourceFile->getParentFolder();
+        $targetName = $sourceFile->getName() . '.webp';
+        $newFile = $folder->addFile($tempTarget, $targetName, self::replaceConflictMode());
+        $processedFile->setIdentifier($newFile->getIdentifier());
+    }
+
+    /**
+     * TYPO3 v13/v14 ship DuplicationBehavior as a string-backed enum at
+     * \TYPO3\CMS\Core\Resource\Enum\DuplicationBehavior; v12 has a class with
+     * constants at \TYPO3\CMS\Core\Resource\DuplicationBehavior. The
+     * extension supports all three so we resolve at runtime.
+     */
+    private static function replaceConflictMode(): mixed
+    {
+        if (\enum_exists('TYPO3\\CMS\\Core\\Resource\\Enum\\DuplicationBehavior')) {
+            return \TYPO3\CMS\Core\Resource\Enum\DuplicationBehavior::REPLACE;
+        }
+
+        return \TYPO3\CMS\Core\Resource\DuplicationBehavior::REPLACE;
     }
 
     private function getParametersForMimeType(string $mimeType): ?string

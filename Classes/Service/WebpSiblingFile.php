@@ -4,93 +4,133 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Resource\AbstractFile;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\Resource\StorageRepository;
 
-final class WebpSiblingFile
+final class WebpSiblingFile implements LoggerAwareInterface
 {
-    /** @var \WeakMap<FileInterface, string> */
+    use LoggerAwareTrait;
+
+    /** @var \WeakMap<FileInterface, array{0: int, 1: string}> */
     private \WeakMap $capturedOldSiblings;
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly StorageRepository $storageRepository,
+    ) {
         $this->capturedOldSiblings = new \WeakMap();
     }
 
     public function captureBeforeMove(FileInterface $file): void
     {
-        if (!$this->isLocalWritable($file->getStorage())) {
+        if ($this->shouldSkip($file)) {
             return;
         }
-        $this->capturedOldSiblings[$file] = $file->getForLocalProcessing(false) . '.webp';
+        $this->capturedOldSiblings[$file] = [
+            $file->getStorage()->getUid(),
+            $file->getIdentifier() . '.webp',
+        ];
     }
 
     public function relocateAfterMove(FileInterface $fileAtNewLocation): void
     {
-        $oldSibling = $this->capturedOldSiblings[$fileAtNewLocation] ?? null;
+        $captured = $this->capturedOldSiblings[$fileAtNewLocation] ?? null;
         unset($this->capturedOldSiblings[$fileAtNewLocation]);
-        if (null === $oldSibling) {
+        if (null === $captured) {
             return;
         }
-        if (!$this->isLocalWritable($fileAtNewLocation->getStorage())) {
-            return;
+        [$sourceStorageUid, $oldSiblingIdentifier] = $captured;
+        $newStorage = $fileAtNewLocation->getStorage();
+        $sameStorage = $sourceStorageUid === $newStorage->getUid();
+
+        try {
+            if ($sameStorage && StorageWebpMode::isEnabledFor($newStorage)) {
+                $this->moveSiblingWithinStorage($newStorage, $oldSiblingIdentifier, $fileAtNewLocation);
+
+                return;
+            }
+            // Cross-storage move, or same-storage with mode now Disabled:
+            // captured source sibling is orphaned regardless of destination
+            // mode. Lazy regeneration covers the new location on next render
+            // if mode allows.
+            $this->cleanupSourceSibling($sourceStorageUid, $oldSiblingIdentifier);
+        } catch (\Exception $e) {
+            $this->logger?->warning('webp: sibling relocation failed, falling back to source cleanup + lazy regeneration: ' . $e->getMessage());
+            $this->cleanupSourceSibling($sourceStorageUid, $oldSiblingIdentifier);
         }
-        if (!\is_file($oldSibling)) {
-            return;
-        }
-        $newSibling = $fileAtNewLocation->getForLocalProcessing(false) . '.webp';
-        if ($oldSibling === $newSibling) {
-            return;
-        }
-        if (@\rename($oldSibling, $newSibling)) {
-            return;
-        }
-        // Rename failed (e.g. cross-filesystem). Clear both ends so neither
-        // location serves stale content; lazy regeneration recreates the
-        // sibling at the new path on the next render.
-        $this->unlinkIfExists($oldSibling);
-        $this->unlinkIfExists($newSibling);
     }
 
     public function deleteForReplacedFile(FileInterface $file): void
     {
-        if (!$this->isLocalWritable($file->getStorage())) {
+        if ($this->shouldSkip($file)) {
             return;
         }
-        $this->unlinkIfExists($file->getForLocalProcessing(false) . '.webp');
+        $this->deleteSiblingIfExists($file->getStorage(), $file->getIdentifier() . '.webp');
     }
 
     public function deleteForDeletedFile(FileInterface $file): void
     {
-        $storage = $file->getStorage();
-        if (!$this->isLocalWritable($storage)) {
+        if ($this->shouldSkip($file)) {
             return;
         }
-        // ResourceStorage::deleteFile() routes through moveFile() when the
-        // storage has a recycler and only flips setDeleted() on a physical
-        // delete. In the recycler case our BeforeFileMoved/AfterFileMoved
-        // pair has already relocated the sibling alongside the file, so
-        // leaving it there is what users expect on restore.
         if ($file instanceof AbstractFile && !$file->isDeleted()) {
+            // ResourceStorage::deleteFile() reroutes through moveFile() when a
+            // recycler exists and only flips setDeleted() on a physical delete.
+            // In the recycler case our BeforeFileMoved/AfterFileMoved pair has
+            // already relocated the sibling alongside the file.
             return;
         }
-        $this->unlinkIfExists($storage->getFileForLocalProcessing($file, false) . '.webp');
+        $this->deleteSiblingIfExists($file->getStorage(), $file->getIdentifier() . '.webp');
     }
 
-    private function unlinkIfExists(string $path): void
+    private function shouldSkip(FileInterface $file): bool
     {
-        if (\is_file($path)) {
-            @\unlink($path);
+        if ('webp' === $file->getExtension()) {
+            return true;
         }
+
+        // Mode-gated: don't touch siblings on storages where we're not the
+        // authority. Auto on a non-Local storage means user-managed .webp
+        // files are off-limits to us — we mustn't delete or move them.
+        return !StorageWebpMode::isEnabledFor($file->getStorage());
     }
 
-    private function isLocalWritable(?ResourceStorage $storage): bool
+    private function moveSiblingWithinStorage(ResourceStorage $storage, string $oldIdentifier, FileInterface $fileAtNewLocation): void
     {
-        if (null === $storage || 0 === $storage->getUid()) {
-            return false;
+        if (!$storage->hasFile($oldIdentifier)) {
+            return;
+        }
+        $siblingFile = $storage->getFile($oldIdentifier);
+        $newFolder = $fileAtNewLocation->getParentFolder();
+        $newName = $fileAtNewLocation->getName() . '.webp';
+
+        if ($newFolder->hasFile($newName)) {
+            $storage->deleteFile($newFolder->getFile($newName));
         }
 
-        return 'Local' === $storage->getDriverType() && $storage->isWritable();
+        $storage->moveFile($siblingFile, $newFolder, $newName);
+    }
+
+    private function cleanupSourceSibling(int $storageUid, string $identifier): void
+    {
+        $storage = $this->storageRepository->findByUid($storageUid);
+        if (null === $storage) {
+            return;
+        }
+        $this->deleteSiblingIfExists($storage, $identifier);
+    }
+
+    private function deleteSiblingIfExists(ResourceStorage $storage, string $identifier): void
+    {
+        try {
+            if ($storage->hasFile($identifier)) {
+                $storage->deleteFile($storage->getFile($identifier));
+            }
+        } catch (\Exception $e) {
+            $this->logger?->warning(sprintf('webp: failed to delete sibling "%s": %s', $identifier, $e->getMessage()));
+        }
     }
 }

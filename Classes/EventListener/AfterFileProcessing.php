@@ -10,6 +10,7 @@ use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\ProcessedFileWriter;
+use Plan2net\Webp\Service\StorageWebpMode;
 use Plan2net\Webp\Service\Webp as WebpService;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -131,6 +132,12 @@ final class AfterFileProcessing implements LoggerAwareInterface
                 $this->logger->warning($e->getMessage());
                 $this->removeProcessedFile($processedFileWebp);
             } catch (\Exception $e) {
+                // Transient failures (S3 upload denied, network blip, quota,
+                // driver-specific I/O) are expected on remote drivers. The
+                // publish step uses atomic replace, so the previous valid
+                // .webp survives — we must NOT remove the processedFile here
+                // or we'd delete that good sibling. Log and move on; the
+                // next render retries.
                 $this->logger->error(
                     \sprintf(
                         'Failed to convert image "%s" to webp with: %s',
@@ -138,7 +145,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
                         $e->getMessage()
                     )
                 );
-                $this->removeProcessedFile($processedFileWebp);
             }
         }
     }
@@ -163,8 +169,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return false;
         }
 
-        // Process files only in a local and writable storage
-        if (!$this->isStorageLocalAndWritable($processedFile)) {
+        if (!StorageWebpMode::isEnabledFor($processedFile->getStorage())) {
             return false;
         }
 
@@ -188,23 +193,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         return $this->pathMatcher->matches($file->getIdentifier(), $processingFolder->getIdentifier());
-    }
-
-    private function isStorageLocalAndWritable(ProcessedFile $file): bool
-    {
-        $storage = $file->getStorage();
-
-        // Ignore files in fallback storage (e.g. files from extensions)
-        if (null === $storage) {
-            return false;
-        }
-
-        $storageRecord = $storage->getStorageRecord();
-        if (!is_array($storageRecord) || !isset($storageRecord['uid']) || 0 === $storageRecord['uid']) {
-            return false;
-        }
-
-        return 'Local' === $storage->getDriverType() && $storage->isWritable();
     }
 
     private function originalFileIsInExcludedDirectory(FileInterface $file): bool

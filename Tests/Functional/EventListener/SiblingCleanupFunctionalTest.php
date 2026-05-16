@@ -26,6 +26,20 @@ final class SiblingCleanupFunctionalTest extends FunctionalTestCase
     private string $targetFolderName = 'images';
 
     #[Test]
+    public function siblingFollowsRenamedSourceFile(): void
+    {
+        $file = $this->getFile(1);
+        $oldSibling = $this->fileadminPath . 'tiny.png.webp';
+        $newSibling = $this->fileadminPath . 'renamed.png.webp';
+        \file_put_contents($oldSibling, 'fake-webp');
+
+        $file->getStorage()->renameFile($file, 'renamed.png');
+
+        self::assertFileDoesNotExist($oldSibling);
+        self::assertFileExists($newSibling);
+    }
+
+    #[Test]
     public function siblingMovesWithSourceFile(): void
     {
         $file = $this->getFile(1);
