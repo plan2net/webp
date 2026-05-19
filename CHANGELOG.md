@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.4.0] - 2026-05-19
+
+### Added
+
+- libvips as a first-class conversion backend. Pick **libvips (native)** from the converter dropdown to use a new `VipsConverter` that calls libvips in-process via [`jcupitt/vips`](https://packagist.org/packages/jcupitt/vips) (2.x) + PHP `ext-ffi` — typically 2–3× faster than `MagickConverter` at equivalent quality, substantially less memory, and animated GIFs survive as animated WebP automatically (`n=-1` load + `mixed=true` save). The `vips` CLI binary also works through the existing `ExternalConverter` and preserves GIF animation when the GIF entry uses `%s[n=-1]` on the source argument. Parameter format for the native backend is space-separated `key=value` pairs per mime type, passed straight to libvips's `webpsave`. `webp:diagnose` reports libvips availability (ext-ffi state, package, shared library reachable via `Vips\Config::version()`) and warns on PHP 8.3+ if `zend.max_allowed_stack_size=-1` is not set. README and reST documentation updated. CI matrix exercises the native backend on every PHP × TYPO3 cell.
+
 ## [14.3.0] - 2026-05-16
 
 ### Added
@@ -67,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.4.0]: https://github.com/plan2net/webp/releases/tag/14.4.0
 [14.3.0]: https://github.com/plan2net/webp/releases/tag/14.3.0
 [14.2.0]: https://github.com/plan2net/webp/releases/tag/14.2.0
 [14.1.1]: https://github.com/plan2net/webp/releases/tag/14.1.1
