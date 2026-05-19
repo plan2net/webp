@@ -37,9 +37,21 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: gd, intl, mbstring, pdo_sqlite, json, xml, zip
+          extensions: gd, intl, mbstring, pdo_sqlite, json, xml, zip, ffi
+          ini-values: ffi.enable=true, zend.max_allowed_stack_size=-1
           tools: composer:v2
           coverage: none
+
+      - name: Install libvips
+        if: ${{ !env.ACT }}
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: libvips-tools
+          version: 1.0
+
+      - name: Install libvips locally (act)
+        if: ${{ env.ACT }}
+        run: sudo apt-get update && sudo apt-get install -y libvips-tools
 
       - name: Cache Composer downloads
         if: ${{ !env.ACT }}
@@ -58,6 +70,11 @@ jobs:
         env:
           TYPO3_SKIP_ASSET_PUBLISH: '1'
         run: composer update --no-interaction --no-progress --prefer-dist
+
+      - name: Install jcupitt/vips (for VipsConverter functional tests)
+        env:
+          TYPO3_SKIP_ASSET_PUBLISH: '1'
+        run: composer require --dev --no-interaction --no-progress jcupitt/vips:^2.6
 
       - name: Unit tests
         run: .Build/bin/phpunit -c phpunit.xml
