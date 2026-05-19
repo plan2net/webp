@@ -10,6 +10,7 @@ use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\ExternalConverter;
 use Plan2net\Webp\Converter\MagickConverter;
 use Plan2net\Webp\Converter\PhpGdConverter;
+use Plan2net\Webp\Converter\VipsConverter;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\StorageWebpMode;
 use Plan2net\Webp\Service\Webp as WebpService;
@@ -274,6 +275,7 @@ final class DiagnoseCommand extends Command
             PhpGdConverter::class === $converterClass => $this->checkPhpGdConverter(),
             MagickConverter::class === $converterClass => $this->checkMagickConverter(),
             ExternalConverter::class === $converterClass => $this->checkExternalConverter($parameters),
+            VipsConverter::class === $converterClass => $this->checkVipsConverter(),
             default => $this->checkCustomConverter($converterClass),
         };
 
@@ -281,6 +283,11 @@ final class DiagnoseCommand extends Command
         if ('✗' === $verdict['marker']) {
             ++$this->failureCount;
             $this->captureFirstFailure($verdict['recommendation']);
+        } elseif ('!' === $verdict['marker']) {
+            ++$this->warningCount;
+            if ('' !== $verdict['recommendation']) {
+                $this->captureFirstFailure($verdict['recommendation']);
+            }
         }
 
         $this->checkParameterParsing($io);
@@ -394,7 +401,7 @@ final class DiagnoseCommand extends Command
                 return [
                     'marker' => '✗',
                     'line' => \sprintf('external binary not executable: %s', $binary),
-                    'recommendation' => \sprintf('ExternalConverter is configured but the binary at "%s" is not executable. Install it (`apt install webp`) or correct the path in the parameters setting.', $binary),
+                    'recommendation' => \sprintf('ExternalConverter is configured but the binary at "%s" is not executable. Install it (`apt install webp` for cwebp, `apt install libvips-tools` for vips) or correct the path in the parameters setting.', $binary),
                 ];
             }
         }
@@ -411,6 +418,67 @@ final class DiagnoseCommand extends Command
             'marker' => '✓',
             'line' => 'external converter binary is executable',
             'recommendation' => '',
+        ];
+    }
+
+    /**
+     * @return array{marker: string, line: string, recommendation: string}
+     */
+    private function checkVipsConverter(): array
+    {
+        if (!\extension_loaded('ffi')) {
+            return [
+                'marker' => '✗',
+                'line' => 'PHP ext-ffi is not loaded',
+                'recommendation' => 'VipsConverter (2.x) calls libvips via FFI. Enable extension=ffi in php.ini.',
+            ];
+        }
+
+        $ffiEnable = \strtolower((string) \ini_get('ffi.enable'));
+        if ('preload' === $ffiEnable) {
+            return [
+                'marker' => '✗',
+                'line' => 'ffi.enable is set to "preload" — jcupitt/vips does not support FFI preloading',
+                'recommendation' => 'php-vips 2.x requires FFI enabled globally. Set `ffi.enable=true` in php.ini (not `preload`).',
+            ];
+        }
+        if (false === \filter_var($ffiEnable, \FILTER_VALIDATE_BOOLEAN, \FILTER_NULL_ON_FAILURE) || !\filter_var($ffiEnable, \FILTER_VALIDATE_BOOLEAN)) {
+            return [
+                'marker' => '✗',
+                'line' => \sprintf('ext-ffi loaded but ffi.enable=%s (disabled)', $ffiEnable),
+                'recommendation' => 'VipsConverter needs `ffi.enable=true` in php.ini. Current value is "' . $ffiEnable . '".',
+            ];
+        }
+
+        $warningSuffix = '';
+        if (\PHP_VERSION_ID >= 80300 && -1 !== (int) \ini_get('zend.max_allowed_stack_size')) {
+            // jcupitt/vips runs FFI callbacks off the main thread, which trips PHP 8.3+ default stack-size limits.
+            $warningSuffix = ' (warning: php-vips 2.x recommends zend.max_allowed_stack_size=-1 on PHP 8.3+, see php-vips README)';
+        }
+
+        if (!\class_exists(\Jcupitt\Vips\Image::class)) {
+            return [
+                'marker' => '✗',
+                'line' => 'jcupitt/vips composer package is not installed',
+                'recommendation' => 'VipsConverter needs the jcupitt/vips library. Run `composer require jcupitt/vips` in the project root. Also install the libvips shared library on the host (e.g. `apt install libvips-tools` on Debian/Ubuntu, which pulls in the correct libvips42/libvips42t64 runtime as a dependency).',
+            ];
+        }
+
+        $libvipsVersion = '';
+        try {
+            $libvipsVersion = \Jcupitt\Vips\Config::version();
+        } catch (\Throwable) {
+            return [
+                'marker' => '✗',
+                'line' => 'jcupitt/vips is loaded but cannot reach the libvips shared library via FFI',
+                'recommendation' => 'jcupitt/vips loaded but `Vips\\Config::version()` failed. The libvips shared library is missing or unreadable on the host. Install it (e.g. `apt install libvips-tools` on Debian/Ubuntu — pulls in libvips42/libvips42t64 as a dependency — or `brew install vips` on macOS).',
+            ];
+        }
+
+        return [
+            'marker' => '' === $warningSuffix ? '✓' : '!',
+            'line' => \sprintf('libvips %s available via ext-ffi + jcupitt/vips%s', $libvipsVersion ?: 'unknown', $warningSuffix),
+            'recommendation' => '' === $warningSuffix ? '' : 'Set `zend.max_allowed_stack_size=-1` in php.ini. Background: php-vips runs FFI callbacks off the main thread, which confuses PHP 8.3+ stack-size limits and may cause spurious failures.',
         ];
     }
 
