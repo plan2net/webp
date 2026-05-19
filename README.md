@@ -47,10 +47,12 @@ WebP was released by Google in 2010. It supports both lossy and lossless compres
 
 ## Requirements
 
-A WebP-capable image converter. The extension supports three:
+A WebP-capable image converter. The extension supports four:
 
-- **ImageMagick** or **GraphicsMagick** (whatever TYPO3 already uses for image manipulation), provided it was compiled with WebP support.
-- An external binary such as [`cwebp`](https://developers.google.com/speed/webp/docs/cwebp).
+- **ImageMagick** or **GraphicsMagick** — TYPO3's built-in graphics processor, compiled with WebP support.
+- **PHP GD** — needs the `IMG_WEBP` flag at runtime.
+- **libvips** — in-process via [`jcupitt/vips`](https://packagist.org/packages/jcupitt/vips) + PHP `ext-ffi`, or as the `vips` CLI binary through the ExternalConverter.
+- Any other external WebP encoder such as [`cwebp`](https://developers.google.com/speed/webp/docs/cwebp).
 
 Verify your existing setup:
 
@@ -133,6 +135,37 @@ image/jpeg::/usr/bin/cwebp -jpeg_like %s -o %s|image/png::/usr/bin/cwebp -lossle
 ```
 
 See [`cwebp` documentation](https://developers.google.com/speed/webp/docs/cwebp).
+
+With libvips's `vips` CLI binary:
+
+```
+image/jpeg::/usr/bin/vips webpsave %s %s --Q 85 --effort 4 --smart-subsample|image/png::/usr/bin/vips webpsave %s %s --Q 75 --lossless --effort 4|image/gif::/usr/bin/vips webpsave %s[n=-1] %s --Q 75 --lossless --effort 4 --mixed
+```
+
+The GIF entry uses `%s[n=-1]` on the source so libvips reads all frames; without it only the first frame survives and `--mixed` (a save-side option) can't recover the rest. See the [libvips CLI reference](https://www.libvips.org/API/current/using-the-cli.html).
+
+#### Using libvips natively
+
+Pick **libvips (native)** from the converter dropdown for the fastest path: 2–3× faster than MagickConverter at equivalent quality, substantially less memory, and animated GIFs survive as animated WebP automatically.
+
+Install the libvips shared library, enable PHP's FFI extension, and require the PHP binding:
+
+```sh
+apt install libvips-tools           # Debian/Ubuntu — pulls in libvips42 / libvips42t64
+brew install vips                   # macOS
+composer require jcupitt/vips
+```
+
+Set `parameters` to:
+
+```
+image/jpeg::Q=85 smart_subsample=true effort=4|image/png::Q=75 lossless=true effort=4|image/gif::Q=75 lossless=true mixed=true effort=4
+```
+
+Options are passed straight to libvips's `webpsave` — see the [option reference](https://www.libvips.org/API/current/VipsForeignSave.html#vips-webpsave) for the full list.
+
+> [!IMPORTANT]
+> Set `ffi.enable=true` in php.ini (not `preload` — jcupitt/vips does not support FFI preloading). On PHP 8.3+ also set `zend.max_allowed_stack_size=-1`; without it the default stack limit can cause spurious conversion failures.
 
 ### `mime_types`
 
@@ -473,7 +506,7 @@ After changing `processor_colorspace`, clean up any processed files via the Main
 
 ## Known limitations
 
-- **Animated GIFs.** The bundled converters produce single-frame WebP output, so a served `.gif.webp` is a still image. If you need animations to keep playing, remove `image/gif` from [`mime_types`](#mime_types) and the `gif` group from your webserver's rewrite rule.
+- **Animated GIFs.** Only the libvips routes preserve animation: `VipsConverter` does it automatically, and the `vips` CLI route requires `%s[n=-1]` on the GIF source argument (see [`parameters`](#parameters)). `MagickConverter`, `PhpGdConverter`, and `cwebp`-based configurations produce single-frame output.
 - **ImageMagick / GraphicsMagick must be compiled with WebP support.** See [Requirements](#requirements).
 - **Cross-storage FAL moves are not handled.** If you move a file between two different storages, the sibling at the source storage is left orphaned. Lazy regeneration handles the target storage on next render. Single-storage moves work correctly.
 - **`use_system_settings` only applies to `MagickConverter`.** `PhpGdConverter` and external-binary configurations ignore it.

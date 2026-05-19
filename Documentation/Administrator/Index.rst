@@ -10,15 +10,16 @@ Target group: **Administrators**
 Requirements
 ------------
 
-Your version of ImageMagick or GraphicsMagick on the server needs to support WebP.
+The extension supports four conversion backends. At least one must be available on the host.
 
-How to test
-^^^^^^^^^^^
+ImageMagick or GraphicsMagick
+"""""""""""""""""""""""""""""
+
+Your version of ImageMagick or GraphicsMagick on the server needs to support WebP.
 
 You can test the support on the command line:
 
-GraphicsMagick
-""""""""""""""
+GraphicsMagick:
 
 .. code-block:: bash
 
@@ -26,14 +27,50 @@ GraphicsMagick
 
 This should return "*yes*".
 
-ImageMagick
-"""""""""""
+ImageMagick:
 
 .. code-block:: bash
 
-  convert version | grep webp
+  convert -version | grep -i webp
 
-This should return a list of supported formats including WebP.
+This should include WebP in the list of supported delegates.
+
+PHP GD
+""""""
+
+PHP GD must report ``IMG_WEBP`` at runtime:
+
+.. code-block:: bash
+
+  php -r 'echo (imagetypes() & IMG_WEBP) ? "yes" : "no", "\n";'
+
+libvips (native)
+""""""""""""""""
+
+Install the libvips shared library and the `jcupitt/vips <https://packagist.org/packages/jcupitt/vips>`_ composer package (2.x). The 2.x line calls libvips via PHP's ``ext-ffi`` — no PECL extension involved.
+
+.. code-block:: bash
+
+  apt install libvips-tools           # Debian/Ubuntu (pulls in libvips42 or libvips42t64)
+  composer require jcupitt/vips
+
+.. note::
+
+   Enable FFI in php.ini with ``ffi.enable=true``. ``preload`` is not supported by jcupitt/vips.
+
+.. important::
+
+   On PHP 8.3 and newer, also set ``zend.max_allowed_stack_size=-1`` in php.ini. Without it the 8.3+ default stack-size limit may cause spurious conversion failures because jcupitt/vips runs FFI callbacks off the main thread.
+
+libvips (CLI binary)
+""""""""""""""""""""
+
+The ``vips`` binary from ``libvips-tools`` works via the ExternalConverter, no PHP binding needed.
+
+Other external WebP encoders
+""""""""""""""""""""""""""""
+
+Any binary that can read JPEG/PNG/GIF and write WebP — e.g. ``cwebp`` from the Google ``webp`` package.
 
 Installation
 ------------
@@ -55,30 +92,40 @@ Configuration
 Extension manager configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You can set parameters for the conversion in the extension configuration.
+You set parameters for the conversion in the extension configuration. The string is parsed as per-mime-type entries joined with ``|``, each entry being ``mime/type::params``:
 
 .. code-block:: none
 
-  # cat=basic; type=string; label=Webp conversion parameters (for internal or external adapter)
-  parameters =
+  # cat=basic; type=string; label=Webp conversion parameters
+  parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
 
 You find a list of possible options here:
 
 :ImageMagick:    https://www.imagemagick.org/script/webp.php
-:GraphicsMagick: http://www.graphicsmagick.org/GraphicsMagick.html and http://www.graphicsmagick.org/convert.html
-
-Default value is:
-
-.. code-block:: none
-
-  -quality 95 -define webp:lossless=false
-
-This has (in our experience) a minor to no impact on visual difference to the original image.
+:GraphicsMagick: http://www.graphicsmagick.org/GraphicsMagick.html
 
 .. warning::
 
-  Try to set a higher value for quality first if the image does not fit your expectations, before trying to use *webp:lossless=true*.
-  This could even lead to a larger filesize than the original!
+   Try to set a higher value for *quality* first if the image does not fit your expectations, before reaching for ``webp:lossless=true``. Lossless can produce files *larger* than the original.
+
+Using libvips natively
+""""""""""""""""""""""
+
+When you pick **libvips (native)** from the converter dropdown, the parameter syntax becomes libvips's own ``webpsave`` option set — space-separated ``key=value`` pairs per mime type:
+
+.. code-block:: none
+
+  parameters = image/jpeg::Q=85 smart_subsample=true effort=4|image/png::Q=75 lossless=true effort=4|image/gif::Q=75 lossless=true mixed=true effort=4
+
+See the `webpsave reference <https://www.libvips.org/API/current/VipsForeignSave.html#vips-webpsave>`_ for the full list of options. Animated GIFs are preserved automatically — VipsConverter reads all GIF frames (``n=-1``) for ``.gif`` sources, and ``mixed=true`` tells libvips to emit a multi-frame WebP.
+
+Known limitations
+^^^^^^^^^^^^^^^^^
+
+Animated GIFs
+"""""""""""""
+
+``MagickConverter``, ``PhpGdConverter``, and ``cwebp``-based external configurations produce single-frame WebP output. Both libvips routes preserve animation: the native ``VipsConverter`` always loads all GIF frames automatically, and the ``vips``-CLI route preserves animation when the GIF mime-type command uses ``%s[n=-1]`` as the source argument. ``--mixed`` alone is a save-side option and is not sufficient by itself — the ``[n=-1]`` load-side suffix is what reads all the frames.
 
 Web server configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^
