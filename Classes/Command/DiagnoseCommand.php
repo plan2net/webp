@@ -21,8 +21,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Process\Exception\ProcessTimedOutException;
-use Symfony\Component\Process\Process;
 use TYPO3\CMS\Core\Attribute\AsNonSchedulableCommand;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -333,17 +331,12 @@ final class DiagnoseCommand extends Command
 
         $timedOutTool = null;
         foreach (['convert' => [$processorPath . 'convert', '-version'], 'gm' => [$processorPath . 'gm', 'version']] as $tool => $command) {
-            $process = new Process($command);
-            $process->setTimeout(5);
-            try {
-                $process->run();
-            } catch (ProcessTimedOutException) {
+            $result = self::runCommandWithTimeout($command, 5);
+            if ($result['timedOut']) {
                 $timedOutTool = $tool;
                 continue;
-            } catch (\Exception) {
-                continue;
             }
-            if ($process->isSuccessful() && \str_contains($process->getOutput(), 'WebP')) {
+            if (0 === $result['exitCode'] && \str_contains($result['output'], 'WebP')) {
                 return [
                     'marker' => '✓',
                     'line' => \sprintf('%s with WebP delegate found %s', 'convert' === $tool ? 'ImageMagick' : 'GraphicsMagick', $location),
@@ -365,6 +358,52 @@ final class DiagnoseCommand extends Command
             'line' => \sprintf('neither ImageMagick nor GraphicsMagick with WebP delegate found %s', $location),
             'recommendation' => 'MagickConverter needs `convert` (ImageMagick) or `gm` (GraphicsMagick) with WebP delegate support. Check $GLOBALS[TYPO3_CONF_VARS][GFX][processor_path] or PATH, or switch to PhpGdConverter.',
         ];
+    }
+
+    /**
+     * @param list<string> $command
+     *
+     * @return array{timedOut: bool, exitCode: int, output: string}
+     */
+    private static function runCommandWithTimeout(array $command, int $timeoutSeconds): array
+    {
+        $descriptors = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+        $process = @\proc_open($command, $descriptors, $pipes);
+        if (!\is_resource($process)) {
+            return ['timedOut' => false, 'exitCode' => -1, 'output' => ''];
+        }
+        \fclose($pipes[0]);
+        \stream_set_blocking($pipes[1], false);
+        \stream_set_blocking($pipes[2], false);
+
+        $output = '';
+        $deadline = \microtime(true) + $timeoutSeconds;
+        while (true) {
+            $output .= (string) \stream_get_contents($pipes[1]);
+            \stream_get_contents($pipes[2]);
+            $status = \proc_get_status($process);
+            if (!$status['running']) {
+                $output .= (string) \stream_get_contents($pipes[1]);
+                \fclose($pipes[1]);
+                \fclose($pipes[2]);
+                \proc_close($process);
+
+                return ['timedOut' => false, 'exitCode' => $status['exitcode'], 'output' => $output];
+            }
+            if (\microtime(true) >= $deadline) {
+                \proc_terminate($process, 9);
+                \fclose($pipes[1]);
+                \fclose($pipes[2]);
+                \proc_close($process);
+
+                return ['timedOut' => true, 'exitCode' => -1, 'output' => $output];
+            }
+            \usleep(50_000);
+        }
     }
 
     /**

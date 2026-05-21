@@ -30,7 +30,6 @@
   "require": {
     "php": ">=8.2",
     "symfony/finder": "^6.4 || ^7.0",
-    "symfony/process": "^6.4 || ^7.0",
     "typo3/cms-core": "^12.4 || ^13.4 || ^14.3"
   },
   "suggest": {
