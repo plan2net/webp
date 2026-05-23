@@ -9,7 +9,7 @@
 
 Serve modern image formats — **WebP, AVIF, JPEG XL** — to browsers that support them, **without changing your URLs or HTML**. The extension creates sibling files (`photo.jpg.webp`, `photo.jpg.avif`, `photo.jpg.jxl`) next to every processed image; your webserver picks the best match per request via `Accept`-header content negotiation. Browsers that don't accept any of the modern formats receive the original JPEG/PNG/GIF.
 
-Pick any combination of formats per install via the [`formats_enabled`](#formats_enabled) setting. WebP is active by default.
+Pick any combination of formats via the [`formats_enabled`](#formats_enabled) setting. WebP is active by default.
 
 > [!NOTE]
 > The Composer package is still `plan2net/webp` and the TYPO3 extension key is still `webp` — names kept for backwards compatibility with 1.5M+ existing installs. The runtime supports all three formats regardless.
@@ -35,7 +35,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
 TYPO3 v14 introduced native WebP support via `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imageFileConversionFormats']`. The core mechanism converts processed image **output** to WebP: the processed file's extension is `.webp` and the URL changes accordingly (`photo.jpg` → `photo.webp`). It's WebP-only.
 
-This extension solves a different problem and covers three formats:
+This extension solves a different problem and supports all three formats:
 
 | Concern                                                | This extension                                                                                  | TYPO3 v14 native              |
 |--------------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------|
@@ -46,7 +46,7 @@ This extension solves a different problem and covers three formats:
 | Requires webserver rewrite rule                        | Yes                                                                                             | No                            |
 | Works with cached HTML / CDN URLs                      | Yes                                                                                             | Cache invalidation needed     |
 
-Use the core mechanism when you can change URLs and only need WebP. Use this extension when you can't change URLs, or you want AVIF/JPEG XL alongside WebP.
+Use the core mechanism if you can change URLs and only need WebP. Use this extension if URLs must stay stable, or you want AVIF/JPEG XL alongside WebP.
 
 ## About the formats
 
@@ -61,7 +61,7 @@ Use the core mechanism when you can change URLs and only need WebP. Use this ext
 
 All three support lossy and lossless modes, transparency, and ICC color profiles. WebP and the libvips path also support animation; AVIF and JPEG XL animation depend on the chosen converter.
 
-Smaller image payloads improve Core Web Vitals directly — Largest Contentful Paint (LCP) especially benefits when image bytes are reduced without changing rendered dimensions, and a 25–34% bandwidth reduction adds up on image-heavy pages and mobile connections.
+Smaller image payloads improve Core Web Vitals directly. Largest Contentful Paint (LCP) benefits most: image bytes shrink while rendered dimensions stay the same. A 25–34% bandwidth reduction adds up on image-heavy pages and mobile connections.
 
 ### Converter × format support matrix
 
@@ -93,7 +93,7 @@ Pick a converter per format that matches what's actually installed on the host. 
 
 ## Requirements
 
-At minimum: an image converter on the host that can write the output formats you enable. The extension ships four converter backends — pick whichever fits your stack from the matrix above.
+You need an image converter on the host that can write the output formats you enable. The extension ships four converter backends — pick whichever fits your stack from the matrix above.
 
 For the WebP-only default install:
 
@@ -141,7 +141,7 @@ After a `composer update`, **save the extension settings at least once** via the
 
 Existing installs keep generating WebP only because `formats_enabled` defaults to `webp`. To enable AVIF or JPEG XL:
 
-1. Run the TYPO3 database analyzer once — `tx_webp_queue` and `tx_webp_failed` gain a `format` column with default `'webp'`, so existing rows interpret correctly without a data migration.
+1. Run the TYPO3 database analyzer once — `tx_webp_queue` and `tx_webp_failed` gain a `format` column with default `'webp'`, so existing rows remain valid without a data migration.
 2. Open the AVIF (or JXL) tab in the Extension Configuration, fill in `converter_avif` + `parameters_avif` + `mime_types_avif`, and add the format name to `formats_enabled` (e.g. `webp,avif`).
 3. Update the webserver rewrite rules to serve the new sibling — see [Webserver configuration](#webserver-configuration). Without that update, AVIF/JXL siblings sit on disk unused.
 
@@ -185,7 +185,7 @@ When disabled (default), conversions run synchronously exactly as before.
 async_throttle_ms = 0
 ```
 
-Pause for a random interval between conversions inside the worker. Value `0` means no pause. Value `N > 0` means each pause is `random(N/2, N*3/2)` milliseconds — modeled on `wget --random-wait` to avoid lock-step bursts. Useful on tight-CPU servers when a batch of conversions would otherwise saturate the box. Applies to both queue mode and `--folder` mode.
+Pause for a random interval between conversions inside the worker. Value `0` means no pause. Value `N > 0` means each pause is `random(N/2, N*3/2)` milliseconds, so a batch of conversions doesn't saturate CPU in lock-step. Applies to both queue mode and `--folder` mode.
 
 ### `convert_all`
 
@@ -268,7 +268,7 @@ Only source files whose mime type is in this comma-separated list are considered
 
 ### `parameters`
 
-Each entry is `mime/type::params`, separated by `|`. The `::` is significant — a single colon does not match the parser and silently falls through to the fallback branch.
+Each entry is `mime/type::params`, separated by `|`. The `::` is significant — a single colon doesn't match, and the value is then treated as default parameters for any mime type.
 
 Default (ImageMagick/GraphicsMagick):
 
@@ -362,7 +362,7 @@ By default the extension converts images synchronously inside the request that p
 3. Register a TYPO3 Scheduler task: **System → Scheduler → Add task → Type: "Process conversion queue (webp)"**. Pick a frequency that matches your throughput (every minute for busy sites, hourly for low-traffic).
 4. Make sure the scheduler itself runs — either via `vendor/bin/typo3 scheduler:run` in cron, or a daemonized runner.
 
-The listener will now enqueue new conversions; the scheduler task drains the queue in the background. Existing siblings stay; the extension does not retroactively backfill.
+From now on the listener queues new conversions and the scheduler runs them in the background. Existing siblings keep working; images that don't have one yet get converted the next time they're rendered.
 
 ### Sweeping non-FAL folders
 
@@ -445,7 +445,7 @@ location ~* ^.+\.(png|gif|jpe?g)$ {
 
 ### Apache
 
-The first two directives are already part of TYPO3's default `.htaccess` template (`typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`); they're shown here for completeness. We assume `mod_rewrite.c` is enabled.
+The first two directives are already part of TYPO3's default `.htaccess` template (`typo3/sysext/install/Resources/Private/FolderStructureTemplateFiles/root-htaccess`); they're shown here for completeness. Assume `mod_rewrite.c` is enabled.
 
 ```apache
 RewriteEngine On
@@ -596,7 +596,7 @@ It reports per enabled format:
 - Delivery probe (`--url=…`): four `Accept` HEADs (avif / jxl / webp / `*/*`) compared against `expectedTopFormat`, plus `Vary: Accept`.
 - File deep dive (`--file=<uid>`): metadata + per-format sibling presence (source-folder and processed-folder) + per-format failed-attempts rows.
 
-**Honest limits:** the probe runs from this machine. CDN behaviour at the edge can differ from what we observe locally. Run the probe from a host inside your CDN's pull zone for the most accurate read.
+**Limitation:** the probe runs from this machine. CDN behaviour at the edge can differ from what you observe locally. Run the probe from a host inside your CDN's pull zone for the most accurate read.
 
 Useful flags:
 
