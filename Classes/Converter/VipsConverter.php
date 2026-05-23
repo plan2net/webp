@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Converter;
 
 use Jcupitt\Vips\Exception as VipsException;
+use Jcupitt\Vips\FFI as VipsFFI;
 use Jcupitt\Vips\Image;
+use Plan2net\Webp\Converter\Exception\UnsupportedFormatException;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 
 final class VipsConverter extends AbstractConverter
@@ -19,12 +22,23 @@ final class VipsConverter extends AbstractConverter
         parent::__construct($parameters, $configuration);
     }
 
-    public function convert(string $originalFilePath, string $targetFilePath): void
+    public function convertTo(string $originalFilePath, string $targetFilePath, OutputFormat $format): void
     {
+        if ('' === (string) VipsFFI::vips()->vips_foreign_find_save('probe' . $format->suffix())) {
+            throw new UnsupportedFormatException(\sprintf('libvips on this host lacks a "%s" saver. Install libheif (AVIF) or libjxl (JXL) and rebuild libvips, or pick a different converter for this format.', $format->suffix()));
+        }
+
         try {
             $loadOptions = self::isAnimatedSource($originalFilePath) ? ['n' => -1] : [];
             $image = Image::newFromFile($originalFilePath, $loadOptions);
-            $image->writeToFile($targetFilePath, VipsOptionParser::parse($this->parameters));
+            $options = VipsOptionParser::parse($this->parameters);
+
+            match ($format) {
+                OutputFormat::Webp => $image->webpsave($targetFilePath, $options),
+                // heifsave defaults to HEIC (H.265); compression=av1 selects AVIF.
+                OutputFormat::Avif => $image->heifsave($targetFilePath, ['compression' => 'av1'] + $options),
+                OutputFormat::Jxl => $image->jxlsave($targetFilePath, $options),
+            };
         } catch (VipsException $exception) {
             throw new \RuntimeException(\sprintf('libvips conversion of "%s" failed: %s', $originalFilePath, $exception->getMessage()), 0, $exception);
         }

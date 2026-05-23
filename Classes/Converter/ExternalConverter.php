@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Utility\CommandUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -29,7 +30,7 @@ final class ExternalConverter extends AbstractConverter
         parent::__construct($parameters, $configuration);
     }
 
-    public function convert(string $originalFilePath, string $targetFilePath): void
+    public function convertTo(string $originalFilePath, string $targetFilePath, OutputFormat $format): void
     {
         $silent = $this->configuration->isSilent();
         $command = \sprintf(

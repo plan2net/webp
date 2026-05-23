@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Converter;
 
+use Plan2net\Webp\Converter\Exception\UnsupportedFormatException;
+use Plan2net\Webp\Format\OutputFormat;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Imaging\GifBuilder;
 
@@ -14,8 +16,12 @@ final class PhpGdConverter extends AbstractConverter
 {
     private const DEFAULT_QUALITY = 80;
 
-    public function convert(string $originalFilePath, string $targetFilePath): void
+    public function convertTo(string $originalFilePath, string $targetFilePath, OutputFormat $format): void
     {
+        if (OutputFormat::Webp !== $format) {
+            throw new UnsupportedFormatException(\sprintf('PhpGdConverter cannot produce %s — PHP GD only supports webp.', $format->value));
+        }
+
         if (!$this->gdSupportsWebp()) {
             throw new \RuntimeException(\sprintf('File "%s" was not created: GD is not active or does not support webp!', $targetFilePath));
         }

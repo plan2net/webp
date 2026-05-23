@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Tests\Functional\Converter;
 
 use Jcupitt\Vips\Config as VipsConfig;
+use Jcupitt\Vips\FFI as VipsFFI;
 use Jcupitt\Vips\Image as VipsImage;
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\VipsConverter;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -67,6 +69,52 @@ final class VipsConverterTest extends FunctionalTestCase
         $converter->convert($sourceFile, $targetFile);
 
         self::assertSame(1, $this->readPageCount($targetFile), 'single-frame GIF must produce a single-frame WebP');
+    }
+
+    #[Test]
+    public function pngConvertsToValidAvifFile(): void
+    {
+        if ('' === (string) VipsFFI::vips()->vips_foreign_find_save('probe.avif')) {
+            self::markTestSkipped('libvips on this host lacks an .avif saver (libheif AV1 not built in)');
+        }
+        $sourceFile = $this->workingDirectory . '/tiny.png';
+        \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $sourceFile);
+        $targetFile = $sourceFile . '.avif';
+
+        $converter = new VipsConverter('Q=60 effort=4', $this->createConfiguration());
+        try {
+            $converter->convertTo($sourceFile, $targetFile, OutputFormat::Avif);
+        } catch (\RuntimeException $exception) {
+            if (\str_contains($exception->getMessage(), 'Unsupported compression')) {
+                self::markTestSkipped('libheif on this host lacks an AV1 encoder plugin (heifsave reported Unsupported compression)');
+            }
+            throw $exception;
+        }
+
+        self::assertFileExists($targetFile, 'AVIF sibling must be created');
+        $header = (string) \file_get_contents($targetFile, false, null, 0, 12);
+        self::assertSame('ftypavif', \substr($header, 4, 8), 'AVIF must declare ftypavif box');
+    }
+
+    #[Test]
+    public function pngConvertsToValidJxlFile(): void
+    {
+        if ('' === (string) VipsFFI::vips()->vips_foreign_find_save('probe.jxl')) {
+            self::markTestSkipped('libvips on this host lacks a .jxl saver (libjxl not built in)');
+        }
+        $sourceFile = $this->workingDirectory . '/tiny.png';
+        \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $sourceFile);
+        $targetFile = $sourceFile . '.jxl';
+
+        $converter = new VipsConverter('Q=75 effort=7', $this->createConfiguration());
+        $converter->convertTo($sourceFile, $targetFile, OutputFormat::Jxl);
+
+        self::assertFileExists($targetFile, 'JXL sibling must be created');
+        $magic = \bin2hex((string) \file_get_contents($targetFile, false, null, 0, 12));
+        self::assertTrue(
+            \str_starts_with($magic, 'ff0a') || \str_starts_with($magic, '0000000c4a584c20'),
+            'JXL must start with raw 0xFF0A or ISOBMFF container 0x0000000C JXL ',
+        );
     }
 
     protected function setUp(): void

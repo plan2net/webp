@@ -22,16 +22,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install image binaries (ImageMagick + GraphicsMagick)
+      # libheif1 + plugins give ImageMagick and libvips a real AV1 encoder so
+      # AVIF write paths exercise instead of skipping. libheif-plugin-aomenc is
+      # the AV1 encoder; libjxl-tools gets libvips's jxlsave operation.
+      - name: Install image binaries (ImageMagick + GraphicsMagick + libheif + libjxl)
         if: ${{ !env.ACT }}
         uses: awalsh128/cache-apt-pkgs-action@v1
         with:
-          packages: imagemagick graphicsmagick
-          version: 1.0
+          packages: imagemagick graphicsmagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools
+          version: 3.0
 
       - name: Install image binaries locally (act)
         if: ${{ env.ACT }}
-        run: sudo apt-get update && sudo apt-get install -y imagemagick graphicsmagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick graphicsmagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools
 
       - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
