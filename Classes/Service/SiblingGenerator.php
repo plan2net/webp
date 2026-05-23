@@ -14,6 +14,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
+use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -203,6 +204,9 @@ final class SiblingGenerator implements LoggerAwareInterface
         }
 
         $folder = $sourceFile->getParentFolder();
+        if (!$folder instanceof Folder) {
+            throw new \RuntimeException(\sprintf('Cannot publish sibling next to "%s": parent folder is not writable', $sourceFile->getIdentifier()));
+        }
         $newFile = $folder->addFile($tempTarget, $processedFile->getName(), self::replaceConflictMode());
         $processedFile->setIdentifier($newFile->getIdentifier());
     }

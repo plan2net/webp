@@ -512,7 +512,7 @@ final class DiagnoseCommand extends Command
             }
 
             $binary = \strtok($command, " \t");
-            if (false === $binary || '' === $binary) {
+            if (false === $binary) {
                 continue;
             }
             if (!\is_executable($binary)) {
@@ -1132,9 +1132,6 @@ final class DiagnoseCommand extends Command
             try {
                 $processedFile = $this->processedFileRepository->findByUid((int) $candidate['uid']);
             } catch (\Exception) {
-                continue;
-            }
-            if (null === $processedFile) {
                 continue;
             }
             if ($this->siblingFileExists($processedFile, $format)) {

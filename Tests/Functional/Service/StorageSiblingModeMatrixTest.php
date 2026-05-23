@@ -86,6 +86,6 @@ final class StorageSiblingModeMatrixTest extends FunctionalTestCase
         ]);
 
         return GeneralUtility::makeInstance(StorageRepository::class)
-            ->findByUid((int) $connection->lastInsertId('sys_file_storage'));
+            ->findByUid((int) $connection->lastInsertId());
     }
 }

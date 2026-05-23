@@ -9,6 +9,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Resource\AbstractFile;
 use TYPO3\CMS\Core\Resource\FileInterface;
+use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 
@@ -131,6 +132,9 @@ final class SiblingFile implements LoggerAwareInterface
         $dot = \strrpos($oldIdentifier, '.');
         $suffix = false === $dot ? '' : \substr($oldIdentifier, $dot);
         $newFolder = $fileAtNewLocation->getParentFolder();
+        if (!$newFolder instanceof Folder) {
+            return;
+        }
         $newName = $fileAtNewLocation->getName() . $suffix;
 
         if ($newFolder->hasFile($newName)) {

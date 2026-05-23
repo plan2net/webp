@@ -21,7 +21,6 @@ use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
-use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
@@ -96,9 +95,6 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         foreach ($entries as $index => $entry) {
             try {
                 $originalFile = $this->resourceFactory->getFileObject($entry->originalFileId);
-                if (!$originalFile instanceof File) {
-                    continue;
-                }
                 $configuration = (array) \unserialize($entry->configuration, ['allowed_classes' => false]);
                 $source = $this->resolveSource($entry->processedFileId, $originalFile);
                 if (null === $source) {

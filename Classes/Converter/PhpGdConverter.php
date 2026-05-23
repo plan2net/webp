@@ -41,12 +41,12 @@ final class PhpGdConverter extends AbstractConverter
             && (\imagetypes() & IMG_WEBP) === IMG_WEBP;
     }
 
-    /**
-     * @return \GdImage
-     */
-    private function getImage(string $originalFilePath)
+    private function getImage(string $originalFilePath): \GdImage
     {
         $image = GeneralUtility::makeInstance(GifBuilder::class)->imageCreateFromFile($originalFilePath);
+        if (!$image instanceof \GdImage) {
+            throw new \RuntimeException(\sprintf('GD could not open "%s"', $originalFilePath));
+        }
         // Convert CMYK to RGB
         if (!\imageistruecolor($image)) {
             \imagepalettetotruecolor($image);

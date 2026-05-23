@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Driver\FakeRemoteDriver;
 use TYPO3\CMS\Core\Resource\Driver\DriverRegistry;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
@@ -29,6 +30,7 @@ final class AfterFileProcessingRemoteDriverTest extends FunctionalTestCase
         \copy(self::FIXTURE_PNG, $basePath . '/sample.png');
 
         $file = $storage->getFile('sample.png');
+        self::assertInstanceOf(File::class, $file);
         $processedFile = $file->process(
             ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
             ['width' => 16, 'height' => 16],
@@ -48,6 +50,7 @@ final class AfterFileProcessingRemoteDriverTest extends FunctionalTestCase
         \copy(self::FIXTURE_PNG, $basePath . '/sample.png');
 
         $file = $storage->getFile('sample.png');
+        self::assertInstanceOf(File::class, $file);
         $processedFile = $file->process(
             ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
             ['width' => 16, 'height' => 16],
@@ -106,7 +109,7 @@ final class AfterFileProcessingRemoteDriverTest extends FunctionalTestCase
             'tx_webp_mode' => $mode,
         ];
         $connection->insert('sys_file_storage', $row);
-        $uid = (int) $connection->lastInsertId('sys_file_storage');
+        $uid = (int) $connection->lastInsertId();
 
         // Bypass StorageRepository's local cache by passing the row directly.
         $row['uid'] = $uid;

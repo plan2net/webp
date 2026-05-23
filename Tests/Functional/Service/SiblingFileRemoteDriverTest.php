@@ -194,7 +194,7 @@ final class SiblingFileRemoteDriverTest extends FunctionalTestCase
             'tx_webp_mode' => $mode,
         ];
         $connection->insert('sys_file_storage', $row);
-        $uid = (int) $connection->lastInsertId('sys_file_storage');
+        $uid = (int) $connection->lastInsertId();
 
         // Bypass StorageRepository's local cache, which was primed before
         // this fresh row was inserted. getStorageObject accepts row data
@@ -209,14 +209,18 @@ final class SiblingFileRemoteDriverTest extends FunctionalTestCase
     private function placeImage(string $name): File
     {
         \copy(self::FIXTURE_PNG, $this->storageBasePath . '/' . $name);
+        $file = $this->storage->getFile($name);
+        self::assertInstanceOf(File::class, $file);
 
-        return $this->storage->getFile($name);
+        return $file;
     }
 
     private function placeBytes(string $name, string $bytes): File
     {
         \file_put_contents($this->storageBasePath . '/' . $name, $bytes);
+        $file = $this->storage->getFile($name);
+        self::assertInstanceOf(File::class, $file);
 
-        return $this->storage->getFile($name);
+        return $file;
     }
 }

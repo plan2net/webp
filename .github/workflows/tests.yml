@@ -114,3 +114,19 @@ jobs:
           TYPO3_SKIP_ASSET_PUBLISH: '1'
         run: composer install --no-interaction --no-progress --prefer-dist
       - run: .Build/bin/php-cs-fixer fix --config=php-cs-fixer.config.php --dry-run --diff
+
+  phpstan:
+    name: phpstan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, json
+          tools: composer:v2
+          coverage: none
+      - env:
+          TYPO3_SKIP_ASSET_PUBLISH: '1'
+        run: composer install --no-interaction --no-progress --prefer-dist
+      - run: .Build/bin/phpstan analyse --no-progress

@@ -1,0 +1,33 @@
+parameters:
+    level: 5
+    paths:
+        - Classes
+        - Tests
+    excludePaths:
+        - .Build/*
+        - Resources/*
+    ignoreErrors:
+        # TYPO3 v13+ attributes used conditionally — PHP silently ignores them
+        # on v12 (the lowest supported core), and the test matrix covers both.
+        - identifier: attribute.notFound
+          message: '#TYPO3\\CMS\\Core\\Attribute\\(AsNonSchedulableCommand|AsEventListener|UpgradeWizard)#'
+          reportUnmatched: false
+        # jcupitt/vips is a soft dependency loaded only when VipsConverter runs.
+        # Static analysis can't see the FFI-based 2.x line's type defs.
+        - identifier: class.notFound
+          paths:
+            - Classes/Converter/VipsConverter.php
+            - Classes/Command/DiagnoseCommand.php
+            - Tests/Functional/Converter/VipsConverterTest.php
+        # DuplicationBehavior moved from a class with constants (v12) to an
+        # enum at \TYPO3\CMS\Core\Resource\Enum\DuplicationBehavior (v13+).
+        # SiblingGenerator resolves the right one at runtime.
+        - identifier: class.notFound
+          message: '#TYPO3\\CMS\\Core\\Resource\\DuplicationBehavior#'
+          path: Classes/Service/SiblingGenerator.php
+          reportUnmatched: false
+        # ProcessedFileRepository::add signature differs across v12/v13/v14;
+        # ProcessedFileWriter is the compat shim that hides it.
+        - identifier: arguments.count
+          path: Classes/Service/ProcessedFileWriter.php
+    treatPhpDocTypesAsCertain: false
