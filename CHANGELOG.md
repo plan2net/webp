@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Multi-format output**: WebP, AVIF, and JPEG XL siblings can be generated in any combination via a single per-install setting (`formats_enabled = webp,avif,jxl`). Each enabled format has its own converter, parameters, and supported-mime-types list configured in dedicated tabs of the Extension Configuration form (`converter_avif`, `parameters_avif`, `mime_types_avif`; same for `jxl`). `VipsConverter` dispatches to libvips's `webpsave` / `heifsave compression=av1` / `jxlsave`; `MagickConverter` infers the format from the target file suffix; `ExternalConverter` is command-defined. The 4-backend × 3-format support matrix is documented in the README. Each enabled format gets its own `sys_file_processedfile` row; TYPO3's "Remove Temporary Assets" maintenance task cleans all rows uniformly.
+- New `Plan2net\Webp\Converter\MultiFormatConverter` interface for converters that accept an `OutputFormat` argument. Custom 3rd-party converters that implement only the legacy `Converter` interface keep working for the WebP slot — no migration required. To opt into AVIF/JXL, implement `MultiFormatConverter` or extend the updated `AbstractConverter` (which provides both interfaces).
+- New `Plan2net\Webp\Format\OutputFormat` enum (`Webp`, `Avif`, `Jxl`) carried through the orchestrator, queue rows, failed-attempts cache, and `webp:diagnose` reporting.
+- `webp:diagnose --format=<webp|avif|jxl>` filter restricts the report to one format. The delivery probe sends four `Accept` headers (avif/jxl/webp/`*/*`) and verifies the server returns the highest-priority format the install actually generates. Storages, converter health, async pipeline, failed-attempts cache, and per-file deep-dive all report per format.
+- `webp:process-queue --folder=<path>` sweeps the configured folder for each enabled format.
+
+### Changed
+
+- `tx_webp_queue` and `tx_webp_failed` gain a `format VARCHAR(8) NOT NULL DEFAULT 'webp'` column; the queue's unique-dedup index is reshaped to include it. Existing rows interpret correctly with no data migration — run the TYPO3 database analyzer after upgrade.
+- Default `filter_pattern` now matches `.avif` and `.jxl` siblings as well as `.webp`. Custom values are left untouched; admins who pinned a webp-only regex keep their value.
+- Internal class renames for format-symmetric architecture (all classes are internal to the extension; no settings keys, DB table names, CLI command names, or scheduler task class names change):
+  - `Plan2net\Webp\Service\Webp` → `Plan2net\Webp\Service\SiblingGenerator`
+  - `Plan2net\Webp\Service\WebpSiblingFile` → `Plan2net\Webp\Service\SiblingFile`
+  - `Plan2net\Webp\Service\StorageWebpMode` → `Plan2net\Webp\Service\StorageSiblingMode`
+  - `Plan2net\Webp\Domain\Queue\WebpQueueRepository` → `Plan2net\Webp\Domain\Queue\ConversionQueueRepository`
+  - `Plan2net\Webp\Domain\Queue\WebpQueueEntry` → `Plan2net\Webp\Domain\Queue\ConversionQueueEntry`
+  - `Plan2net\Webp\Command\ProcessWebpQueueCommand` → `Plan2net\Webp\Command\ProcessConversionQueueCommand` (CLI name `webp:process-queue` unchanged)
+  - `Plan2net\Webp\Core\Filter\FileNameFilter::filterWebpFiles()` → `filterSiblingFiles()`
+  - `Plan2net\Webp\Service\Configuration::isHideWebp()` → `isHideSiblings()` (config key `hide_webp` unchanged)
+- `SYS/mediafile_ext` is now extended to include `avif` and `jxl` (in addition to `webp`) so FAL's source-folder publish path accepts the new sibling extensions.
+- Sibling lifecycle (move / rename / replace / delete) now covers all three formats. Any on-disk `.avif` or `.jxl` sibling follows its original alongside the existing `.webp` handling.
+
 ## [14.4.1] - 2026-05-21
 
 ### Bug fixes

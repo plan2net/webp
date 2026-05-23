@@ -11,6 +11,21 @@ Serve WebP to browsers that support it, **without changing your URLs or HTML**. 
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
+## Contents
+
+- [Compatibility](#compatibility)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Updating](#updating)
+- [Configuration](#configuration)
+- [Async mode](#async-mode)
+- [Webserver configuration](#webserver-configuration)
+- [Remote storages (S3, Azure, custom FAL drivers)](#remote-storages-s3-azure-custom-fal-drivers)
+- [Verifying it works](#verifying-it-works)
+- [Diagnosing your installation](#diagnosing-your-installation)
+- [Troubleshooting](#troubleshooting)
+- [Known limitations](#known-limitations)
+
 ## When to use this vs. TYPO3 14 native WebP
 
 TYPO3 v14 introduced native WebP support via `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imageFileConversionFormats']`. The core mechanism converts processed image **output** to WebP: the processed file's extension is `.webp` and the URL changes accordingly (`photo.jpg` → `photo.webp`).
@@ -36,6 +51,32 @@ Use the core mechanism when you can change URLs. Use this extension when you can
 As of May 2026, WebP is supported by **~95.6%** of users globally ([caniuse.com/webp](https://caniuse.com/webp), per StatCounter data updated April 2026). The content-negotiation approach in this extension means even browsers without WebP support keep working — they just receive the original JPEG/PNG/GIF.
 
 WebP was released by Google in 2010. It supports both lossy and lossless compression, transparency (an alpha channel at far lower overhead than PNG's), animation, and ICC color profiles. Smaller image payloads improve Core Web Vitals directly — Largest Contentful Paint (LCP) especially benefits when image bytes are reduced without changing rendered dimensions, and a 25–34% bandwidth reduction adds up on image-heavy pages and mobile connections.
+
+## Output formats
+
+The extension can produce siblings in any combination of three formats, chosen per install via the [`formats_enabled`](#formats_enabled) setting:
+
+- **WebP** — broadest browser support (~95.6%), the default.
+- **AVIF** — typically 20–30% smaller than WebP at equivalent quality; supported by ~94% of users (Chrome 85+, Firefox 93+, Safari 16+).
+- **JPEG XL** — narrower browser support today (Safari 17+), but available for installs that want to ship it.
+
+Each format has its own converter, parameters, and supported-mime-types list — set `formats_enabled = webp,avif` to produce both kinds of siblings, then fill in `converter_avif` + `parameters_avif` next to the existing `converter` + `parameters`.
+
+### Converter × format support matrix
+
+| Converter           | webp | avif | jxl |
+|---------------------|------|------|-----|
+| `VipsConverter`     | ✓    | ✓¹   | ✓²  |
+| `MagickConverter`   | ✓    | ✓³   | ✓⁴  |
+| `ExternalConverter` | ✓    | ✓⁵   | ✓⁶  |
+| `PhpGdConverter`    | ✓    | ✗    | ✗   |
+
+¹ libvips built with libheif (AV1 encoder)  
+² libvips built with libjxl  
+³ ImageMagick with libheif AV1 delegate  
+⁴ ImageMagick 7+ with libjxl delegate  
+⁵ command-defined, e.g. `avifenc`  
+⁶ command-defined, e.g. `cjxl`
 
 ## Compatibility
 
@@ -83,13 +124,24 @@ Then:
 
 After a `composer update`, **save the extension settings at least once** via the Extension Configuration backend module (*System → Settings → Extension Configuration → webp* on TYPO3 v14; *Admin Tools → Settings → Extension Configuration → webp* on v12/v13). TYPO3 only writes default values to `LocalConfiguration` when you save the settings form, so any new defaults the upgraded version ships won't take effect until you do.
 
+### Upgrading to multi-format output
+
+Existing installs keep generating WebP only because `formats_enabled` defaults to `webp`. To enable AVIF or JPEG XL:
+
+1. Run the TYPO3 database analyzer once — `tx_webp_queue` and `tx_webp_failed` gain a `format` column with default `'webp'`, so existing rows interpret correctly without a data migration.
+2. Open the AVIF (or JXL) tab in the Extension Configuration, fill in `converter_avif` + `parameters_avif` + `mime_types_avif`, and add the format name to `formats_enabled` (e.g. `webp,avif`).
+3. Update the webserver rewrite rules to serve the new sibling — see [Webserver configuration](#webserver-configuration). Without that update, AVIF/JXL siblings sit on disk unused.
+
+3rd-party custom converters that implement only `Plan2net\Webp\Converter\Converter` continue to work for the WebP slot. To opt them into AVIF or JXL, implement `Plan2net\Webp\Converter\MultiFormatConverter` (a separate interface that takes the format as a 3rd argument) — or extend `Plan2net\Webp\Converter\AbstractConverter`, which now provides both.
+
 ## Configuration
 
 ![Extension settings](Documentation/extension_settings.png)
 
 | Setting                                       | Default                                     | Purpose                                                |
 |-----------------------------------------------|---------------------------------------------|--------------------------------------------------------|
-| [`parameters`](#parameters)                   | See below                                   | Per-mime-type converter parameters                     |
+| [`formats_enabled`](#formats_enabled)         | `webp`                                      | Output formats to generate, comma list of `webp,avif,jxl` |
+| [`parameters`](#parameters)                   | See below                                   | Per-mime-type WebP converter parameters                |
 | [`mime_types`](#mime_types)                   | `image/jpeg,image/png,image/gif`            | Source mime types to convert                           |
 | [`convert_all`](#convert_all)                 | `1`                                         | Convert all images, not just `_processed_`             |
 | [`silent`](#silent)                           | `1`                                         | Suppress converter stdout/stderr (Linux only)          |
@@ -175,6 +227,29 @@ mime_types = image/jpeg,image/png,image/gif
 ```
 
 Only source files whose mime type is in this comma-separated list are considered for conversion.
+
+### `formats_enabled`
+
+```
+# cat=basic; type=string; label=Output formats to generate (comma-separated list of webp,avif,jxl)
+formats_enabled = webp
+```
+
+Comma-separated list of output formats this install should produce. Each enabled format generates its own sibling next to the original (and its own row in `sys_file_processedfile`). Set to `webp,avif` to ship both kinds of siblings, `avif,jxl,webp` to ship all three.
+
+Each non-webp format reads its converter and parameters from per-format keys (in their own `cat=avif` / `cat=jxl` tabs in the Extension Configuration form):
+
+- `converter_avif`, `parameters_avif`, `mime_types_avif`
+- `converter_jxl`, `parameters_jxl`, `mime_types_jxl`
+
+The legacy `converter` + `parameters` + `mime_types` keys remain the source of truth for the WebP slot.
+
+**Recommended parameter strings** for libvips:
+
+```
+parameters_avif = image/jpeg::Q=60 effort=4|image/png::Q=60 effort=4|image/gif::Q=60 effort=4
+parameters_jxl  = image/jpeg::Q=75 effort=7|image/png::lossless=true effort=7|image/gif::lossless=true effort=7
+```
 
 ### `convert_all`
 
@@ -283,10 +358,7 @@ Register this as a second Scheduler task ("Execute console command") if you want
 
 ## Webserver configuration
 
-The webserver inspects the client's `Accept` header and rewrites the request to the `.webp` sibling when both are true:
-
-- the client advertised `image/webp` support
-- the sibling exists on disk
+The webserver inspects the client's `Accept` header and rewrites the request to the best-matching sibling that's available on disk. If only WebP is enabled, the server has two candidates: serve `.webp` when the client accepts it, otherwise fall back to the original JPEG/PNG/GIF. With AVIF or JPEG XL enabled too, the server picks among the available siblings in client-preference order.
 
 Below are examples for nginx and Apache. **Adapt them to your stack** — these aren't drop-in copies.
 
@@ -295,31 +367,40 @@ Below are examples for nginx and Apache. **Adapt them to your stack** — these 
 
 ### nginx
 
-Add a `map` directive in the `http` block:
+Add a `map` directive in the `http` block. Order matters — the first match wins, so list the formats in preference order (AVIF first, WebP next, JXL last):
 
 ```nginx
-map $http_accept $webp_suffix {
-    default   "";
-    "~*webp"  ".webp";
+map $http_accept $sibling_suffix {
+    default        "";
+    "~*image/avif" ".avif";
+    "~*image/webp" ".webp";
+    "~*image/jxl"  ".jxl";
 }
 ```
 
-If you front the site with Cloudflare, prefer this variant — Cloudflare caches per response and would otherwise mix WebP and non-WebP variants:
+If you only generate `.webp`, the map can be the single-line `"~*webp" ".webp";` variant — clients never ask for `image/avif` from a server that doesn't offer it.
+
+If you front the site with Cloudflare, prefer this variant — Cloudflare caches per response and would otherwise mix the variants:
 
 ```nginx
-map $http_accept $webpok {
-    default   0;
-    "~*webp"  1;
+map $http_accept $sibling_suffix_raw {
+    default        "";
+    "~*image/avif" ".avif";
+    "~*image/webp" ".webp";
+    "~*image/jxl"  ".jxl";
 }
 map $http_cf_cache_status $iscf {
     default   1;
     ""        0;
 }
-map $webpok$iscf $webp_suffix {
-    11  "";
-    10  ".webp";
-    01  "";
-    00  "";
+# Suppress the sibling whenever Cloudflare is in front (iscf=1). Composite key
+# is "<iscf><suffix>": "0.avif" serves AVIF directly, "1.avif" serves the
+# original. Every iscf=1 case falls through `default ""`.
+map $iscf$sibling_suffix_raw $sibling_suffix {
+    default   "";
+    "0.avif"  ".avif";
+    "0.webp"  ".webp";
+    "0.jxl"   ".jxl";
 }
 ```
 
@@ -329,7 +410,7 @@ Add the location block to your `server`:
 location ~* ^.+\.(png|gif|jpe?g)$ {
     add_header Vary "Accept";
     add_header Cache-Control "public, no-transform";
-    try_files $uri$webp_suffix $uri =404;
+    try_files $uri$sibling_suffix $uri =404;
 }
 ```
 
@@ -338,7 +419,7 @@ location ~* ^.+\.(png|gif|jpe?g)$ {
 ```nginx
 location ~* ^.+\.(png|gif|jpe?g)$ {
     if ($http_user_agent !~* (Chrome|Firefox|Edge)) {
-        set $webp_suffix "";
+        set $sibling_suffix "";
     }
     …
 }
@@ -351,11 +432,24 @@ The first two directives are already part of TYPO3's default `.htaccess` templat
 ```apache
 RewriteEngine On
 AddType image/webp .webp
+AddType image/avif .avif
+AddType image/jxl  .jxl
+
+# AVIF preferred over WebP — order matters, first matching rule wins.
+RewriteCond %{HTTP_ACCEPT} image/avif
+RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
+RewriteCond %{REQUEST_FILENAME}\.avif -f
+RewriteRule ^ %{REQUEST_FILENAME}\.avif [L,T=image/avif]
 
 RewriteCond %{HTTP_ACCEPT} image/webp
 RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
 RewriteCond %{REQUEST_FILENAME}\.webp -f
 RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
+
+RewriteCond %{HTTP_ACCEPT} image/jxl
+RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
+RewriteCond %{REQUEST_FILENAME}\.jxl -f
+RewriteRule ^ %{REQUEST_FILENAME}\.jxl [L,T=image/jxl]
 
 <IfModule mod_headers.c>
     <FilesMatch "\.(png|gif|jpe?g)$">
@@ -363,6 +457,8 @@ RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
     </FilesMatch>
 </IfModule>
 ```
+
+If you only generate `.webp` (default `formats_enabled = webp`), keep just the WebP block and drop the AVIF/JXL ones.
 
 #### When `%{REQUEST_FILENAME}` doesn't resolve
 
@@ -506,7 +602,7 @@ After changing `processor_colorspace`, clean up any processed files via the Main
 
 ## Known limitations
 
-- **Animated GIFs.** Only the libvips routes preserve animation: `VipsConverter` does it automatically, and the `vips` CLI route requires `%s[n=-1]` on the GIF source argument (see [`parameters`](#parameters)). `MagickConverter`, `PhpGdConverter`, and `cwebp`-based configurations produce single-frame output.
+- **Animated GIFs.** Only the libvips routes preserve animation: `VipsConverter` does it automatically, and the `vips` CLI route requires `%s[n=-1]` on the GIF source argument (see [`parameters`](#parameters)). `MagickConverter`, `PhpGdConverter`, and `cwebp`-based configurations produce single-frame output. For AVIF and JPEG XL siblings, animation preservation depends on the chosen converter and is not exercised by the test suite.
 - **ImageMagick / GraphicsMagick must be compiled with WebP support.** See [Requirements](#requirements).
 - **Cross-storage FAL moves are not handled.** If you move a file between two different storages, the sibling at the source storage is left orphaned. Lazy regeneration handles the target storage on next render. Single-storage moves work correctly.
 - **`use_system_settings` only applies to `MagickConverter`.** `PhpGdConverter` and external-binary configurations ignore it.
