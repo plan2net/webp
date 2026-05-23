@@ -85,7 +85,7 @@ After a `composer update`, **save the extension settings at least once** via the
 
 ## Configuration
 
-![Extension settings](Resources/Public/Documentation/extension_settings.png)
+![Extension settings](Documentation/extension_settings.png)
 
 | Setting                                       | Default                                     | Purpose                                                |
 |-----------------------------------------------|---------------------------------------------|--------------------------------------------------------|
@@ -390,7 +390,7 @@ RewriteCond %{HTTP_USER_AGENT} ^.*(Chrome|Firefox|Edge).*$ [NC]
 
 ## Remote storages (S3, Azure, custom FAL drivers)
 
-![Generate WebP variants storage setting](Resources/Public/Documentation/generate_webp_variants.png)
+![Generate WebP variants storage setting](Documentation/generate_webp_variants.png)
 
 Out of the box every Local writable storage produces `.webp` siblings — that's
 the default mode for the new *Generate WebP variants* field on each storage
@@ -457,7 +457,7 @@ curl -H "Accept: image/webp" -I https://example.tld/fileadmin/_processed_/b/2/cs
 
 Or open the URL in a browser and check the response headers in the developer tools — despite the `.jpg` suffix the `Content-Type` should be `image/webp`:
 
-![Response headers showing image/webp](Resources/Public/Documentation/headers.png)
+![Response headers showing image/webp](Documentation/headers.png)
 
 ## Diagnosing your installation
 
