@@ -1,8 +1,8 @@
 <?php
 
 $EM_CONF['webp'] = [
-    'title' => 'Drop-in WebP delivery',
-    'description' => 'Creates sibling WebP files next to each processed image. The webserver delivers them via Accept-header content negotiation, so image URLs and HTML stay unchanged.',
+    'title' => 'Drop-in WebP / AVIF / JPEG XL delivery',
+    'description' => 'Creates sibling WebP, AVIF, and JPEG XL files next to each processed image. The webserver delivers the best match per request via Accept-header content negotiation, so image URLs and HTML stay unchanged.',
     'category' => 'fe',
     'author' => 'Wolfgang Klinger',
     'author_email' => 'wk@plan2.net',
