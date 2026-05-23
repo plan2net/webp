@@ -36,6 +36,7 @@
     "ext-gd": "Use GD for image processing",
     "ext-ffi": "Required by VipsConverter — jcupitt/vips 2.x calls libvips via PHP FFI",
     "jcupitt/vips": "PHP binding for libvips (2.x, FFI-based), required by VipsConverter",
+    "typo3/cms-frontend": "Required only when the PhpGdConverter backend is used; ships TYPO3\\CMS\\Frontend\\Imaging\\GifBuilder",
     "typo3/cms-install": "Required only if you run the UpgradeWizard that clears legacy tx_webp_failed rows during a configuration_hash column resize",
     "typo3/cms-scheduler": "Required only when async = 1; provides the scheduler task that drains tx_webp_queue out-of-band"
   },
