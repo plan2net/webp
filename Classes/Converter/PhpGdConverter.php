@@ -60,7 +60,7 @@ final class PhpGdConverter extends AbstractConverter
         \preg_match('/\\bquality[\\s=](\\d{1,3})\\b/', $this->parameters, $matches);
 
         if (isset($matches[1]) && (int) $matches[1] > 0) {
-            return (int) $matches[1];
+            return \min(100, (int) $matches[1]);
         }
 
         return self::DEFAULT_QUALITY;

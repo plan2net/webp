@@ -59,6 +59,25 @@ final class PhpGdConverterTest extends FunctionalTestCase
         ];
     }
 
+    #[Test]
+    #[DataProvider('qualityClampProvider')]
+    public function parsedQualityIsClampedToValidRange(string $parameters, int $expected): void
+    {
+        $converter = new PhpGdConverter($parameters, $this->createConfiguration());
+        $method = new \ReflectionMethod($converter, 'getQuality');
+
+        self::assertSame($expected, $method->invoke($converter));
+    }
+
+    public static function qualityClampProvider(): array
+    {
+        return [
+            'in-range stays as-is' => ['-quality 85', 85],
+            'three-digit above 100 clamps to 100' => ['-quality 200', 100],
+            'edge value 100 stays' => ['-quality 100', 100],
+        ];
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
