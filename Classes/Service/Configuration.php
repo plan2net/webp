@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
+use Plan2net\Webp\Format\OutputFormat;
 use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationExtensionNotConfiguredException;
 use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationPathDoesNotExistException;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
@@ -117,6 +118,92 @@ final readonly class Configuration
         }
 
         return $pattern;
+    }
+
+    /**
+     * @return list<OutputFormat>
+     */
+    public function getEnabledFormats(): array
+    {
+        $raw = $this->stringValue('formats_enabled');
+        if ('' === $raw) {
+            return [OutputFormat::Webp];
+        }
+
+        $formats = [];
+        foreach (\explode(',', $raw) as $token) {
+            $format = OutputFormat::tryFrom(\strtolower(\trim($token)));
+            if (null !== $format) {
+                $formats[] = $format;
+            }
+        }
+
+        return $formats;
+    }
+
+    public function getConverterFor(OutputFormat $format): string
+    {
+        $perFormat = $this->stringValue('converter_' . $format->value);
+        if ('' !== $perFormat) {
+            return $perFormat;
+        }
+
+        return OutputFormat::Webp === $format ? $this->stringValue('converter') : '';
+    }
+
+    public function getParametersFor(OutputFormat $format, string $mimeType): ?string
+    {
+        $raw = $this->getRawParameters($format);
+        if ('' === $raw) {
+            return null;
+        }
+
+        return self::lookupMimeType($raw, $mimeType);
+    }
+
+    public function isSupportedMimeTypeFor(OutputFormat $format, string $mimeType): bool
+    {
+        $list = $this->stringValue('mime_types_' . $format->value);
+        if ('' === $list && OutputFormat::Webp === $format) {
+            $list = $this->stringValue('mime_types');
+        }
+        if ('' === $list) {
+            return false;
+        }
+
+        $configured = \array_map(
+            static fn (string $value): string => \strtolower(\trim($value)),
+            \explode(',', $list),
+        );
+
+        return \in_array(\strtolower($mimeType), $configured, true);
+    }
+
+    public function getRawParameters(OutputFormat $format): string
+    {
+        $perFormat = $this->stringValue('parameters_' . $format->value);
+        if ('' !== $perFormat) {
+            return $perFormat;
+        }
+
+        return OutputFormat::Webp === $format ? $this->stringValue('parameters') : '';
+    }
+
+    private static function lookupMimeType(string $rawParameters, string $mimeType): ?string
+    {
+        foreach (\explode('|', $rawParameters) as $segment) {
+            $parts = \explode('::', $segment, 2);
+            $type = $parts[0] ?? null;
+            $options = $parts[1] ?? null;
+            if (empty($options)) {
+                return $type;
+            }
+            if ($type === $mimeType) {
+                return $options;
+            }
+        }
+
+        return null;
     }
 
     private function settings(): array
