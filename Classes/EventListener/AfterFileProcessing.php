@@ -59,7 +59,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         if ($this->configuration->isAsync()) {
-            $this->enqueueEnabledFormats($originalFile, $processedFile, $event->getTaskType(), $taskConfiguration);
+            $this->enqueueEnabledFormats($originalFile, $processedFile, $sourceVariant, $event->getTaskType(), $taskConfiguration);
 
             return;
         }
@@ -76,7 +76,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
      * The queue worker re-dispatches each entry with its own $entry->format,
      * so a single drain produces exactly the formats that were enqueued.
      */
-    private function enqueueEnabledFormats(File $originalFile, ProcessedFile $processedFile, string $taskType, array $taskConfiguration): void
+    private function enqueueEnabledFormats(File $originalFile, ProcessedFile $processedFile, FileInterface $sourceVariant, string $taskType, array $taskConfiguration): void
     {
         $processedFileId = $processedFile->usesOriginalFile() ? 0 : (int) $processedFile->getUid();
         $mimeType = $originalFile->getMimeType();
@@ -105,10 +105,10 @@ final class AfterFileProcessing implements LoggerAwareInterface
                     $formatConfiguration,
                     $format,
                 );
-            } catch (\Doctrine\DBAL\Exception $e) {
-                $this->logger?->notice(\sprintf('webp: queue table unavailable for %s, falling back to synchronous conversion: %s', $format->value, $e->getMessage()));
+            } catch (\Doctrine\DBAL\Exception $exception) {
+                $this->logger?->notice(\sprintf('webp: queue table unavailable for %s, falling back to synchronous conversion: %s', $format->value, $exception->getMessage()));
                 try {
-                    $this->siblingGenerator->process($originalFile, $processedFile, $taskType, $taskConfiguration, $format);
+                    $this->siblingGenerator->process($originalFile, $sourceVariant, $taskType, $taskConfiguration, $format);
                 } catch (\Throwable $inner) {
                     $this->logger?->error(\sprintf('webp: sync fallback for %s also failed: %s', $format->value, $inner->getMessage()));
                 }
