@@ -282,6 +282,36 @@ final class ConfigurationTest extends TestCase
         self::assertSame('', $this->configurationWith([])->getRawParameters(OutputFormat::Avif));
     }
 
+    #[Test]
+    public function isFormatRunnableRequiresBothConverterAndParameters(): void
+    {
+        $missingBoth = $this->configurationWith([]);
+        self::assertFalse($missingBoth->isFormatRunnable(OutputFormat::Avif));
+
+        $missingParameters = $this->configurationWith(['converter_avif' => 'Plan2net\\Webp\\Converter\\VipsConverter']);
+        self::assertFalse($missingParameters->isFormatRunnable(OutputFormat::Avif));
+
+        $missingConverter = $this->configurationWith(['parameters_avif' => 'image/jpeg::Q=60']);
+        self::assertFalse($missingConverter->isFormatRunnable(OutputFormat::Avif));
+
+        $configured = $this->configurationWith([
+            'converter_avif' => 'Plan2net\\Webp\\Converter\\VipsConverter',
+            'parameters_avif' => 'image/jpeg::Q=60',
+        ]);
+        self::assertTrue($configured->isFormatRunnable(OutputFormat::Avif));
+    }
+
+    #[Test]
+    public function isFormatRunnableForWebpUsesLegacyKeysAsFallback(): void
+    {
+        $config = $this->configurationWith([
+            'converter' => 'Plan2net\\Webp\\Converter\\PhpGdConverter',
+            'parameters' => 'image/jpeg::-quality 85',
+        ]);
+
+        self::assertTrue($config->isFormatRunnable(OutputFormat::Webp));
+    }
+
     private function configurationWith(array $settings): Configuration
     {
         $extConfig = $this->createMock(ExtensionConfiguration::class);

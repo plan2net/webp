@@ -85,6 +85,9 @@ final class AfterFileProcessing implements LoggerAwareInterface
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
                 continue;
             }
+            if (!$this->configuration->isFormatRunnable($format)) {
+                continue;
+            }
             $formatConfiguration = $taskConfiguration + ['format' => $format->value, 'webp' => true];
             $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $originalFile,
@@ -146,6 +149,9 @@ final class AfterFileProcessing implements LoggerAwareInterface
     private function anyEnabledFormatAcceptsMimeType(string $mimeType): bool
     {
         foreach ($this->configuration->getEnabledFormats() as $format) {
+            if (!$this->configuration->isFormatRunnable($format)) {
+                continue;
+            }
             if ($this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
                 return true;
             }

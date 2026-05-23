@@ -141,6 +141,12 @@ final readonly class Configuration
         return $formats;
     }
 
+    public function isFormatRunnable(OutputFormat $format): bool
+    {
+        return '' !== $this->getConverterFor($format)
+            && '' !== $this->getRawParameters($format);
+    }
+
     public function getConverterFor(OutputFormat $format): string
     {
         $perFormat = $this->stringValue('converter_' . $format->value);

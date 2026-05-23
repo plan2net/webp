@@ -62,6 +62,10 @@ final class SiblingGenerator implements LoggerAwareInterface
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
                 continue;
             }
+            if (!$this->configuration->isFormatRunnable($format)) {
+                $this->logger?->notice(\sprintf('webp: %s is enabled but not fully configured (missing converter or parameters) — skipping.', $format->value));
+                continue;
+            }
             $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $taskConfiguration, $format);
         }
     }
