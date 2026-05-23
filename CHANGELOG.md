@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SYS/mediafile_ext` is now extended to include `avif` and `jxl` (in addition to `webp`) so FAL's source-folder publish path accepts the new sibling extensions.
 - Sibling lifecycle (move / rename / replace / delete) now covers all three formats. Any on-disk `.avif` or `.jxl` sibling follows its original alongside the existing `.webp` handling.
 
+### Upgrade notes
+
+- **Stop the Scheduler before running the database analyzer.** The `tx_webp_queue` unique index is reshaped to include the new `format` column. Concurrent enqueues during the `ALTER TABLE` can collide. Existing rows are valid (`format` defaults to `webp`) so no data migration is needed; queued work that you don't mind losing can be wiped with `TRUNCATE tx_webp_queue` before the analyzer runs.
+- **Flush all caches after deploy.** The DI container caches references to the renamed service classes (`Plan2net\Webp\Service\Webp` → `SiblingGenerator` etc.). A stale compiled container will fatal on the first request that touches them — `vendor/bin/typo3 cache:flush` or Install Tool → Maintenance → Flush cache resolves it.
+- **Re-save Extension Configuration if you customised `filter_pattern` to the previous webp-only default.** Old default `'/\.(jpe?g|png|gif)\.webp$/i'` won't hide `.avif` / `.jxl` siblings. The new default covers all three; admins who pinned a webp-only regex keep their value untouched.
+
 ## [14.4.1] - 2026-05-21
 
 ### Bug fixes
