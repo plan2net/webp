@@ -234,6 +234,30 @@ probe_all_accept_variants() {
     probe "image/jxl,image/*,*/*"                       "$(top_format_for 'image/jxl')"
     probe "image/webp,image/*,*/*"                      "$(top_format_for 'image/webp')"
     probe "*/*"                                          "image/jpeg"
+    probe_vary_header "image/webp,image/*,*/*"
+}
+
+# Asserts the negotiated response carries `Vary: Accept`. A regression that
+# drops the header would cache-poison any CDN sitting in front of the site.
+probe_vary_header() {
+    local accept="$1"
+    local vary
+    vary="$(curl -sk -D - -o /dev/null \
+        -H "Accept: $accept" \
+        "http://127.0.0.1:${PORT}/${PROCESSED_RELPATH}" \
+        | grep -i '^vary:' | tr -d '\r')"
+    if [[ -z "$vary" ]]; then
+        echo "  ✗ Vary header missing from negotiated response"
+        fail_count=$((fail_count + 1))
+        return
+    fi
+    if echo "$vary" | grep -iq 'accept'; then
+        echo "  ✓ ${vary}"
+        pass_count=$((pass_count + 1))
+    else
+        echo "  ✗ Vary header present but does not list Accept: ${vary}"
+        fail_count=$((fail_count + 1))
+    fi
 }
 
 start_nginx() {
