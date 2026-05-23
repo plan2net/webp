@@ -1,0 +1,97 @@
+name: e2e
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'feature/**'
+      - 'fix/**'
+  pull_request:
+
+jobs:
+  e2e:
+    name: E2E PHP ${{ matrix.php }} / TYPO3 ${{ matrix.typo3 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+        typo3: ['^12.4', '^13.4', '^14.3']
+        exclude:
+          - { php: '8.4', typo3: '^12.4' }
+    steps:
+      - uses: actions/checkout@v4
+
+      # libheif-plugin-aomenc gives libheif a real AV1 encoder; without it
+      # heifsave fails with "Unsupported compression" on Ubuntu 24.04.
+      - name: Install system packages (cached)
+        if: ${{ !env.ACT }}
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: nginx apache2 sqlite3 imagemagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools libvips-tools
+          execute_install_scripts: true
+          version: 1.0
+
+      - name: Install system packages (act fallback)
+        if: ${{ env.ACT }}
+        run: sudo apt-get update && sudo apt-get install -y nginx apache2 sqlite3 imagemagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools libvips-tools
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: gd, intl, mbstring, pdo_sqlite, json, xml, zip, ffi
+          ini-values: ffi.enable=true, zend.max_allowed_stack_size=-1
+          tools: composer:v2
+          coverage: none
+
+      # Composer download cache — independent of TYPO3 version pin.
+      - name: Cache Composer downloads
+        if: ${{ !env.ACT }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: e2e-composer-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            e2e-composer-${{ matrix.php }}-${{ matrix.typo3 }}-
+            e2e-composer-${{ matrix.php }}-
+
+      # Built TYPO3 instance cache — the big win. Invalidates on any change to
+      # extension source, fixtures, or composer.json. Restores everything under
+      # /tmp/plan2net-webp-e2e/instance/ so we skip composer install + TYPO3
+      # setup entirely on cache hit.
+      - name: Cache built TYPO3 instance
+        id: instance-cache
+        if: ${{ !env.ACT }}
+        uses: actions/cache@v4
+        with:
+          path: /tmp/plan2net-webp-e2e/instance
+          key: e2e-instance-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json', 'Classes/**', 'Configuration/**', 'ext_*.php', 'ext_tables.sql', 'Resources/Private/Language/**', 'Tests/E2E/bootstrap.sh', 'Tests/E2E/fixtures/**') }}
+
+      - name: Bootstrap TYPO3 instance (cache miss only)
+        if: steps.instance-cache.outputs.cache-hit != 'true'
+        run: bash Tests/E2E/bootstrap.sh
+        env:
+          TYPO3_VERSION: ${{ matrix.typo3 }}
+
+      - name: Run E2E assertions
+        run: sudo -E bash Tests/E2E/run.sh
+        env:
+          TYPO3_VERSION: ${{ matrix.typo3 }}
+
+      - name: Normalize E2E artifact ownership
+        if: always()
+        run: sudo chown -R "$USER:$USER" /tmp/plan2net-webp-e2e || true
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs-php${{ matrix.php }}-typo3-${{ strategy.job-index }}
+          path: |
+            /tmp/plan2net-webp-e2e/*.log
+            /tmp/plan2net-webp-e2e/instance/var/log/
+          if-no-files-found: ignore
+          retention-days: 7

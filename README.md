@@ -378,7 +378,7 @@ Register this as a second Scheduler task ("Execute console command") if you want
 
 The webserver inspects the client's `Accept` header and rewrites the request to the best-matching sibling that's available on disk. If only WebP is enabled, the server has two candidates: serve `.webp` when the client accepts it, otherwise fall back to the original JPEG/PNG/GIF. With AVIF or JPEG XL enabled too, the server picks among the available siblings in client-preference order.
 
-Below are examples for nginx and Apache. **Adapt them to your stack** — these aren't drop-in copies.
+Below are examples for nginx and Apache. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for both servers: [nginx.conf](Tests/E2E/nginx.conf) and [apache.conf](Tests/E2E/apache.conf).
 
 > [!IMPORTANT]
 > Make sure no earlier rule in your config short-circuits the request for the image extensions you target (e.g. a generic static-asset block). If so, move the sibling-rewrite rules above it or rework the earlier rule.
