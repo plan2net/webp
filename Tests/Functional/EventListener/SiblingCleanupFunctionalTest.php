@@ -40,6 +40,29 @@ final class SiblingCleanupFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function renameRelocatesEveryKnownSiblingFormat(): void
+    {
+        // Use a name distinct from other tests in this class — fileadmin
+        // state persists across methods so generic names cross-contaminate.
+        \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $this->fileadminPath . 'multi.png');
+        \file_put_contents($this->fileadminPath . 'multi.png.webp', 'fake-webp');
+        \file_put_contents($this->fileadminPath . 'multi.png.avif', 'fake-avif');
+        \file_put_contents($this->fileadminPath . 'multi.png.jxl', 'fake-jxl');
+
+        $storage = $this->get(StorageRepository::class)->findByUid(1);
+        self::assertNotNull($storage, 'fileadmin storage (UID 1) must exist');
+        $multi = $storage->getFile('/multi.png');
+        $storage->renameFile($multi, 'multi-renamed.png');
+
+        self::assertFileDoesNotExist($this->fileadminPath . 'multi.png.webp');
+        self::assertFileDoesNotExist($this->fileadminPath . 'multi.png.avif');
+        self::assertFileDoesNotExist($this->fileadminPath . 'multi.png.jxl');
+        self::assertFileExists($this->fileadminPath . 'multi-renamed.png.webp');
+        self::assertFileExists($this->fileadminPath . 'multi-renamed.png.avif');
+        self::assertFileExists($this->fileadminPath . 'multi-renamed.png.jxl');
+    }
+
+    #[Test]
     public function siblingMovesWithSourceFile(): void
     {
         $file = $this->getFile(1);
