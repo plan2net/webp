@@ -17,7 +17,16 @@ final class SiblingFile implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
-    /** @var \WeakMap<FileInterface, array{0: int, 1: list<string>}> */
+    /**
+     * Pre-move capture indexed by FileInterface object identity. This works
+     * because TYPO3 FAL mutates the same File across Before/After move events;
+     * the Local driver, the in-repo FakeRemoteDriver, and every standard
+     * driver behave that way. A custom driver that returns a fresh File
+     * instance for the After event would miss this lookup and leave source-
+     * side siblings orphaned. No such driver is known.
+     *
+     * @var \WeakMap<FileInterface, array{0: int, 1: list<string>}>
+     */
     private \WeakMap $capturedOldSiblings;
 
     public function __construct(
