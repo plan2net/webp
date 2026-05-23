@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Command;
 
+use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
@@ -144,8 +145,14 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
                 }
                 try {
                     $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . $format->suffix(), $entry['mimeType'], $format);
-                } catch (\Throwable $e) {
-                    $this->logger?->error('webp folder: ' . $e->getMessage(), ['path' => $entry['path'], 'format' => $format->value]);
+                } catch (ConvertedFileLargerThanOriginalException $exception) {
+                    // No FAL UID in folder mode, so we can't persist to
+                    // tx_webp_failed; subsequent sweeps will re-attempt.
+                    // Surface the path so an admin can adjust parameters or
+                    // exclude_directories without grepping noise.
+                    $this->logger?->notice('webp folder: skipping ' . $entry['path'] . ' — converted file would be larger than original', ['path' => $entry['path'], 'format' => $format->value]);
+                } catch (\Throwable $exception) {
+                    $this->logger?->error('webp folder: ' . $exception->getMessage(), ['path' => $entry['path'], 'format' => $format->value]);
                 }
             }
             $this->applyThrottle($throttleMs, $index === $lastIndex);
