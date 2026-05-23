@@ -695,6 +695,10 @@ final class DiagnoseCommand extends Command
             return;
         }
 
+        if (!$this->schemaReady('tx_webp_queue', 'format', $io)) {
+            return;
+        }
+
         $io->writeln('· queue size:');
         $maxOldestEnqueuedAt = null;
         foreach ($selectedFormats as $format) {
@@ -785,6 +789,58 @@ final class DiagnoseCommand extends Command
     }
 
     /**
+     * Verifies that one of our tables is present with the expected column.
+     * On upgrade installs that haven't run TYPO3's Database Analyzer yet the
+     * `format` column added in the multi-format release is missing, and the
+     * raw queries below would otherwise raise InvalidFieldNameException and
+     * crash the whole command.
+     */
+    private function schemaReady(string $tableName, string $requiredColumn, SymfonyStyle $io): bool
+    {
+        try {
+            $schemaManager = $this->connectionPool
+                ->getConnectionForTable($tableName)
+                ->createSchemaManager();
+            if (!$schemaManager->tablesExist([$tableName])) {
+                $this->writeStatus($io, '!', \sprintf(
+                    'database table `%s` is missing — run the TYPO3 Database Analyzer (backend: System → Maintenance → Analyze Database Structure) and re-run this command',
+                    $tableName,
+                ));
+                ++$this->warningCount;
+                $this->captureFirstFailure(\sprintf(
+                    "The `%s` table doesn't exist yet. Run the TYPO3 Database Analyzer (backend: System → Maintenance → Analyze Database Structure) so the schema matches the installed extension version.",
+                    $tableName,
+                ));
+
+                return false;
+            }
+            $columns = $schemaManager->listTableColumns($tableName);
+            if (!isset($columns[\strtolower($requiredColumn)])) {
+                $this->writeStatus($io, '!', \sprintf(
+                    '`%s.%s` column is missing — run the TYPO3 Database Analyzer (backend: System → Maintenance → Analyze Database Structure) and re-run this command',
+                    $tableName,
+                    $requiredColumn,
+                ));
+                ++$this->warningCount;
+                $this->captureFirstFailure(\sprintf(
+                    'The `%s.%s` column is missing. Run the TYPO3 Database Analyzer (backend: System → Maintenance → Analyze Database Structure) to add it.',
+                    $tableName,
+                    $requiredColumn,
+                ));
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $exception) {
+            $this->writeStatus($io, '!', \sprintf('could not introspect schema for `%s`: %s — skipping section', $tableName, $exception->getMessage()));
+            ++$this->warningCount;
+
+            return false;
+        }
+    }
+
+    /**
      * @return array{disable: int, lastexecution_time: int}|null
      */
     private function findWebpScheduledTaskRow(): ?array
@@ -858,6 +914,10 @@ final class DiagnoseCommand extends Command
     private function reportFailedAttempts(SymfonyStyle $io, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Failed attempts');
+
+        if (!$this->schemaReady('tx_webp_failed', 'format', $io)) {
+            return;
+        }
 
         $totalCount = 0;
         foreach ($selectedFormats as $format) {
@@ -1409,16 +1469,23 @@ final class DiagnoseCommand extends Command
      */
     private function findFailedRows(int $fileUid, OutputFormat $format): array
     {
-        $query = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
-        $rows = $query
-            ->select('configuration_hash')
-            ->from('tx_webp_failed')
-            ->where(
-                $query->expr()->eq('file_id', $query->createNamedParameter($fileUid, Connection::PARAM_INT)),
-                $query->expr()->eq('format', $query->createNamedParameter($format->value)),
-            )
-            ->executeQuery()
-            ->fetchAllAssociative();
+        try {
+            $query = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
+            $rows = $query
+                ->select('configuration_hash')
+                ->from('tx_webp_failed')
+                ->where(
+                    $query->expr()->eq('file_id', $query->createNamedParameter($fileUid, Connection::PARAM_INT)),
+                    $query->expr()->eq('format', $query->createNamedParameter($format->value)),
+                )
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            // Schema may be out of date (missing format column) on installs
+            // that haven't run the TYPO3 Database Analyzer yet. The deep-dive
+            // section reports the gap once and just skips the per-file row.
+            return [];
+        }
 
         /** @var list<array{configuration_hash: string}> $normalized */
         $normalized = \array_map(
