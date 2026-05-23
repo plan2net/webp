@@ -9,8 +9,10 @@ use GuzzleHttp\Exception\GuzzleException;
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\ExternalConverter;
 use Plan2net\Webp\Converter\MagickConverter;
+use Plan2net\Webp\Converter\MultiFormatConverter;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Converter\VipsConverter;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Http\Message\ResponseInterface;
@@ -61,6 +63,7 @@ final class DiagnoseCommand extends Command
         $this->addOption('file', null, InputOption::VALUE_REQUIRED, 'sys_file UID for per-file deep dive.');
         $this->addOption('insecure', null, InputOption::VALUE_NONE, 'Disable TLS certificate verification on the HTTP probe (for self-signed dev certs).');
         $this->addOption('probe-timeout', null, InputOption::VALUE_REQUIRED, 'HTTP probe timeout in seconds.', '10');
+        $this->addOption('format', null, InputOption::VALUE_REQUIRED, 'Limit the report to one format (webp, avif, jxl).');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -74,24 +77,51 @@ final class DiagnoseCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->reportStorages($io);
-        $this->reportConverter($io);
-        $this->reportAsyncPipeline($io);
-        $this->reportFailedAttempts($io);
+        $selectedFormats = $this->resolveSelectedFormats($input->getOption('format'), $io);
+        if (null === $selectedFormats) {
+            return Command::FAILURE;
+        }
+
+        $this->reportStorages($io, $selectedFormats);
+        $this->reportConverter($io, $selectedFormats);
+        $this->reportAsyncPipeline($io, $selectedFormats);
+        $this->reportFailedAttempts($io, $selectedFormats);
 
         $probeUrl = $this->resolveProbeBaseUrl($input, $io);
         if (null !== $probeUrl) {
-            $this->reportDeliveryProbe($io, $probeUrl, $input);
+            $this->reportDeliveryProbe($io, $probeUrl, $input, $selectedFormats);
         }
 
         $fileUid = $input->getOption('file');
         if (\is_string($fileUid) && '' !== $fileUid) {
-            $this->reportFileDeepDive($io, (int) $fileUid);
+            $this->reportFileDeepDive($io, (int) $fileUid, $selectedFormats);
         }
 
         $this->emitRecommendation($io);
 
         return $this->failureCount > 0 ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * @return list<OutputFormat>|null
+     */
+    private function resolveSelectedFormats(?string $filter, SymfonyStyle $io): ?array
+    {
+        $enabled = $this->configuration->getEnabledFormats();
+        if (null === $filter || '' === $filter) {
+            return $enabled;
+        }
+        $requested = OutputFormat::tryFrom(\strtolower($filter));
+        if (null === $requested) {
+            $io->error(\sprintf('Unknown --format value "%s". Valid: webp, avif, jxl.', $filter));
+
+            return null;
+        }
+        if (!\in_array($requested, $enabled, true)) {
+            $io->warning(\sprintf('--format=%s is not in formats_enabled; report will show "not enabled" only.', $requested->value));
+        }
+
+        return [$requested];
     }
 
     private function isInstallationEmpty(): bool
@@ -107,7 +137,10 @@ final class DiagnoseCommand extends Command
         return 0 === $count;
     }
 
-    private function reportStorages(SymfonyStyle $io): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportStorages(SymfonyStyle $io, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Storages');
 
@@ -136,7 +169,12 @@ final class DiagnoseCommand extends Command
                 (int) ($storage->getStorageRecord()['tx_webp_mode'] ?? StorageSiblingMode::Auto->value),
             ) ?? StorageSiblingMode::Auto;
             $isEnabled = StorageSiblingMode::isEnabledFor($storage);
-            $siblingCount = $this->countSiblings($storage->getUid());
+
+            $siblingCounts = [];
+            foreach ($selectedFormats as $format) {
+                $siblingCounts[] = \sprintf('%s=%d', $format->value, $this->countSiblings($storage->getUid(), $format));
+            }
+            $siblingSummary = 'siblings: ' . \implode(', ', $siblingCounts);
 
             $marker = match (true) {
                 $isEnabled => '✓',
@@ -150,7 +188,7 @@ final class DiagnoseCommand extends Command
                 $storage->getDriverType(),
                 $mode->name,
                 $storage->isWritable() ? 'writable' : 'read-only',
-                $this->pluralize($siblingCount, '.webp file sibling'),
+                $siblingSummary,
             ));
 
             if (!$isEnabled && StorageSiblingMode::Disabled !== $mode) {
@@ -210,7 +248,7 @@ final class DiagnoseCommand extends Command
         }
     }
 
-    private function countSiblings(int $storageUid): int
+    private function countSiblings(int $storageUid, OutputFormat $format): int
     {
         $fileQuery = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $directCount = (int) $fileQuery
@@ -218,7 +256,7 @@ final class DiagnoseCommand extends Command
             ->from('sys_file')
             ->where(
                 $fileQuery->expr()->eq('storage', $fileQuery->createNamedParameter($storageUid, Connection::PARAM_INT)),
-                $fileQuery->expr()->eq('extension', $fileQuery->createNamedParameter('webp')),
+                $fileQuery->expr()->eq('extension', $fileQuery->createNamedParameter($format->value)),
             )
             ->executeQuery()
             ->fetchOne();
@@ -229,7 +267,7 @@ final class DiagnoseCommand extends Command
             ->from('sys_file_processedfile')
             ->where(
                 $processedQuery->expr()->eq('storage', $processedQuery->createNamedParameter($storageUid, Connection::PARAM_INT)),
-                $processedQuery->expr()->like('identifier', $processedQuery->createNamedParameter('%.webp')),
+                $processedQuery->expr()->like('identifier', $processedQuery->createNamedParameter('%' . $format->suffix())),
             )
             ->executeQuery()
             ->fetchOne();
@@ -249,44 +287,86 @@ final class DiagnoseCommand extends Command
         return 'StorageSiblingMode::isEnabledFor returned false (storage uid 0 or other gate)';
     }
 
-    private function reportConverter(SymfonyStyle $io): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportConverter(SymfonyStyle $io, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Converter');
 
-        $converterClass = $this->configuration->getConverter();
-        $parameters = $this->configuration->getParameters();
+        $enabled = $this->configuration->getEnabledFormats();
 
-        if ('' === $converterClass) {
-            $this->writeStatus($io, '✗', 'no converter configured — set EXTENSIONS/webp/converter in TYPO3 settings');
-            ++$this->failureCount;
-            $this->captureFirstFailure('No converter configured. Edit the TYPO3 extension settings for webp and pick PhpGdConverter, MagickConverter, or ExternalConverter.');
+        foreach (OutputFormat::cases() as $format) {
+            $isEnabled = \in_array($format, $enabled, true);
+            $isSelected = \in_array($format, $selectedFormats, true);
 
-            return;
-        }
-
-        $io->writeln(\sprintf('· class:      %s', $converterClass));
-        $io->writeln(\sprintf('· parameters: %s', '' === $parameters ? '(empty)' : $parameters));
-
-        $verdict = match (true) {
-            PhpGdConverter::class === $converterClass => $this->checkPhpGdConverter(),
-            MagickConverter::class === $converterClass => $this->checkMagickConverter(),
-            ExternalConverter::class === $converterClass => $this->checkExternalConverter($parameters),
-            VipsConverter::class === $converterClass => $this->checkVipsConverter(),
-            default => $this->checkCustomConverter($converterClass),
-        };
-
-        $this->writeStatus($io, $verdict['marker'], $verdict['line']);
-        if ('✗' === $verdict['marker']) {
-            ++$this->failureCount;
-            $this->captureFirstFailure($verdict['recommendation']);
-        } elseif ('!' === $verdict['marker']) {
-            ++$this->warningCount;
-            if ('' !== $verdict['recommendation']) {
-                $this->captureFirstFailure($verdict['recommendation']);
+            if ($isSelected && !$isEnabled) {
+                $io->writeln(\sprintf('Converter: %s  (selected via --format but not enabled — skipped)', $format->value));
+                $io->newLine();
+                continue;
             }
+
+            if (!$isSelected) {
+                continue;
+            }
+
+            $converterClass = $this->configuration->getConverterFor($format);
+            $rawParameters = $this->configuration->getRawParameters($format);
+
+            $io->writeln(\sprintf('Converter: %s', $format->value));
+            $io->writeln(\sprintf('· class:      %s', '' === $converterClass ? '(none)' : $converterClass));
+            $io->writeln(\sprintf('· parameters: %s', '' === $rawParameters ? '(empty)' : $rawParameters));
+
+            if ('' === $converterClass) {
+                $this->writeStatus($io, '✗', \sprintf('no converter configured for %s — set EXTENSIONS/webp/converter_%s in TYPO3 settings', $format->value, $format->value));
+                ++$this->failureCount;
+                $this->captureFirstFailure(\sprintf('No converter configured for %s. Edit the TYPO3 extension settings for webp and pick PhpGdConverter, MagickConverter, or ExternalConverter.', $format->value));
+                $io->newLine();
+                continue;
+            }
+
+            if (!$this->converterAdvertisesFormat($converterClass, $format)) {
+                $this->writeStatus($io, '✗', \sprintf('%s does not support output format %s', $converterClass, $format->value));
+                ++$this->failureCount;
+                $this->captureFirstFailure(\sprintf('The converter "%s" does not support the %s output format. Use MagickConverter, ExternalConverter, or VipsConverter for AVIF/JXL output.', $converterClass, $format->value));
+                $io->newLine();
+                continue;
+            }
+
+            $verdict = match (true) {
+                PhpGdConverter::class === $converterClass => $this->checkPhpGdConverter(),
+                MagickConverter::class === $converterClass => $this->checkMagickConverter($format),
+                ExternalConverter::class === $converterClass => $this->checkExternalConverter($rawParameters),
+                VipsConverter::class === $converterClass => $this->checkVipsConverter($format),
+                default => $this->checkCustomConverter($converterClass),
+            };
+
+            $this->writeStatus($io, $verdict['marker'], $verdict['line']);
+            if ('✗' === $verdict['marker']) {
+                ++$this->failureCount;
+                $this->captureFirstFailure($verdict['recommendation']);
+            } elseif ('!' === $verdict['marker']) {
+                ++$this->warningCount;
+                if ('' !== $verdict['recommendation']) {
+                    $this->captureFirstFailure($verdict['recommendation']);
+                }
+            }
+
+            $this->checkParameterParsing($io, $format);
+            $io->newLine();
+        }
+    }
+
+    private function converterAdvertisesFormat(string $converterClass, OutputFormat $format): bool
+    {
+        if (OutputFormat::Webp === $format) {
+            return true;
+        }
+        if (!\class_exists($converterClass)) {
+            return false;
         }
 
-        $this->checkParameterParsing($io);
+        return \is_subclass_of($converterClass, MultiFormatConverter::class);
     }
 
     /**
@@ -319,25 +399,26 @@ final class DiagnoseCommand extends Command
     /**
      * @return array{marker: string, line: string, recommendation: string}
      */
-    private function checkMagickConverter(): array
+    private function checkMagickConverter(OutputFormat $format): array
     {
         $processorPath = (string) ($GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_path'] ?? '');
         if ('' !== $processorPath && !\str_ends_with($processorPath, \DIRECTORY_SEPARATOR)) {
             $processorPath .= \DIRECTORY_SEPARATOR;
         }
         $location = '' === $processorPath ? 'on PATH' : 'at ' . $processorPath;
+        $formatTag = \strtoupper($format->value);
 
         $timedOutTool = null;
-        foreach (['convert' => [$processorPath . 'convert', '-version'], 'gm' => [$processorPath . 'gm', 'version']] as $tool => $command) {
+        foreach (['convert' => [$processorPath . 'convert', '-list', 'format'], 'gm' => [$processorPath . 'gm', 'convert', '-list', 'format']] as $tool => $command) {
             $result = self::runCommandWithTimeout($command, 5);
             if ($result['timedOut']) {
                 $timedOutTool = $tool;
                 continue;
             }
-            if (0 === $result['exitCode'] && \str_contains($result['output'], 'WebP')) {
+            if (0 === $result['exitCode'] && self::magickListFormatHasWriteSupport($result['output'], $formatTag)) {
                 return [
                     'marker' => '✓',
-                    'line' => \sprintf('%s with WebP delegate found %s', 'convert' === $tool ? 'ImageMagick' : 'GraphicsMagick', $location),
+                    'line' => \sprintf('%s with %s write support found %s', 'convert' === $tool ? 'ImageMagick' : 'GraphicsMagick', $formatTag, $location),
                     'recommendation' => '',
                 ];
             }
@@ -347,14 +428,14 @@ final class DiagnoseCommand extends Command
             return [
                 'marker' => '✗',
                 'line' => \sprintf('%s did not respond within 5 seconds %s', 'convert' === $timedOutTool ? 'ImageMagick' : 'GraphicsMagick', $location),
-                'recommendation' => \sprintf('`%s -version` did not return within 5 seconds. Investigate why the binary is slow to start before relying on it for conversions.', $timedOutTool),
+                'recommendation' => \sprintf('`%s -list format` did not return within 5 seconds. Investigate why the binary is slow to start before relying on it for conversions.', $timedOutTool),
             ];
         }
 
         return [
             'marker' => '✗',
-            'line' => \sprintf('neither ImageMagick nor GraphicsMagick with WebP delegate found %s', $location),
-            'recommendation' => 'MagickConverter needs `convert` (ImageMagick) or `gm` (GraphicsMagick) with WebP delegate support. Check $GLOBALS[TYPO3_CONF_VARS][GFX][processor_path] or PATH, or switch to PhpGdConverter.',
+            'line' => \sprintf('neither ImageMagick nor GraphicsMagick advertises %s write support %s', $formatTag, $location),
+            'recommendation' => \sprintf('MagickConverter needs `convert` (ImageMagick) or `gm` (GraphicsMagick) with %s delegate support. AVIF needs libheif with an AV1 encoder; JXL needs libjxl. Check `convert -list format` for the format flagged `rw+`, or switch to VipsConverter / ExternalConverter for this format.', $formatTag),
         ];
     }
 
@@ -461,7 +542,7 @@ final class DiagnoseCommand extends Command
     /**
      * @return array{marker: string, line: string, recommendation: string}
      */
-    private function checkVipsConverter(): array
+    private function checkVipsConverter(OutputFormat $format): array
     {
         if (!\extension_loaded('ffi')) {
             return [
@@ -512,11 +593,38 @@ final class DiagnoseCommand extends Command
             ];
         }
 
+        try {
+            $saver = (string) \Jcupitt\Vips\FFI::vips()->vips_foreign_find_save('probe' . $format->suffix());
+        } catch (\Throwable) {
+            $saver = '';
+        }
+        if ('' === $saver) {
+            return [
+                'marker' => '✗',
+                'line' => \sprintf('libvips %s reachable but lacks a %s saver', $libvipsVersion ?: 'unknown', $format->suffix()),
+                'recommendation' => \sprintf('libvips on this host has no operation that writes %s. Rebuild libvips with libheif (AVIF) or libjxl (JXL) support, or switch to a different converter for this format.', $format->suffix()),
+            ];
+        }
+
         return [
             'marker' => '' === $warningSuffix ? '✓' : '!',
-            'line' => \sprintf('libvips %s available via ext-ffi + jcupitt/vips%s', $libvipsVersion ?: 'unknown', $warningSuffix),
+            'line' => \sprintf('libvips %s with %s saver (%s) available via ext-ffi + jcupitt/vips%s', $libvipsVersion ?: 'unknown', $format->suffix(), $saver, $warningSuffix),
             'recommendation' => '' === $warningSuffix ? '' : 'Set `zend.max_allowed_stack_size=-1` in php.ini. Background: php-vips runs FFI callbacks off the main thread, which confuses PHP 8.3+ stack-size limits and may cause spurious failures.',
         ];
+    }
+
+    /**
+     * Scans `<convert> -list format` output for a line whose first token is the
+     * format tag (e.g. `WEBP`, `AVIF`, `JXL`) and whose rights column contains a
+     * `w`. ImageMagick prints `AVIF  HEIC  rw+ …`; GraphicsMagick prints
+     * `AVIF P  r--  …` where the second column is the rights and `--` means
+     * read-only.
+     */
+    private static function magickListFormatHasWriteSupport(string $listFormatOutput, string $formatTag): bool
+    {
+        $pattern = '/^\\s+' . \preg_quote($formatTag, '/') . '[*\\s].*?\\b[rR][wW][+\\-*]?\\b/m';
+
+        return 1 === \preg_match($pattern, $listFormatOutput);
     }
 
     /**
@@ -546,22 +654,31 @@ final class DiagnoseCommand extends Command
         ];
     }
 
-    private function checkParameterParsing(SymfonyStyle $io): void
+    private function checkParameterParsing(SymfonyStyle $io, OutputFormat $format): void
     {
-        foreach ($this->configuration->getMimeTypes() as $mimeType) {
-            $resolved = $this->configuration->getParametersFor(\Plan2net\Webp\Format\OutputFormat::Webp, $mimeType);
+        foreach (\Plan2net\Webp\Format\SourceMimeType::all() as $mimeType) {
+            if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
+                continue;
+            }
+            $resolved = $this->configuration->getParametersFor($format, $mimeType);
             if (null === $resolved) {
-                $this->writeStatus($io, '!', \sprintf('parameters for %s could not be resolved — falls back to old single-options format', $mimeType));
+                $this->writeStatus($io, '!', \sprintf('parameters for %s @ %s could not be resolved — falls back to old single-options format', $format->value, $mimeType));
                 ++$this->warningCount;
                 $this->captureFirstFailure(\sprintf(
-                    "Converter parameters cannot be resolved for mime type %s.\nThe parameters string should look like 'image/jpeg::-quality 85|image/png::-quality 75'. Check the parameters setting in the extension config.",
+                    "Converter parameters cannot be resolved for format %s and mime type %s.\nThe parameters_%s string should look like 'image/jpeg::Q=85|image/png::Q=75'. Check the parameters_%s setting in the extension config.",
+                    $format->value,
                     $mimeType,
+                    $format->value,
+                    $format->value,
                 ));
             }
         }
     }
 
-    private function reportAsyncPipeline(SymfonyStyle $io): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportAsyncPipeline(SymfonyStyle $io, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Async pipeline');
 
@@ -571,23 +688,46 @@ final class DiagnoseCommand extends Command
             return;
         }
 
-        $queueQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_queue');
-        $queueSize = (int) $queueQuery
-            ->count('uid')
-            ->from('tx_webp_queue')
-            ->executeQuery()
-            ->fetchOne();
-        $io->writeln(\sprintf('· queue size: %d', $queueSize));
-
-        $oldestEnqueuedAt = null;
-        if ($queueSize > 0) {
-            $oldestQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_queue');
-            $oldestEnqueuedAt = (int) $oldestQuery
-                ->selectLiteral('MIN(enqueued_at)')
+        $io->writeln('· queue size:');
+        $maxOldestEnqueuedAt = null;
+        foreach ($selectedFormats as $format) {
+            $queueQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_queue');
+            $queueSize = (int) $queueQuery
+                ->count('uid')
                 ->from('tx_webp_queue')
+                ->where($queueQuery->expr()->eq('format', $queueQuery->createNamedParameter($format->value)))
                 ->executeQuery()
                 ->fetchOne();
-            $io->writeln(\sprintf('· oldest entry: %s ago', $this->humanAge(\time() - $oldestEnqueuedAt)));
+            $io->writeln(\sprintf('    %s=%d', $format->value, $queueSize));
+
+            if ($queueSize > 0) {
+                $oldestQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_queue');
+                $oldestEnqueuedAt = (int) $oldestQuery
+                    ->selectLiteral('MIN(enqueued_at)')
+                    ->from('tx_webp_queue')
+                    ->where($oldestQuery->expr()->eq('format', $oldestQuery->createNamedParameter($format->value)))
+                    ->executeQuery()
+                    ->fetchOne();
+                if (null === $maxOldestEnqueuedAt || $oldestEnqueuedAt < $maxOldestEnqueuedAt) {
+                    $maxOldestEnqueuedAt = $oldestEnqueuedAt;
+                }
+            }
+        }
+
+        if (null !== $maxOldestEnqueuedAt) {
+            $io->writeln('· oldest entry:');
+            foreach ($selectedFormats as $format) {
+                $oldestQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_queue');
+                $formatOldest = $oldestQuery
+                    ->selectLiteral('MIN(enqueued_at)')
+                    ->from('tx_webp_queue')
+                    ->where($oldestQuery->expr()->eq('format', $oldestQuery->createNamedParameter($format->value)))
+                    ->executeQuery()
+                    ->fetchOne();
+                if (null !== $formatOldest && false !== $formatOldest) {
+                    $io->writeln(\sprintf('    %s %s ago', $format->value, $this->humanAge(\time() - (int) $formatOldest)));
+                }
+            }
         }
 
         if (!$this->schedulerTableExists()) {
@@ -615,9 +755,8 @@ final class DiagnoseCommand extends Command
             $this->captureFirstFailure("Async mode is enabled but no ProcessWebpQueueTask scheduler entry exists.\nEither create a scheduler task for Plan2net\\Webp\\Task\\ProcessWebpQueueTask, or invoke `vendor/bin/typo3 webp:process-queue` from a system cron.");
         }
 
-        $stale = $queueSize > 0
-            && null !== $oldestEnqueuedAt
-            && (\time() - $oldestEnqueuedAt) > 3600
+        $stale = null !== $maxOldestEnqueuedAt
+            && (\time() - $maxOldestEnqueuedAt) > 3600
             && (!$taskFound || $taskDisabled || (\time() - $lastExecutionTime) > 3600);
 
         if ($stale) {
@@ -706,65 +845,96 @@ final class DiagnoseCommand extends Command
         return \intdiv($seconds, 86400) . 'd';
     }
 
-    private function reportFailedAttempts(SymfonyStyle $io): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportFailedAttempts(SymfonyStyle $io, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Failed attempts');
 
-        $countQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
-        $totalCount = (int) $countQuery
-            ->count('uid')
-            ->from('tx_webp_failed')
-            ->executeQuery()
-            ->fetchOne();
-
-        $io->writeln(\sprintf('· tx_webp_failed rows: %d', $totalCount));
+        $totalCount = 0;
+        foreach ($selectedFormats as $format) {
+            $countQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
+            $formatCount = (int) $countQuery
+                ->count('uid')
+                ->from('tx_webp_failed')
+                ->where($countQuery->expr()->eq('format', $countQuery->createNamedParameter($format->value)))
+                ->executeQuery()
+                ->fetchOne();
+            $io->writeln(\sprintf('· tx_webp_failed rows (%s): %d', $format->value, $formatCount));
+            $totalCount += $formatCount;
+        }
 
         if (0 === $totalCount) {
             return;
         }
 
         $recentQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
-        $recent = $recentQuery
-            ->select('file_id', 'configuration_hash', 'configuration')
+        $recentQuery->select('file_id', 'format', 'configuration_hash', 'configuration')
             ->from('tx_webp_failed')
             ->orderBy('uid', 'DESC')
-            ->setMaxResults(5)
-            ->executeQuery()
-            ->fetchAllAssociative();
+            ->setMaxResults(5);
+
+        if (1 === \count($selectedFormats)) {
+            $recentQuery->where(
+                $recentQuery->expr()->eq('format', $recentQuery->createNamedParameter($selectedFormats[0]->value)),
+            );
+        }
+
+        $recent = $recentQuery->executeQuery()->fetchAllAssociative();
 
         $io->writeln('· most recent (up to 5):');
         foreach ($recent as $row) {
             $io->writeln(\sprintf(
-                '    file_id=%d ⋅ hash=%s',
+                '    file_id=%d ⋅ format=%s ⋅ hash=%s',
                 (int) $row['file_id'],
+                (string) $row['format'],
                 $row['configuration_hash'],
             ));
         }
 
-        $dominantQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
-        $dominant = $dominantQuery
-            ->select('configuration_hash')
-            ->addSelectLiteral('COUNT(*) AS hash_count')
-            ->from('tx_webp_failed')
-            ->groupBy('configuration_hash')
-            ->orderBy('hash_count', 'DESC')
-            ->setMaxResults(1)
-            ->executeQuery()
-            ->fetchAssociative();
+        foreach ($selectedFormats as $format) {
+            $countQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
+            $formatCount = (int) $countQuery
+                ->count('uid')
+                ->from('tx_webp_failed')
+                ->where($countQuery->expr()->eq('format', $countQuery->createNamedParameter($format->value)))
+                ->executeQuery()
+                ->fetchOne();
 
-        if (false !== $dominant && (int) $dominant['hash_count'] >= \intdiv($totalCount + 1, 2)) {
-            $this->writeStatus($io, '!', \sprintf(
-                'configuration_hash %s accounts for %d of %d failed attempts',
-                $dominant['configuration_hash'],
-                (int) $dominant['hash_count'],
-                $totalCount,
-            ));
-            ++$this->warningCount;
-            $this->captureFirstFailure(\sprintf(
-                "More than half of the failed-conversion cache rows share one configuration_hash (%s).\nThe parameters in that configuration are likely wrong for the target images. Adjust the parameters string and run `TRUNCATE tx_webp_failed;` (or DELETE WHERE configuration_hash = '%s') to retry.",
-                $dominant['configuration_hash'],
-                $dominant['configuration_hash'],
-            ));
+            if (0 === $formatCount) {
+                continue;
+            }
+
+            $dominantQuery = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
+            $dominant = $dominantQuery
+                ->select('configuration_hash')
+                ->addSelectLiteral('COUNT(*) AS hash_count')
+                ->from('tx_webp_failed')
+                ->where($dominantQuery->expr()->eq('format', $dominantQuery->createNamedParameter($format->value)))
+                ->groupBy('configuration_hash')
+                ->orderBy('hash_count', 'DESC')
+                ->setMaxResults(1)
+                ->executeQuery()
+                ->fetchAssociative();
+
+            if (false !== $dominant && (int) $dominant['hash_count'] >= \intdiv($formatCount + 1, 2)) {
+                $this->writeStatus($io, '!', \sprintf(
+                    '[%s] configuration_hash %s accounts for %d of %d failed attempts',
+                    $format->value,
+                    $dominant['configuration_hash'],
+                    (int) $dominant['hash_count'],
+                    $formatCount,
+                ));
+                ++$this->warningCount;
+                $this->captureFirstFailure(\sprintf(
+                    "More than half of the failed-conversion cache rows for %s share one configuration_hash (%s).\nThe parameters in that configuration are likely wrong for the target images. Adjust the parameters string and run `TRUNCATE tx_webp_failed;` (or DELETE WHERE format = '%s' AND configuration_hash = '%s') to retry.",
+                    $format->value,
+                    $dominant['configuration_hash'],
+                    $format->value,
+                    $dominant['configuration_hash'],
+                ));
+            }
         }
     }
 
@@ -797,13 +967,17 @@ final class DiagnoseCommand extends Command
         return null;
     }
 
-    private function reportDeliveryProbe(SymfonyStyle $io, string $baseUrl, InputInterface $input): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportDeliveryProbe(SymfonyStyle $io, string $baseUrl, InputInterface $input, array $selectedFormats): void
     {
         $this->writeHeader($io, 'Delivery probe');
 
-        $probeTarget = $this->pickProbeTarget();
+        $probeTarget = $this->pickProbeTarget($selectedFormats);
         if (null === $probeTarget) {
-            $this->writeStatus($io, '!', 'no original/.webp sibling pair available on disk — probe skipped');
+            $suffixes = \implode('/', \array_map(static fn (OutputFormat $f): string => $f->suffix(), $selectedFormats));
+            $this->writeStatus($io, '!', \sprintf('no original/sibling pair (%s) available on disk — probe skipped', $suffixes));
             ++$this->warningCount;
 
             return;
@@ -852,37 +1026,41 @@ final class DiagnoseCommand extends Command
             'headers' => [],
         ];
 
-        $webpResponse = $this->probe($probeUrl, 'image/webp,*/*', $options, $io);
+        $avifResponse = $this->probe($probeUrl, 'image/avif,image/webp,image/jxl,image/*,*/*', $options, $io);
+        $jxlResponse = $this->probe($probeUrl, 'image/jxl,image/*,*/*', $options, $io);
+        $webpResponse = $this->probe($probeUrl, 'image/webp,image/*,*/*', $options, $io);
         $originalResponse = $this->probe($probeUrl, '*/*', $options, $io);
 
-        if (null === $webpResponse || null === $originalResponse) {
+        if (null === $avifResponse || null === $jxlResponse || null === $webpResponse || null === $originalResponse) {
             return;
         }
 
+        $avifType = $this->contentType($avifResponse);
+        $jxlType = $this->contentType($jxlResponse);
         $webpType = $this->contentType($webpResponse);
         $originalType = $this->contentType($originalResponse);
-        $io->writeln(\sprintf('· with %-20s → %s', 'Accept image/webp', $webpType));
-        $io->writeln(\sprintf('· with %-20s → %s', 'Accept */*', $originalType));
 
-        $verdict = match (true) {
-            'image/webp' === $webpType && 'image/webp' !== $originalType => 'rewrite-working',
-            'image/webp' !== $webpType && 'image/webp' !== $originalType => 'no-rewrite',
-            'image/webp' === $webpType && 'image/webp' === $originalType => 'unconditional-rewrite',
-            default => 'inconclusive',
-        };
+        $io->writeln(\sprintf('· Accept image/avif,image/webp,image/jxl → %s', $avifType));
+        $io->writeln(\sprintf('· Accept image/jxl                       → %s', $jxlType));
+        $io->writeln(\sprintf('· Accept image/webp                      → %s', $webpType));
+        $io->writeln(\sprintf('· Accept */*                             → %s', $originalType));
 
-        match ($verdict) {
-            'rewrite-working' => $this->writeStatus($io, '✓', 'Accept-header rewrite is working'),
-            'no-rewrite' => $this->failNoRewrite($io),
-            'unconditional-rewrite' => $this->failUnconditionalRewrite($io),
-            'inconclusive' => $this->warnInconclusiveRewrite($io),
-        };
+        $expectedTopFormat = $this->expectedTopFormat($selectedFormats);
+        $expectedMime = $expectedTopFormat->mimeType();
 
-        if ('rewrite-working' !== $verdict) {
-            return;
+        if ($avifType === $expectedMime && $avifType !== $originalType) {
+            $this->writeStatus($io, '✓', 'Accept-header rewrite is working');
+        } elseif (OutputFormat::Avif === $expectedTopFormat && 'image/webp' === $avifType) {
+            $this->writeStatus($io, '!', 'server prefers webp over avif — check content-negotiation priority in rewrite rules');
+            ++$this->warningCount;
+            $this->captureFirstFailure("The server is serving WebP when AVIF was expected as the top format.\nAdjust your Accept-header rewrite rules to give AVIF priority when the client supports it.");
+        } elseif ($avifType === $expectedMime && $avifType === $originalType) {
+            $this->failUnconditionalRewrite($io);
+        } else {
+            $this->failNoRewrite($io);
         }
 
-        $vary = $webpResponse->getHeaderLine('Vary');
+        $vary = $avifResponse->getHeaderLine('Vary');
         if ('' === $vary || !\str_contains(\strtolower($vary), 'accept')) {
             $this->writeStatus($io, '!', 'Vary: Accept header missing on webp response — any CDN in front will cache-poison');
             ++$this->warningCount;
@@ -890,8 +1068,50 @@ final class DiagnoseCommand extends Command
         }
     }
 
-    private function pickProbeTarget(): ?FileInterface
+    /**
+     * @param list<OutputFormat> $enabledFormats
+     */
+    private function expectedTopFormat(array $enabledFormats): OutputFormat
     {
+        foreach ([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl] as $candidate) {
+            if (\in_array($candidate, $enabledFormats, true)) {
+                return $candidate;
+            }
+        }
+
+        return OutputFormat::Webp;
+    }
+
+    /**
+     * Picks a probe target by iterating formats in the SAME preference order
+     * `expectedTopFormat()` uses (AVIF → WebP → JXL). Without this alignment
+     * the verdict comparison would falsely flag e.g. "server prefers webp
+     * over avif" for a target that has no AVIF sibling at all.
+     *
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function pickProbeTarget(array $selectedFormats): ?FileInterface
+    {
+        foreach ([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl] as $format) {
+            if (!\in_array($format, $selectedFormats, true)) {
+                continue;
+            }
+            $processed = $this->pickProcessedProbeCandidate($format);
+            if (null !== $processed) {
+                return $processed;
+            }
+            $original = $this->pickOriginalProbeCandidate($format);
+            if (null !== $original) {
+                return $original;
+            }
+        }
+
+        return null;
+    }
+
+    private function pickProcessedProbeCandidate(OutputFormat $format): ?FileInterface
+    {
+        $suffix = $format->suffix();
         $processedQuery = $this->connectionPool->getQueryBuilderForTable('sys_file_processedfile');
         $candidates = $processedQuery
             ->select('p1.uid')
@@ -900,9 +1120,9 @@ final class DiagnoseCommand extends Command
                 'p1',
                 'sys_file_processedfile',
                 'p2',
-                'p1.storage = p2.storage AND p2.identifier = CONCAT(p1.identifier, \'.webp\')',
+                'p1.storage = p2.storage AND p2.identifier = CONCAT(p1.identifier, ' . $processedQuery->createNamedParameter($suffix) . ')',
             )
-            ->where($processedQuery->expr()->notLike('p1.identifier', $processedQuery->createNamedParameter('%.webp')))
+            ->where($processedQuery->expr()->notLike('p1.identifier', $processedQuery->createNamedParameter('%' . $suffix)))
             ->orderBy('p1.uid', 'ASC')
             ->setMaxResults(20)
             ->executeQuery()
@@ -917,11 +1137,17 @@ final class DiagnoseCommand extends Command
             if (null === $processedFile) {
                 continue;
             }
-            if ($this->siblingFileExists($processedFile)) {
+            if ($this->siblingFileExists($processedFile, $format)) {
                 return $processedFile;
             }
         }
 
+        return null;
+    }
+
+    private function pickOriginalProbeCandidate(OutputFormat $format): ?FileInterface
+    {
+        $suffix = $format->suffix();
         $originalQuery = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $originalCandidates = $originalQuery
             ->select('s.uid')
@@ -930,7 +1156,7 @@ final class DiagnoseCommand extends Command
                 's',
                 'sys_file',
                 'w',
-                's.storage = w.storage AND w.identifier = CONCAT(s.identifier, \'.webp\') AND w.extension = \'webp\'',
+                's.storage = w.storage AND w.identifier = CONCAT(s.identifier, ' . $originalQuery->createNamedParameter($suffix) . ') AND w.extension = ' . $originalQuery->createNamedParameter($format->value),
             )
             ->where(
                 $originalQuery->expr()->in(
@@ -949,7 +1175,7 @@ final class DiagnoseCommand extends Command
             } catch (\Exception) {
                 continue;
             }
-            if ($this->siblingFileExists($original)) {
+            if ($this->siblingFileExists($original, $format)) {
                 return $original;
             }
         }
@@ -957,10 +1183,10 @@ final class DiagnoseCommand extends Command
         return null;
     }
 
-    private function siblingFileExists(FileInterface $file): bool
+    private function siblingFileExists(FileInterface $file, OutputFormat $format): bool
     {
         try {
-            return $file->getStorage()->hasFile($file->getIdentifier() . '.webp');
+            return $file->getStorage()->hasFile($file->getIdentifier() . $format->suffix());
         } catch (\Exception) {
             return false;
         }
@@ -1021,14 +1247,10 @@ final class DiagnoseCommand extends Command
         $this->captureFirstFailure("The webserver rewrites every image request to .webp, even when the client did not send `Accept: image/webp`.\nThe rewrite must be gated by the Accept header. Check your rewrite rule for a missing `RewriteCond %{HTTP_ACCEPT} image/webp` (Apache) or `if (\$http_accept ~* webp)` (nginx).");
     }
 
-    private function warnInconclusiveRewrite(SymfonyStyle $io): void
-    {
-        $this->writeStatus($io, '!', 'probe response is inconclusive (4xx/5xx) — file may not exist at that URL or is behind auth');
-        ++$this->warningCount;
-        $this->captureFirstFailure("Delivery probe returned a non-2xx response.\nUse --url with a known-good public image URL, or verify the probe target's public URL by hand.");
-    }
-
-    private function reportFileDeepDive(SymfonyStyle $io, int $fileUid): void
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportFileDeepDive(SymfonyStyle $io, int $fileUid, array $selectedFormats): void
     {
         $this->writeHeader($io, \sprintf('File deep dive (#%d)', $fileUid));
 
@@ -1059,39 +1281,61 @@ final class DiagnoseCommand extends Command
             $storageEnabled = StorageSiblingMode::isEnabledFor($storage);
             $io->writeln(\sprintf('· storage opt-in: %s', $storageEnabled ? '✓ enabled' : '✗ off'));
 
-            $mimeSupported = $this->configuration->isSupportedMimeType($file->getMimeType());
-            $io->writeln(\sprintf('· mime supported: %s', $mimeSupported ? '✓ yes' : '✗ no (not in mime_types setting)'));
-
-            $directSibling = $this->findDirectSibling($storage->getUid(), $file->getIdentifier() . '.webp');
-            $processedSibling = $this->findProcessedSibling($fileUid);
-
-            $io->writeln(\sprintf('· source-folder sibling: %s', null === $directSibling ? '✗ none' : \sprintf('✓ sys_file #%d', $directSibling)));
-            $io->writeln(\sprintf('· processed sibling:     %s', [] === $processedSibling ? '✗ none' : \sprintf('✓ %d row(s) in sys_file_processedfile', \count($processedSibling))));
-
-            $failedRows = $this->findFailedRows($fileUid);
-            if ([] !== $failedRows) {
-                $io->writeln(\sprintf('· tx_webp_failed rows: %d', \count($failedRows)));
-                foreach ($failedRows as $row) {
-                    $io->writeln(\sprintf('    hash=%s', $row['configuration_hash']));
+            $supportingFormats = [];
+            foreach ($selectedFormats as $format) {
+                if ($this->configuration->isSupportedMimeTypeFor($format, $file->getMimeType())) {
+                    $supportingFormats[] = $format->value;
                 }
-                ++$this->failureCount;
-                $this->captureFirstFailure(\sprintf(
-                    "File #%d has %d row(s) in tx_webp_failed — the converter previously gave up on this file.\nRun: DELETE FROM tx_webp_failed WHERE file_id = %d;\nThen re-render the image (e.g. clear processed files / BE preview) to retry conversion.",
-                    $fileUid,
-                    \count($failedRows),
-                    $fileUid,
-                ));
+            }
+            $io->writeln(\sprintf(
+                '· mime supported: %s',
+                [] === $supportingFormats
+                    ? '✗ no (not in any enabled format\'s mime_types_<format>)'
+                    : '✓ for ' . \implode(', ', $supportingFormats),
+            ));
 
-                return;
+            $hasAnyFailure = false;
+            foreach ($selectedFormats as $format) {
+                $io->writeln(\sprintf('· [%s]', $format->value));
+
+                $directSibling = $this->findDirectSibling($storage->getUid(), $file->getIdentifier() . $format->suffix(), $format);
+                $processedSibling = $this->findProcessedSibling($fileUid, $format);
+
+                $io->writeln(\sprintf('    source-folder sibling: %s', null === $directSibling ? '✗ none' : \sprintf('✓ sys_file #%d', $directSibling)));
+                $io->writeln(\sprintf('    processed sibling:     %s', [] === $processedSibling ? '✗ none' : \sprintf('✓ %d row(s) in sys_file_processedfile', \count($processedSibling))));
+
+                $failedRows = $this->findFailedRows($fileUid, $format);
+                if ([] !== $failedRows) {
+                    $io->writeln(\sprintf('    tx_webp_failed rows: %d', \count($failedRows)));
+                    foreach ($failedRows as $row) {
+                        $io->writeln(\sprintf('        hash=%s', $row['configuration_hash']));
+                    }
+                    $hasAnyFailure = true;
+                    ++$this->failureCount;
+                    $this->captureFirstFailure(\sprintf(
+                        "File #%d has %d row(s) in tx_webp_failed for format %s — the converter previously gave up on this file.\nRun: DELETE FROM tx_webp_failed WHERE file_id = %d AND format = '%s';\nThen re-render the image (e.g. clear processed files / BE preview) to retry conversion.",
+                        $fileUid,
+                        \count($failedRows),
+                        $format->value,
+                        $fileUid,
+                        $format->value,
+                    ));
+                }
+
+                $mimeSupportedForFormat = $this->configuration->isSupportedMimeTypeFor($format, $file->getMimeType());
+                if (null === $directSibling && [] === $processedSibling && [] === $failedRows && $mimeSupportedForFormat && $storageEnabled) {
+                    $this->writeStatus($io, '!', \sprintf('[%s] no sibling in either table and no failure recorded — sibling has never been generated', $format->value));
+                    ++$this->warningCount;
+                    $this->captureFirstFailure(\sprintf(
+                        "File #%d has no %s sibling in either sys_file or sys_file_processedfile, and there is no failure recorded.\nThe file has likely never been rendered through TYPO3's image pipeline since the extension was installed. Trigger a re-render (e.g. clear processed files in Install Tool) to generate it.",
+                        $fileUid,
+                        $format->value,
+                    ));
+                }
             }
 
-            if (null === $directSibling && [] === $processedSibling && $mimeSupported && $storageEnabled) {
-                $this->writeStatus($io, '!', 'no sibling in either table and no failure recorded — sibling has never been generated');
-                ++$this->warningCount;
-                $this->captureFirstFailure(\sprintf(
-                    "File #%d has no .webp sibling in either sys_file or sys_file_processedfile, and there is no failure recorded.\nThe file has likely never been rendered through TYPO3's image pipeline since the extension was installed. Trigger a re-render (e.g. clear processed files in Install Tool) to generate it.",
-                    $fileUid,
-                ));
+            if ($hasAnyFailure) {
+                return;
             }
         } catch (\Exception $exception) {
             $io->error(\sprintf('File deep dive aborted: %s (%s)', $exception->getMessage(), $exception::class));
@@ -1100,7 +1344,7 @@ final class DiagnoseCommand extends Command
         }
     }
 
-    private function findDirectSibling(int $storageUid, string $siblingIdentifier): ?int
+    private function findDirectSibling(int $storageUid, string $siblingIdentifier, OutputFormat $format): ?int
     {
         $query = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $row = $query
@@ -1109,7 +1353,7 @@ final class DiagnoseCommand extends Command
             ->where(
                 $query->expr()->eq('storage', $query->createNamedParameter($storageUid, Connection::PARAM_INT)),
                 $query->expr()->eq('identifier', $query->createNamedParameter($siblingIdentifier)),
-                $query->expr()->eq('extension', $query->createNamedParameter('webp')),
+                $query->expr()->eq('extension', $query->createNamedParameter($format->value)),
             )
             ->setMaxResults(1)
             ->executeQuery()
@@ -1121,7 +1365,7 @@ final class DiagnoseCommand extends Command
     /**
      * @return list<array{uid: int, identifier: string}>
      */
-    private function findProcessedSibling(int $originalUid): array
+    private function findProcessedSibling(int $originalUid, OutputFormat $format): array
     {
         $query = $this->connectionPool->getQueryBuilderForTable('sys_file_processedfile');
         $rows = $query
@@ -1129,7 +1373,7 @@ final class DiagnoseCommand extends Command
             ->from('sys_file_processedfile')
             ->where(
                 $query->expr()->eq('original', $query->createNamedParameter($originalUid, Connection::PARAM_INT)),
-                $query->expr()->like('identifier', $query->createNamedParameter('%.webp')),
+                $query->expr()->like('identifier', $query->createNamedParameter('%' . $format->suffix())),
             )
             ->executeQuery()
             ->fetchAllAssociative();
@@ -1146,13 +1390,16 @@ final class DiagnoseCommand extends Command
     /**
      * @return list<array{configuration_hash: string}>
      */
-    private function findFailedRows(int $fileUid): array
+    private function findFailedRows(int $fileUid, OutputFormat $format): array
     {
         $query = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
         $rows = $query
             ->select('configuration_hash')
             ->from('tx_webp_failed')
-            ->where($query->expr()->eq('file_id', $query->createNamedParameter($fileUid, Connection::PARAM_INT)))
+            ->where(
+                $query->expr()->eq('file_id', $query->createNamedParameter($fileUid, Connection::PARAM_INT)),
+                $query->expr()->eq('format', $query->createNamedParameter($format->value)),
+            )
             ->executeQuery()
             ->fetchAllAssociative();
 
