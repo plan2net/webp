@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Domain\Queue;
 
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Plan2net\Webp\Format\OutputFormat;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 final class ConversionQueueRepository
@@ -16,7 +17,7 @@ final class ConversionQueueRepository
     ) {
     }
 
-    public function enqueue(int $originalFileId, int $processedFileId, string $taskType, array $configuration): void
+    public function enqueue(int $originalFileId, int $processedFileId, string $taskType, array $configuration, OutputFormat $format = OutputFormat::Webp): void
     {
         $serialized = \serialize($configuration);
         $hash = \md5($serialized);
@@ -31,6 +32,7 @@ final class ConversionQueueRepository
                 'configuration' => $serialized,
                 'configuration_hash' => $hash,
                 'enqueued_at' => $now,
+                'format' => $format->value,
             ]);
         } catch (UniqueConstraintViolationException) {
             $connection->update(
@@ -41,6 +43,7 @@ final class ConversionQueueRepository
                     'processed_file_id' => $processedFileId,
                     'task_type' => $taskType,
                     'configuration_hash' => $hash,
+                    'format' => $format->value,
                 ]
             );
         }
@@ -56,7 +59,7 @@ final class ConversionQueueRepository
         }
         $queryBuilder = $this->connectionPool->getConnectionForTable(self::TABLE)->createQueryBuilder();
         $rows = $queryBuilder
-            ->select('uid', 'original_file_id', 'processed_file_id', 'task_type', 'configuration', 'configuration_hash', 'enqueued_at')
+            ->select('uid', 'original_file_id', 'processed_file_id', 'task_type', 'configuration', 'configuration_hash', 'enqueued_at', 'format')
             ->from(self::TABLE)
             ->orderBy('enqueued_at', 'ASC')
             ->addOrderBy('uid', 'ASC')
@@ -73,6 +76,7 @@ final class ConversionQueueRepository
                 (string) ($row['configuration'] ?? ''),
                 (string) $row['configuration_hash'],
                 (int) $row['enqueued_at'],
+                OutputFormat::tryFrom((string) ($row['format'] ?? 'webp')) ?? OutputFormat::Webp,
             ),
             $rows
         );

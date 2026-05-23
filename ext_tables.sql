@@ -5,8 +5,9 @@ CREATE TABLE tx_webp_failed
     file_id            INT(11) NOT NULL DEFAULT '0',
     configuration      TEXT,
     configuration_hash VARCHAR(32),
+    format             VARCHAR(8) NOT NULL DEFAULT 'webp',
     PRIMARY KEY (uid),
-    KEY configuration (file_id, configuration_hash)
+    KEY configuration (file_id, configuration_hash, format)
 );
 
 CREATE TABLE tx_webp_queue
@@ -18,12 +19,13 @@ CREATE TABLE tx_webp_queue
     configuration      TEXT,
     configuration_hash VARCHAR(32)  NOT NULL,
     enqueued_at        INT(11)      NOT NULL DEFAULT 0,
+    format             VARCHAR(8)   NOT NULL DEFAULT 'webp',
     PRIMARY KEY (uid),
-    UNIQUE KEY queue_dedup (original_file_id, processed_file_id, task_type, configuration_hash),
+    UNIQUE KEY queue_dedup (original_file_id, processed_file_id, task_type, configuration_hash, format),
     KEY enqueued_at (enqueued_at)
 );
 
-# Per-storage WebP sibling mode override.
+# Per-storage sibling mode override.
 # 0 = Auto (Local: on, others: off), 1 = Enabled, 2 = Disabled
 CREATE TABLE sys_file_storage
 (

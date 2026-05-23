@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Tests\Functional\Domain\Queue;
 
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
+use Plan2net\Webp\Format\OutputFormat;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
 final class ConversionQueueRepositoryTest extends FunctionalTestCase
@@ -120,6 +121,40 @@ final class ConversionQueueRepositoryTest extends FunctionalTestCase
         $this->expectException(\InvalidArgumentException::class);
 
         $this->get(ConversionQueueRepository::class)->fetchBatch(0);
+    }
+
+    #[Test]
+    public function enqueueStoresFormatColumn(): void
+    {
+        $repository = $this->get(ConversionQueueRepository::class);
+        $repository->enqueue(1, 0, 'Image.CropScaleMask', ['width' => 32], OutputFormat::Avif);
+
+        $row = $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->select(['format'], 'tx_webp_queue', ['original_file_id' => 1])
+            ->fetchAssociative();
+        self::assertNotFalse($row);
+        self::assertSame('avif', $row['format']);
+    }
+
+    #[Test]
+    public function dedupAcrossFormatsAllowsParallelEntries(): void
+    {
+        $repository = $this->get(ConversionQueueRepository::class);
+        $repository->enqueue(1, 0, 'Image.CropScaleMask', ['width' => 32], OutputFormat::Webp);
+        $repository->enqueue(1, 0, 'Image.CropScaleMask', ['width' => 32], OutputFormat::Avif);
+
+        self::assertSame(2, $this->countRows());
+    }
+
+    #[Test]
+    public function fetchBatchExposesFormat(): void
+    {
+        $repository = $this->get(ConversionQueueRepository::class);
+        $repository->enqueue(1, 0, 'Image.CropScaleMask', [], OutputFormat::Jxl);
+
+        $entry = $repository->fetchBatch(1)[0];
+        self::assertSame(OutputFormat::Jxl, $entry->format);
     }
 
     #[Test]
