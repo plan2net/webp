@@ -163,7 +163,6 @@ final class SiblingGenerator implements LoggerAwareInterface
             if (null !== $parameters) {
                 $this->failedAttempts->record($fileUid, $parameters, $format);
             }
-            $this->removeExistingSibling($formatRow, $sourceVariant, $format);
             $this->logger?->warning($e->getMessage());
         } catch (WillNotRetryWithConfigurationException $e) {
             $this->logger?->notice($e->getMessage());
@@ -171,24 +170,6 @@ final class SiblingGenerator implements LoggerAwareInterface
             $this->logger?->error(\sprintf('webp: %s conversion of "%s" failed: %s', $format->value, $originalFile->getIdentifier(), $e->getMessage()));
         } finally {
             GeneralUtility::unlink_tempfile($tempTarget);
-        }
-    }
-
-    /**
-     * Drops the sibling DB row (if persisted) and unlinks the on-disk file so
-     * the conversion target is free for the next attempt.
-     */
-    private function removeExistingSibling(ProcessedFile $formatRow, FileInterface $sourceVariant, OutputFormat $format): void
-    {
-        if (!$formatRow->isNew()) {
-            try {
-                $formatRow->delete(true);
-            } catch (\Throwable) {
-            }
-        }
-        $localSiblingPath = $sourceVariant->getForLocalProcessing(false) . $format->suffix();
-        if (@\is_file($localSiblingPath)) {
-            @\unlink($localSiblingPath);
         }
     }
 

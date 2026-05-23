@@ -143,14 +143,25 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         $this->applyConfigOverride('converter', RecordingConverter::class);
 
         $file = $this->getFile(1);
-
         $processed = $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16],
+        );
+        $siblingPath = $processed->getForLocalProcessing(false) . '.webp';
+
+        // Seed a previously-published sibling at the predicted on-disk path —
+        // a happy-path attempt with the same source would land here. The
+        // oversize-handler must NOT delete it on subsequent failure.
+        \file_put_contents($siblingPath, 'pre-existing-sibling');
+
+        $file->process(
             ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
             ['width' => 16, 'height' => 16],
         );
 
         self::assertSame(1, $this->countFailedRows((int) $file->getUid()));
-        self::assertFileDoesNotExist($processed->getForLocalProcessing(false) . '.webp');
+        self::assertFileExists($siblingPath, 'oversize attempt must leave any previously-published sibling intact');
+        self::assertSame('pre-existing-sibling', \file_get_contents($siblingPath), 'sibling contents must be untouched');
         self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
 
         // Second invocation: wasAttempted() must return true and short-circuit
