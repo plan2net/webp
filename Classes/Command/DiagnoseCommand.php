@@ -981,13 +981,18 @@ final class DiagnoseCommand extends Command
     {
         $this->writeHeader($io, 'Delivery probe');
 
-        $probeTarget = $this->pickProbeTarget($selectedFormats);
-        if (null === $probeTarget) {
+        $pick = $this->pickProbeTarget($selectedFormats);
+        if (null === $pick) {
             $suffixes = \implode('/', \array_map(static fn (OutputFormat $f): string => $f->suffix(), $selectedFormats));
             $this->writeStatus($io, '!', \sprintf('no original/sibling pair (%s) available on disk — probe skipped', $suffixes));
             ++$this->warningCount;
 
             return;
+        }
+        [$probeTarget, $targetFormat] = $pick;
+        $topFormat = $this->expectedTopFormat($selectedFormats);
+        if ($targetFormat !== $topFormat) {
+            $io->writeln(\sprintf('· note: no %s sibling on disk for any probe candidate; verifying %s delivery instead', $topFormat->value, $targetFormat->value));
         }
 
         $publicUrl = $probeTarget->getPublicUrl();
@@ -1052,16 +1057,21 @@ final class DiagnoseCommand extends Command
         $io->writeln(\sprintf('· Accept image/webp                      → %s', $webpType));
         $io->writeln(\sprintf('· Accept */*                             → %s', $originalType));
 
-        $expectedTopFormat = $this->expectedTopFormat($selectedFormats);
-        $expectedMime = $expectedTopFormat->mimeType();
+        $expectedMime = $targetFormat->mimeType();
+        $gradeResponse = match ($targetFormat) {
+            OutputFormat::Avif => $avifResponse,
+            OutputFormat::Jxl => $jxlResponse,
+            OutputFormat::Webp => $webpResponse,
+        };
+        $gradeType = $this->contentType($gradeResponse);
 
-        if ($avifType === $expectedMime && $avifType !== $originalType) {
-            $this->writeStatus($io, '✓', 'Accept-header rewrite is working');
-        } elseif (OutputFormat::Avif === $expectedTopFormat && 'image/webp' === $avifType) {
+        if ($gradeType === $expectedMime && $gradeType !== $originalType) {
+            $this->writeStatus($io, '✓', \sprintf('Accept-header rewrite is working for %s', $targetFormat->value));
+        } elseif ($targetFormat === $topFormat && OutputFormat::Avif === $topFormat && 'image/webp' === $avifType) {
             $this->writeStatus($io, '!', 'server prefers webp over avif — check content-negotiation priority in rewrite rules');
             ++$this->warningCount;
             $this->captureFirstFailure("The server is serving WebP when AVIF was expected as the top format.\nAdjust your Accept-header rewrite rules to give AVIF priority when the client supports it.");
-        } elseif ($avifType === $expectedMime && $avifType === $originalType) {
+        } elseif ($gradeType === $expectedMime && $gradeType === $originalType) {
             $this->failUnconditionalRewrite($io);
         } else {
             $this->failNoRewrite($io);
@@ -1091,13 +1101,16 @@ final class DiagnoseCommand extends Command
 
     /**
      * Picks a probe target by iterating formats in the SAME preference order
-     * `expectedTopFormat()` uses (AVIF → WebP → JXL). Without this alignment
-     * the verdict comparison would falsely flag e.g. "server prefers webp
-     * over avif" for a target that has no AVIF sibling at all.
+     * `expectedTopFormat()` uses (AVIF → WebP → JXL) and returns both the file
+     * and the format actually found on disk, so the verdict can grade the
+     * correct probe response instead of always comparing against the top
+     * enabled format.
      *
      * @param list<OutputFormat> $selectedFormats
+     *
+     * @return array{0: FileInterface, 1: OutputFormat}|null
      */
-    private function pickProbeTarget(array $selectedFormats): ?FileInterface
+    private function pickProbeTarget(array $selectedFormats): ?array
     {
         foreach ([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl] as $format) {
             if (!\in_array($format, $selectedFormats, true)) {
@@ -1105,11 +1118,11 @@ final class DiagnoseCommand extends Command
             }
             $processed = $this->pickProcessedProbeCandidate($format);
             if (null !== $processed) {
-                return $processed;
+                return [$processed, $format];
             }
             $original = $this->pickOriginalProbeCandidate($format);
             if (null !== $original) {
-                return $original;
+                return [$original, $format];
             }
         }
 
