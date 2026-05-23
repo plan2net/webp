@@ -6,7 +6,7 @@ namespace Plan2net\Webp\Service;
 
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 
-enum StorageWebpMode: int
+enum StorageSiblingMode: int
 {
     case Auto = 0;
     case Enabled = 1;

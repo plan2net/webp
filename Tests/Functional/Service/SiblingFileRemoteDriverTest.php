@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
-final class WebpSiblingFileRemoteDriverTest extends FunctionalTestCase
+final class SiblingFileRemoteDriverTest extends FunctionalTestCase
 {
     private const FIXTURE_PNG = __DIR__ . '/../../Functional/Fixtures/Images/tiny.png';
 

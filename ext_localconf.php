@@ -11,11 +11,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] = '' === $mediaFileExtensions ? 'webp' : $mediaFileExtensions . ',webp';
     }
 
-    if (GeneralUtility::makeInstance(Configuration::class)->isHideWebp()) {
+    if (GeneralUtility::makeInstance(Configuration::class)->isHideSiblings()) {
         // Hide webp files in file lists
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks'][] = [
             FileNameFilter::class,
-            'filterWebpFiles',
+            'filterSiblingFiles',
         ];
     }
 

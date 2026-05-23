@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Plan2net\Webp\Service\StorageWebpMode;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 (static function (): void {
@@ -11,11 +11,11 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
         'description' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.description',
         'config' => [
             'type' => 'radio',
-            'default' => StorageWebpMode::Auto->value,
+            'default' => StorageSiblingMode::Auto->value,
             'items' => [
-                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.auto',     'value' => StorageWebpMode::Auto->value],
-                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.enabled',  'value' => StorageWebpMode::Enabled->value],
-                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.disabled', 'value' => StorageWebpMode::Disabled->value],
+                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.auto',     'value' => StorageSiblingMode::Auto->value],
+                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.enabled',  'value' => StorageSiblingMode::Enabled->value],
+                ['label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_storage.tx_webp_mode.disabled', 'value' => StorageSiblingMode::Disabled->value],
             ],
         ],
     ];

@@ -7,7 +7,7 @@ namespace Plan2net\Webp\Domain\Queue;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
-final class WebpQueueRepository
+final class ConversionQueueRepository
 {
     private const TABLE = 'tx_webp_queue';
 
@@ -47,7 +47,7 @@ final class WebpQueueRepository
     }
 
     /**
-     * @return list<WebpQueueEntry>
+     * @return list<ConversionQueueEntry>
      */
     public function fetchBatch(int $limit): array
     {
@@ -65,7 +65,7 @@ final class WebpQueueRepository
             ->fetchAllAssociative();
 
         return \array_map(
-            static fn (array $row) => new WebpQueueEntry(
+            static fn (array $row) => new ConversionQueueEntry(
                 (int) $row['uid'],
                 (int) $row['original_file_id'],
                 (int) $row['processed_file_id'],

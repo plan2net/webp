@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Tests\Functional\Command;
 
 use PHPUnit\Framework\Attributes\Test;
-use Plan2net\Webp\Command\ProcessWebpQueueCommand;
-use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
+use Plan2net\Webp\Command\ProcessConversionQueueCommand;
+use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\CMS\Core\Resource\File;
@@ -14,7 +14,7 @@ use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
-final class ProcessWebpQueueCommandTest extends FunctionalTestCase
+final class ProcessConversionQueueCommandTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = [
         'install',
@@ -31,7 +31,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
     public function queueModeProcessesEnqueuedEntries(): void
     {
         $file = $this->getFile(1);
-        $this->get(WebpQueueRepository::class)->enqueue(
+        $this->get(ConversionQueueRepository::class)->enqueue(
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
@@ -51,7 +51,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
         $file = $this->getFile(1);
 
         // First drain creates the webp.
-        $this->get(WebpQueueRepository::class)->enqueue(
+        $this->get(ConversionQueueRepository::class)->enqueue(
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
@@ -62,7 +62,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
         $firstSize = (int) \filesize($this->fileadminPath . 'tiny.png.webp');
 
         // Re-enqueue same tuple. Worker should see needsReprocessing()=false and skip the converter.
-        $this->get(WebpQueueRepository::class)->enqueue(
+        $this->get(ConversionQueueRepository::class)->enqueue(
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
@@ -77,7 +77,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
     #[Test]
     public function queueModeSkipsMissingFiles(): void
     {
-        $this->get(WebpQueueRepository::class)->enqueue(99999, 0, 'Image.CropScaleMask', []);
+        $this->get(ConversionQueueRepository::class)->enqueue(99999, 0, 'Image.CropScaleMask', []);
 
         $exitCode = $this->runCommand([]);
 
@@ -189,7 +189,7 @@ final class ProcessWebpQueueCommandTest extends FunctionalTestCase
 
     private function runCommand(array $arguments): int
     {
-        $tester = new CommandTester($this->get(ProcessWebpQueueCommand::class));
+        $tester = new CommandTester($this->get(ProcessConversionQueueCommand::class));
 
         return $tester->execute($arguments);
     }

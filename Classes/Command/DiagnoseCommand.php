@@ -12,8 +12,8 @@ use Plan2net\Webp\Converter\MagickConverter;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Converter\VipsConverter;
 use Plan2net\Webp\Service\Configuration;
-use Plan2net\Webp\Service\StorageWebpMode;
-use Plan2net\Webp\Service\Webp as WebpService;
+use Plan2net\Webp\Service\SiblingGenerator;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -47,7 +47,7 @@ final class DiagnoseCommand extends Command
     public function __construct(
         private readonly StorageRepository $storageRepository,
         private readonly Configuration $configuration,
-        private readonly WebpService $webpService,
+        private readonly SiblingGenerator $siblingGenerator,
         private readonly RequestFactory $requestFactory,
         private readonly SiteFinder $siteFinder,
         private readonly ConnectionPool $connectionPool,
@@ -134,15 +134,15 @@ final class DiagnoseCommand extends Command
                 continue;
             }
 
-            $mode = StorageWebpMode::tryFrom(
-                (int) ($storage->getStorageRecord()['tx_webp_mode'] ?? StorageWebpMode::Auto->value),
-            ) ?? StorageWebpMode::Auto;
-            $isEnabled = StorageWebpMode::isEnabledFor($storage);
+            $mode = StorageSiblingMode::tryFrom(
+                (int) ($storage->getStorageRecord()['tx_webp_mode'] ?? StorageSiblingMode::Auto->value),
+            ) ?? StorageSiblingMode::Auto;
+            $isEnabled = StorageSiblingMode::isEnabledFor($storage);
             $siblingCount = $this->countSiblings($storage->getUid());
 
             $marker = match (true) {
                 $isEnabled => '✓',
-                StorageWebpMode::Disabled === $mode => '·',
+                StorageSiblingMode::Disabled === $mode => '·',
                 default => '!',
             };
             $this->writeStatus($io, $marker, \sprintf(
@@ -155,7 +155,7 @@ final class DiagnoseCommand extends Command
                 $this->pluralize($siblingCount, '.webp file sibling'),
             ));
 
-            if (!$isEnabled && StorageWebpMode::Disabled !== $mode) {
+            if (!$isEnabled && StorageSiblingMode::Disabled !== $mode) {
                 $reason = $this->silentOffReason($storage, $mode);
                 $io->writeln(\sprintf('  <fg=yellow>↳ %s</>', $reason));
                 ++$this->warningCount;
@@ -239,16 +239,16 @@ final class DiagnoseCommand extends Command
         return $directCount + $processedCount;
     }
 
-    private function silentOffReason(ResourceStorage $storage, StorageWebpMode $mode): string
+    private function silentOffReason(ResourceStorage $storage, StorageSiblingMode $mode): string
     {
         if (!$storage->isWritable()) {
             return 'storage is read-only — extension cannot write .webp siblings';
         }
-        if (StorageWebpMode::Auto === $mode && 'Local' !== $storage->getDriverType()) {
+        if (StorageSiblingMode::Auto === $mode && 'Local' !== $storage->getDriverType()) {
             return \sprintf('mode=Auto and driver=%s — Auto is on only for Local drivers. Switch to Enabled to opt in.', $storage->getDriverType());
         }
 
-        return 'StorageWebpMode::isEnabledFor returned false (storage uid 0 or other gate)';
+        return 'StorageSiblingMode::isEnabledFor returned false (storage uid 0 or other gate)';
     }
 
     private function reportConverter(SymfonyStyle $io): void
@@ -551,7 +551,7 @@ final class DiagnoseCommand extends Command
     private function checkParameterParsing(SymfonyStyle $io): void
     {
         foreach ($this->configuration->getMimeTypes() as $mimeType) {
-            $resolved = $this->webpService->getParametersForMimeType($mimeType);
+            $resolved = $this->siblingGenerator->getParametersForMimeType($mimeType);
             if (null === $resolved) {
                 $this->writeStatus($io, '!', \sprintf('parameters for %s could not be resolved — falls back to old single-options format', $mimeType));
                 ++$this->warningCount;
@@ -1058,7 +1058,7 @@ final class DiagnoseCommand extends Command
             $io->writeln(\sprintf('· sha1:       %s', $file->getSha1()));
             $io->writeln(\sprintf('· size:       %d bytes', $file->getSize()));
 
-            $storageEnabled = StorageWebpMode::isEnabledFor($storage);
+            $storageEnabled = StorageSiblingMode::isEnabledFor($storage);
             $io->writeln(\sprintf('· storage opt-in: %s', $storageEnabled ? '✓ enabled' : '✗ off'));
 
             $mimeSupported = $this->configuration->isSupportedMimeType($file->getMimeType());

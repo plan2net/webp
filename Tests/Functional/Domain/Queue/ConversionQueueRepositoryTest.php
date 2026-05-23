@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Tests\Functional\Domain\Queue;
 
 use PHPUnit\Framework\Attributes\Test;
-use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
+use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
-final class WebpQueueRepositoryTest extends FunctionalTestCase
+final class ConversionQueueRepositoryTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = [
         'install',
@@ -22,7 +22,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function enqueueInsertsRow(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 0, 'Image.CropScaleMask', ['width' => 100]);
 
         self::assertSame(1, $this->countRows());
@@ -31,7 +31,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function enqueueIsIdempotentForSameTuple(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 7, 'Image.CropScaleMask', ['width' => 100]);
         $repository->enqueue(42, 7, 'Image.CropScaleMask', ['width' => 100]);
 
@@ -41,7 +41,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function enqueueAllowsDifferentProcessedFilesForSameOriginal(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 7, 'Image.CropScaleMask', ['width' => 100]);
         $repository->enqueue(42, 8, 'Image.CropScaleMask', ['width' => 200]);
 
@@ -51,7 +51,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function enqueueRefreshesTimestampOnDuplicate(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 0, 'Image.CropScaleMask', ['width' => 100]);
         $oldTimestamp = $this->fetchEnqueuedAt(42);
 
@@ -65,7 +65,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function fetchBatchReturnsOldestFirst(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(2, 0, 'Image.CropScaleMask', ['n' => 'second']);
         \sleep(1);
         $repository->enqueue(1, 0, 'Image.CropScaleMask', ['n' => 'first-but-later']);
@@ -80,7 +80,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function fetchBatchRespectsLimit(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         for ($i = 1; $i <= 5; ++$i) {
             $repository->enqueue($i, 0, 'Image.CropScaleMask', ['i' => $i]);
         }
@@ -93,7 +93,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function fetchBatchExposesAllTupleFields(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 7, 'Image.CropScaleMask', ['width' => 100]);
 
         $entry = $repository->fetchBatch(1)[0];
@@ -107,7 +107,7 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     #[Test]
     public function enqueueAllowsDifferentTaskTypesForSameTuple(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(42, 7, 'Image.CropScaleMask', ['width' => 100]);
         $repository->enqueue(42, 7, 'Image.Preview', ['width' => 100]);
 
@@ -119,13 +119,13 @@ final class WebpQueueRepositoryTest extends FunctionalTestCase
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        $this->get(WebpQueueRepository::class)->fetchBatch(0);
+        $this->get(ConversionQueueRepository::class)->fetchBatch(0);
     }
 
     #[Test]
     public function removeRemovesByUid(): void
     {
-        $repository = $this->get(WebpQueueRepository::class);
+        $repository = $this->get(ConversionQueueRepository::class);
         $repository->enqueue(1, 0, 'Image.CropScaleMask', []);
         $repository->enqueue(2, 0, 'Image.CropScaleMask', []);
 

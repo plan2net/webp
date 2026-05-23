@@ -10,7 +10,7 @@ services:
         identifier: 'webp.after-file-processing'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent
 
-  Plan2net\Webp\Service\WebpSiblingFile: ~
+  Plan2net\Webp\Service\SiblingFile: ~
 
   Plan2net\Webp\EventListener\BeforeFileMoved:
     tags:
@@ -48,7 +48,7 @@ services:
         identifier: 'webp.after-file-renamed'
         event: TYPO3\CMS\Core\Resource\Event\AfterFileRenamedEvent
 
-  Plan2net\Webp\Service\Webp:
+  Plan2net\Webp\Service\SiblingGenerator:
     public: true
 
   Plan2net\Webp\Service\PathMatcher:
@@ -58,11 +58,11 @@ services:
 
   Plan2net\Webp\Service\FailedAttemptsRepository: ~
 
-  Plan2net\Webp\Domain\Queue\WebpQueueRepository: ~
+  Plan2net\Webp\Domain\Queue\ConversionQueueRepository: ~
 
   Plan2net\Webp\Service\FolderScanner: ~
 
-  Plan2net\Webp\Command\ProcessWebpQueueCommand:
+  Plan2net\Webp\Command\ProcessConversionQueueCommand:
     tags:
       - name: 'console.command'
 
@@ -71,7 +71,7 @@ services:
       - name: 'console.command'
 
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
-  # the service from the container (called from FileNameFilter::filterWebpFiles and from
+  # the service from the container (called from FileNameFilter::filterSiblingFiles and from
   # ext_localconf.php — neither has a DI constructor injection point).
   Plan2net\Webp\Service\Configuration:
     public: true

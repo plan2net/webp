@@ -22,7 +22,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern('/\\.(jpe?g|png|gif)\\.webp$/i');
 
-        self::assertSame(-1, FileNameFilter::filterWebpFiles('photo.jpg.webp', '/_processed_/photo.jpg.webp'));
+        self::assertSame(-1, FileNameFilter::filterSiblingFiles('photo.jpg.webp', '/_processed_/photo.jpg.webp'));
     }
 
     #[Test]
@@ -30,7 +30,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern('/\\.(jpe?g|png|gif)\\.webp$/i');
 
-        self::assertSame(-1, FileNameFilter::filterWebpFiles('icon.png.webp', '/_processed_/icon.png.webp'));
+        self::assertSame(-1, FileNameFilter::filterSiblingFiles('icon.png.webp', '/_processed_/icon.png.webp'));
     }
 
     #[Test]
@@ -38,7 +38,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern('/\\.(jpe?g|png|gif)\\.webp$/i');
 
-        self::assertSame(-1, FileNameFilter::filterWebpFiles('banner.gif.webp', '/_processed_/banner.gif.webp'));
+        self::assertSame(-1, FileNameFilter::filterSiblingFiles('banner.gif.webp', '/_processed_/banner.gif.webp'));
     }
 
     #[Test]
@@ -46,7 +46,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern('/\\.(jpe?g|png|gif)\\.webp$/i');
 
-        self::assertSame(1, FileNameFilter::filterWebpFiles('photo.jpg', '/_processed_/photo.jpg'));
+        self::assertSame(1, FileNameFilter::filterSiblingFiles('photo.jpg', '/_processed_/photo.jpg'));
     }
 
     #[Test]
@@ -54,7 +54,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern('/\\.(jpe?g|png|gif)\\.webp$/i');
 
-        self::assertSame(1, FileNameFilter::filterWebpFiles('pure.webp', '/upload/pure.webp'));
+        self::assertSame(1, FileNameFilter::filterSiblingFiles('pure.webp', '/upload/pure.webp'));
     }
 
     #[Test]
@@ -63,7 +63,7 @@ final class FileNameFilterTest extends TestCase
     {
         $this->seedPattern($pattern);
 
-        self::assertSame(1, FileNameFilter::filterWebpFiles('photo.jpg.webp', '/_processed_/photo.jpg.webp'));
+        self::assertSame(1, FileNameFilter::filterSiblingFiles('photo.jpg.webp', '/_processed_/photo.jpg.webp'));
     }
 
     public static function invalidOrEmptyPatternProvider(): array
@@ -77,9 +77,9 @@ final class FileNameFilterTest extends TestCase
     protected function setUp(): void
     {
         $this->extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
-        // One Configuration instance per test — filterWebpFiles() consumes it on
+        // One Configuration instance per test — filterSiblingFiles() consumes it on
         // its first GeneralUtility::makeInstance call. Each #[Test] body in this
-        // class calls filterWebpFiles exactly once, so one addInstance suffices.
+        // class calls filterSiblingFiles exactly once, so one addInstance suffices.
         GeneralUtility::addInstance(
             Configuration::class,
             new Configuration($this->extensionConfiguration),

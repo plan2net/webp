@@ -11,7 +11,7 @@ use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 
-final class WebpSiblingFile implements LoggerAwareInterface
+final class SiblingFile implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
@@ -47,7 +47,7 @@ final class WebpSiblingFile implements LoggerAwareInterface
         $sameStorage = $sourceStorageUid === $newStorage->getUid();
 
         try {
-            if ($sameStorage && StorageWebpMode::isEnabledFor($newStorage)) {
+            if ($sameStorage && StorageSiblingMode::isEnabledFor($newStorage)) {
                 $this->moveSiblingWithinStorage($newStorage, $oldSiblingIdentifier, $fileAtNewLocation);
 
                 return;
@@ -95,7 +95,7 @@ final class WebpSiblingFile implements LoggerAwareInterface
         // Mode-gated: don't touch siblings on storages where we're not the
         // authority. Auto on a non-Local storage means user-managed .webp
         // files are off-limits to us — we mustn't delete or move them.
-        return !StorageWebpMode::isEnabledFor($file->getStorage());
+        return !StorageSiblingMode::isEnabledFor($file->getStorage());
     }
 
     private function moveSiblingWithinStorage(ResourceStorage $storage, string $oldIdentifier, FileInterface $fileAtNewLocation): void

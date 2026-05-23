@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Task;
 
-use Plan2net\Webp\Command\ProcessWebpQueueCommand;
+use Plan2net\Webp\Command\ProcessConversionQueueCommand;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -18,7 +18,7 @@ final class ProcessWebpQueueTask extends AbstractTask
 
     public function execute(): bool
     {
-        $command = GeneralUtility::makeInstance(ProcessWebpQueueCommand::class);
+        $command = GeneralUtility::makeInstance(ProcessConversionQueueCommand::class);
         $input = new ArrayInput(['--batch' => (string) $this->batchSize]);
 
         return 0 === $command->run($input, new NullOutput());

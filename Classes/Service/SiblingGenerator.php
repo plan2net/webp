@@ -12,7 +12,7 @@ use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-final class Webp
+final class SiblingGenerator
 {
     public function __construct(
         private readonly Configuration $configuration,

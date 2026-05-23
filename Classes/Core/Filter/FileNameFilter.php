@@ -10,11 +10,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class FileNameFilter
 {
-    /**
-     * Remove generated webp files from file lists,
-     * i.e. files ending in .suffix.webp, but not exclusively in .webp.
-     */
-    public static function filterWebpFiles(
+    /** Hides generated sibling files (.webp/.avif/.jxl) from FAL file lists. */
+    public static function filterSiblingFiles(
         string $itemName,
         string $itemIdentifier,
         string $parentIdentifier = '',

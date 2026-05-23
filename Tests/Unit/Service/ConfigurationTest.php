@@ -78,7 +78,7 @@ final class ConfigurationTest extends TestCase
             'convert_all' => ['convert_all', 'isConvertAll'],
             'silent' => ['silent', 'isSilent'],
             'use_system_settings' => ['use_system_settings', 'isUseSystemSettings'],
-            'hide_webp' => ['hide_webp', 'isHideWebp'],
+            'hide_webp' => ['hide_webp', 'isHideSiblings'],
             'async' => ['async', 'isAsync'],
         ];
     }
@@ -166,7 +166,7 @@ final class ConfigurationTest extends TestCase
         self::assertSame([], $config->getExcludeDirectories());
         self::assertFalse($config->isSilent());
         self::assertFalse($config->isUseSystemSettings());
-        self::assertFalse($config->isHideWebp());
+        self::assertFalse($config->isHideSiblings());
         self::assertNull($config->getFilterPattern());
     }
 

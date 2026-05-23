@@ -6,11 +6,11 @@ namespace Plan2net\Webp\Command;
 
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
-use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
+use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\FolderScanner;
 use Plan2net\Webp\Service\ProcessedFileWriter;
-use Plan2net\Webp\Service\Webp as WebpService;
+use Plan2net\Webp\Service\SiblingGenerator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -32,15 +32,15 @@ use TYPO3\CMS\Core\Resource\ResourceFactory;
     description: 'Drain the WebP conversion queue or sweep a filesystem folder.'
 )]
 #[AsNonSchedulableCommand]
-final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterface
+final class ProcessConversionQueueCommand extends Command implements LoggerAwareInterface
 {
     use LoggerAwareTrait;
 
     public function __construct(
-        private readonly WebpQueueRepository $queueRepository,
+        private readonly ConversionQueueRepository $queueRepository,
         private readonly ResourceFactory $resourceFactory,
         private readonly ProcessedFileRepository $processedFileRepository,
-        private readonly WebpService $webpService,
+        private readonly SiblingGenerator $siblingGenerator,
         private readonly ProcessedFileWriter $processedFileWriter,
         private readonly Configuration $configuration,
         private readonly FolderScanner $folderScanner,
@@ -108,7 +108,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
                     $entry->taskType,
                     $configuration
                 );
-                if (!$this->webpService->needsReprocessing($processedFileWebp)) {
+                if (!$this->siblingGenerator->needsReprocessing($processedFileWebp)) {
                     continue;
                 }
                 if ($source instanceof ProcessedFile && $source->isOutdated()) {
@@ -116,7 +116,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
                     // Skip — the next render will reprocess and re-enqueue with current data.
                     continue;
                 }
-                $this->webpService->process($source, $processedFileWebp);
+                $this->siblingGenerator->process($source, $processedFileWebp);
                 $this->processedFileWriter->add($processedFileWebp, $entry->taskType, $configuration);
             } catch (WillNotRetryWithConfigurationException $e) {
                 $this->logger?->notice($e->getMessage());
@@ -155,7 +155,7 @@ final class ProcessWebpQueueCommand extends Command implements LoggerAwareInterf
 
         foreach ($entries as $index => $entry) {
             try {
-                $this->webpService->convertFilePath($entry['path'], $entry['path'] . '.webp', $entry['mimeType']);
+                $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . '.webp', $entry['mimeType']);
             } catch (\Throwable $e) {
                 $this->logger?->error('webp folder: ' . $e->getMessage(), ['path' => $entry['path']]);
             }

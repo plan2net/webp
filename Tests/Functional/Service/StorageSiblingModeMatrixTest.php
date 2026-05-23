@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Tests\Functional\Service;
 
 use PHPUnit\Framework\Attributes\Test;
-use Plan2net\Webp\Service\StorageWebpMode;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use Plan2net\Webp\Tests\Functional\Fixtures\Driver\FakeRemoteDriver;
 use TYPO3\CMS\Core\Resource\Driver\DriverRegistry;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
-final class StorageWebpModeMatrixTest extends FunctionalTestCase
+final class StorageSiblingModeMatrixTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = ['install', 'scheduler'];
 
@@ -22,33 +22,33 @@ final class StorageWebpModeMatrixTest extends FunctionalTestCase
     #[Test]
     public function localStorageWithAutoModeIsEnabled(): void
     {
-        $storage = $this->createStorage(driver: 'Local', mode: StorageWebpMode::Auto);
+        $storage = $this->createStorage(driver: 'Local', mode: StorageSiblingMode::Auto);
 
-        self::assertTrue(StorageWebpMode::isEnabledFor($storage));
+        self::assertTrue(StorageSiblingMode::isEnabledFor($storage));
     }
 
     #[Test]
     public function localStorageWithDisabledModeIsOff(): void
     {
-        $storage = $this->createStorage(driver: 'Local', mode: StorageWebpMode::Disabled);
+        $storage = $this->createStorage(driver: 'Local', mode: StorageSiblingMode::Disabled);
 
-        self::assertFalse(StorageWebpMode::isEnabledFor($storage));
+        self::assertFalse(StorageSiblingMode::isEnabledFor($storage));
     }
 
     #[Test]
     public function fakeRemoteStorageWithAutoModeIsOff(): void
     {
-        $storage = $this->createStorage(driver: 'FakeRemote', mode: StorageWebpMode::Auto);
+        $storage = $this->createStorage(driver: 'FakeRemote', mode: StorageSiblingMode::Auto);
 
-        self::assertFalse(StorageWebpMode::isEnabledFor($storage));
+        self::assertFalse(StorageSiblingMode::isEnabledFor($storage));
     }
 
     #[Test]
     public function fakeRemoteStorageWithEnabledModeIsOn(): void
     {
-        $storage = $this->createStorage(driver: 'FakeRemote', mode: StorageWebpMode::Enabled);
+        $storage = $this->createStorage(driver: 'FakeRemote', mode: StorageSiblingMode::Enabled);
 
-        self::assertTrue(StorageWebpMode::isEnabledFor($storage));
+        self::assertTrue(StorageSiblingMode::isEnabledFor($storage));
     }
 
     protected function setUp(): void
@@ -62,7 +62,7 @@ final class StorageWebpModeMatrixTest extends FunctionalTestCase
         );
     }
 
-    private function createStorage(string $driver, StorageWebpMode $mode): ResourceStorage
+    private function createStorage(string $driver, StorageSiblingMode $mode): ResourceStorage
     {
         $basePath = $this->instancePath . '/fileadmin-' . uniqid('webp-');
         mkdir($basePath, 0o775, true);

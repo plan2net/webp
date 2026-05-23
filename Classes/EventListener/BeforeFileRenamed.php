@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\EventListener;
 
-use Plan2net\Webp\Service\WebpSiblingFile;
+use Plan2net\Webp\Service\SiblingFile;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Resource\Event\BeforeFileRenamedEvent;
 
@@ -12,7 +12,7 @@ use TYPO3\CMS\Core\Resource\Event\BeforeFileRenamedEvent;
 final readonly class BeforeFileRenamed
 {
     public function __construct(
-        private WebpSiblingFile $siblings,
+        private SiblingFile $siblings,
     ) {
     }
 

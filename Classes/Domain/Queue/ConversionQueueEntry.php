@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Domain\Queue;
 
-final readonly class WebpQueueEntry
+final readonly class ConversionQueueEntry
 {
     public function __construct(
         public int $uid,

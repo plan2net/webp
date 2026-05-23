@@ -68,7 +68,7 @@ final readonly class Configuration
         return $this->boolValue('use_system_settings');
     }
 
-    public function isHideWebp(): bool
+    public function isHideSiblings(): bool
     {
         return $this->boolValue('hide_webp');
     }

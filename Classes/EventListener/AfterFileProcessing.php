@@ -6,12 +6,12 @@ namespace Plan2net\Webp\EventListener;
 
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
-use Plan2net\Webp\Domain\Queue\WebpQueueRepository;
+use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\ProcessedFileWriter;
-use Plan2net\Webp\Service\StorageWebpMode;
-use Plan2net\Webp\Service\Webp as WebpService;
+use Plan2net\Webp\Service\SiblingGenerator;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
@@ -31,11 +31,11 @@ final class AfterFileProcessing implements LoggerAwareInterface
 
     public function __construct(
         private readonly PathMatcher $pathMatcher,
-        private readonly WebpService $webpService,
+        private readonly SiblingGenerator $siblingGenerator,
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly ProcessedFileWriter $processedFileWriter,
         private readonly Configuration $configuration,
-        private readonly WebpQueueRepository $queueRepository,
+        private readonly ConversionQueueRepository $queueRepository,
     ) {
     }
 
@@ -89,7 +89,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
                 ]
             );
             // Check if reprocessing is required
-            if (!$this->webpService->needsReprocessing($processedFileWebp)) {
+            if (!$this->siblingGenerator->needsReprocessing($processedFileWebp)) {
                 return;
             }
 
@@ -118,7 +118,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
             }
 
             try {
-                $this->webpService->process($processedFile, $processedFileWebp);
+                $this->siblingGenerator->process($processedFile, $processedFileWebp);
 
                 // This will add or update; the writer hides the v14 signature change.
                 $this->processedFileWriter->add(
@@ -169,7 +169,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return false;
         }
 
-        if (!StorageWebpMode::isEnabledFor($processedFile->getStorage())) {
+        if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
             return false;
         }
 
