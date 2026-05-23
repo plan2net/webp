@@ -137,8 +137,15 @@ final class SiblingFile implements LoggerAwareInterface
         }
         $newName = $fileAtNewLocation->getName() . $suffix;
 
+        // A pre-existing file at the destination may belong to whatever record
+        // was there before the rename overwrote it (or even be hand-placed by
+        // the user). Drop only our orphaned source sibling and let lazy
+        // regeneration produce a fresh destination sibling on the next render.
         if ($newFolder->hasFile($newName)) {
-            $storage->deleteFile($newFolder->getFile($newName));
+            $this->logger?->notice(\sprintf('webp: destination "%s" already present; skipping sibling move, relying on lazy regeneration', $newName));
+            $this->deleteSiblingIfExists($storage, $oldIdentifier);
+
+            return;
         }
 
         $storage->moveFile($siblingFile, $newFolder, $newName);

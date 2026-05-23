@@ -54,6 +54,27 @@ final class SiblingCleanupFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function renameDoesNotOverwriteAPreExistingSiblingAtTheDestination(): void
+    {
+        // Source `tiny.png` with its sibling exists; a different `target.png.webp`
+        // is sitting at the destination name we're about to rename to. That
+        // file may belong to another record, or be hand-placed; either way the
+        // rename listener must not blindly overwrite it.
+        $file = $this->getFile(1);
+        $sourceSibling = $this->fileadminPath . 'tiny.png.webp';
+        \file_put_contents($sourceSibling, 'source-sibling');
+
+        $destinationSibling = $this->fileadminPath . 'target.png.webp';
+        \file_put_contents($destinationSibling, 'pre-existing-other');
+
+        $file->getStorage()->renameFile($file, 'target.png');
+
+        self::assertFileDoesNotExist($sourceSibling, 'orphaned source sibling must still be cleaned up');
+        self::assertFileExists($destinationSibling, 'pre-existing destination file must survive the rename');
+        self::assertSame('pre-existing-other', \file_get_contents($destinationSibling), 'destination contents must be untouched');
+    }
+
+    #[Test]
     public function siblingIsDeletedWhenSourceFileIsDeleted(): void
     {
         $file = $this->getFile(1);
