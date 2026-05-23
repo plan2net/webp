@@ -57,10 +57,10 @@ final class PhpGdConverter extends AbstractConverter
 
     private function getQuality(): int
     {
-        \preg_match('/quality(\\s|=)(\\d{1,3})/', $this->parameters, $matches);
+        \preg_match('/\\bquality[\\s=](\\d{1,3})\\b/', $this->parameters, $matches);
 
-        if (isset($matches[2]) && (int) $matches[2] > 0) {
-            return (int) $matches[2];
+        if (isset($matches[1]) && (int) $matches[1] > 0) {
+            return (int) $matches[1];
         }
 
         return self::DEFAULT_QUALITY;
