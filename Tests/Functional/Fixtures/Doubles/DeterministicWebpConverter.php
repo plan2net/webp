@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Tests\Functional\Fixtures\Doubles;
 
-use Plan2net\Webp\Converter\Converter;
-use Plan2net\Webp\Service\Configuration;
+use Plan2net\Webp\Converter\AbstractConverter;
+use Plan2net\Webp\Format\OutputFormat;
 
 /**
  * Test-only Converter that emits a fixed, valid WebP regardless of runtime
@@ -13,13 +13,9 @@ use Plan2net\Webp\Service\Configuration;
  * free of environment-sensitive output-size variability. Real-converter
  * coverage stays where it belongs — AfterFileProcessingFunctionalTest.
  */
-final class DeterministicWebpConverter implements Converter
+final class DeterministicWebpConverter extends AbstractConverter
 {
-    public function __construct(string $parameters, Configuration $configuration)
-    {
-    }
-
-    public function convert(string $originalFilePath, string $targetFilePath): void
+    public function convertTo(string $originalFilePath, string $targetFilePath, OutputFormat $format): void
     {
         \copy(__DIR__ . '/../Images/tiny.webp', $targetFilePath);
     }

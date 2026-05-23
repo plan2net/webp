@@ -13,10 +13,10 @@
         <source>Batch size (entries per run)</source>
       </trans-unit>
       <trans-unit id="sys_file_storage.tx_webp_mode">
-        <source>Generate WebP variants</source>
+        <source>Generate WebP / AVIF / JPEG XL siblings</source>
       </trans-unit>
       <trans-unit id="sys_file_storage.tx_webp_mode.description">
-        <source>When enabled, processed images on this storage get a .webp copy at the same path for transparent delivery to browsers that support WebP.</source>
+        <source>When enabled, processed images on this storage get sibling files at the same path — one per enabled output format — for transparent delivery via Accept-header content negotiation. The active formats are configured via the formats_enabled extension setting.</source>
       </trans-unit>
       <trans-unit id="sys_file_storage.tx_webp_mode.auto">
         <source>Auto (Local drivers only)</source>

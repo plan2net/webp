@@ -1,18 +1,25 @@
 <?php
 
 use Plan2net\Webp\Core\Filter\FileNameFilter;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 (static function () {
-    // TYPO3 v12 omits `webp` from SYS/mediafile_ext; v13+ added it.
+    // TYPO3 v12 omits `webp` from SYS/mediafile_ext; v13+ added it. AVIF and
+    // JXL are not in any TYPO3 default — register them so FAL's source-folder
+    // publish path (Folder::addFile) accepts the new sibling extensions.
     $mediaFileExtensions = (string) ($GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] ?? '');
-    if (!\in_array('webp', GeneralUtility::trimExplode(',', $mediaFileExtensions, true), true)) {
-        $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] = '' === $mediaFileExtensions ? 'webp' : $mediaFileExtensions . ',webp';
+    $known = GeneralUtility::trimExplode(',', $mediaFileExtensions, true);
+    foreach (OutputFormat::cases() as $format) {
+        if (!\in_array($format->value, $known, true)) {
+            $known[] = $format->value;
+        }
     }
+    $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] = \implode(',', $known);
 
     if (GeneralUtility::makeInstance(Configuration::class)->isHideSiblings()) {
-        // Hide webp files in file lists
+        // Hide generated sibling files (.webp/.avif/.jxl) in BE file lists
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks'][] = [
             FileNameFilter::class,
             'filterSiblingFiles',

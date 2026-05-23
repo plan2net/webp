@@ -107,6 +107,38 @@ final class SiblingFileRemoteDriverTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function deleteRemovesSiblingsForAllKnownOutputFormats(): void
+    {
+        $original = $this->placeImage('multi.png');
+        $this->placeBytes('multi.png.webp', 'webp-bytes');
+        $this->placeBytes('multi.png.avif', 'avif-bytes');
+        $this->placeBytes('multi.png.jxl', 'jxl-bytes');
+
+        $original->delete();
+
+        self::assertFileDoesNotExist($this->storageBasePath . '/multi.png.webp');
+        self::assertFileDoesNotExist($this->storageBasePath . '/multi.png.avif');
+        self::assertFileDoesNotExist($this->storageBasePath . '/multi.png.jxl');
+    }
+
+    #[Test]
+    public function moveRelocatesSiblingsForAllKnownOutputFormats(): void
+    {
+        \mkdir($this->storageBasePath . '/dst', 0o775, true);
+        $original = $this->placeImage('moveall.png');
+        $this->placeBytes('moveall.png.webp', 'webp-bytes');
+        $this->placeBytes('moveall.png.avif', 'avif-bytes');
+
+        $targetFolder = $this->storage->getFolder('/dst/');
+        $this->storage->moveFile($original, $targetFolder);
+
+        self::assertFileDoesNotExist($this->storageBasePath . '/moveall.png.webp');
+        self::assertFileDoesNotExist($this->storageBasePath . '/moveall.png.avif');
+        self::assertFileExists($this->storageBasePath . '/dst/moveall.png.webp');
+        self::assertFileExists($this->storageBasePath . '/dst/moveall.png.avif');
+    }
+
+    #[Test]
     public function autoModeRemoteStorageLeavesUserManagedSiblingsAlone(): void
     {
         // Auto on a non-Local storage means the extension is OFF for this

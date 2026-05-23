@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Command;
 
-use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
-use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
+use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\FolderScanner;
-use Plan2net\Webp\Service\ProcessedFileWriter;
 use Plan2net\Webp\Service\SiblingGenerator;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -23,13 +21,15 @@ use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
+use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 #[AsCommand(
     name: 'webp:process-queue',
-    description: 'Drain the WebP conversion queue or sweep a filesystem folder.'
+    description: 'Drain the conversion queue or sweep a filesystem folder.'
 )]
 #[AsNonSchedulableCommand]
 final class ProcessConversionQueueCommand extends Command implements LoggerAwareInterface
@@ -41,7 +41,6 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         private readonly ResourceFactory $resourceFactory,
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly SiblingGenerator $siblingGenerator,
-        private readonly ProcessedFileWriter $processedFileWriter,
         private readonly Configuration $configuration,
         private readonly FolderScanner $folderScanner,
         private readonly LockFactory $lockFactory,
@@ -95,41 +94,25 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         $lastIndex = \count($entries) - 1;
 
         foreach ($entries as $index => $entry) {
-            $processedFileWebp = null;
             try {
                 $originalFile = $this->resourceFactory->getFileObject($entry->originalFileId);
+                if (!$originalFile instanceof File) {
+                    continue;
+                }
                 $configuration = (array) \unserialize($entry->configuration, ['allowed_classes' => false]);
                 $source = $this->resolveSource($entry->processedFileId, $originalFile);
                 if (null === $source) {
                     continue;
                 }
-                $processedFileWebp = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
-                    $originalFile,
-                    $entry->taskType,
-                    $configuration
-                );
-                if (!$this->siblingGenerator->needsReprocessing($processedFileWebp)) {
-                    continue;
-                }
                 if ($source instanceof ProcessedFile && $source->isOutdated()) {
-                    // Original changed between enqueue and now; the cached derivative is stale.
-                    // Skip — the next render will reprocess and re-enqueue with current data.
+                    // Original changed between enqueue and now; skip — next render re-enqueues.
                     continue;
                 }
-                $this->siblingGenerator->process($source, $processedFileWebp);
-                $this->processedFileWriter->add($processedFileWebp, $entry->taskType, $configuration);
-            } catch (WillNotRetryWithConfigurationException $e) {
-                $this->logger?->notice($e->getMessage());
-            } catch (ConvertedFileLargerThanOriginalException $e) {
-                $this->logger?->warning($e->getMessage());
-                if ($processedFileWebp instanceof ProcessedFile) {
-                    try {
-                        $processedFileWebp->delete(true);
-                    } catch (\Throwable) {
-                    }
-                }
+                // $entry->format restricts process() to this row's format; without it
+                // a single drain would re-process every currently-enabled format.
+                $this->siblingGenerator->process($originalFile, $source, $entry->taskType, $configuration, $entry->format);
             } catch (\Throwable $e) {
-                $this->logger?->error('webp queue: ' . $e->getMessage(), ['originalFileId' => $entry->originalFileId]);
+                $this->logger?->error('webp queue: ' . $e->getMessage(), ['originalFileId' => $entry->originalFileId, 'format' => $entry->format->value]);
             } finally {
                 $this->queueRepository->remove($entry->uid);
                 $this->applyThrottle($throttleMs, $index === $lastIndex);
@@ -148,16 +131,26 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
             return Command::FAILURE;
         }
 
-        $mimeTypes = $this->configuration->getMimeTypes();
         $throttleMs = $this->configuration->getAsyncThrottleMs();
-        $entries = \iterator_to_array($this->folderScanner->scan($rootPath, $mimeTypes), false);
+        $enabledFormats = $this->configuration->getEnabledFormats();
+        if ([] === $enabledFormats) {
+            return Command::SUCCESS;
+        }
+        $mimeTypes = $this->mimeTypeUnion($enabledFormats);
+
+        $entries = \iterator_to_array($this->folderScanner->scan($rootPath, $mimeTypes, $enabledFormats), false);
         $lastIndex = \count($entries) - 1;
 
         foreach ($entries as $index => $entry) {
-            try {
-                $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . '.webp', $entry['mimeType']);
-            } catch (\Throwable $e) {
-                $this->logger?->error('webp folder: ' . $e->getMessage(), ['path' => $entry['path']]);
+            foreach ($entry['missingFormats'] as $format) {
+                if (!$this->configuration->isSupportedMimeTypeFor($format, $entry['mimeType'])) {
+                    continue;
+                }
+                try {
+                    $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . $format->suffix(), $entry['mimeType'], $format);
+                } catch (\Throwable $e) {
+                    $this->logger?->error('webp folder: ' . $e->getMessage(), ['path' => $entry['path'], 'format' => $format->value]);
+                }
             }
             $this->applyThrottle($throttleMs, $index === $lastIndex);
         }
@@ -165,11 +158,28 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         return Command::SUCCESS;
     }
 
-    private function resolveSource(int $processedFileId, $originalFile): ?\TYPO3\CMS\Core\Resource\FileInterface
+    /**
+     * @param list<\Plan2net\Webp\Format\OutputFormat> $enabledFormats
+     *
+     * @return list<string>
+     */
+    private function mimeTypeUnion(array $enabledFormats): array
     {
-        if (!$originalFile instanceof \TYPO3\CMS\Core\Resource\FileInterface) {
-            return null;
+        $union = [];
+        foreach (SourceMimeType::all() as $mimeType) {
+            foreach ($enabledFormats as $format) {
+                if ($this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
+                    $union[] = $mimeType;
+                    break;
+                }
+            }
         }
+
+        return $union;
+    }
+
+    private function resolveSource(int $processedFileId, FileInterface $originalFile): ?FileInterface
+    {
         if (0 === $processedFileId) {
             return $originalFile;
         }

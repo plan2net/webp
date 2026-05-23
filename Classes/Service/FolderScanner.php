@@ -4,68 +4,53 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Service;
 
+use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Format\SourceMimeType;
 use Symfony\Component\Finder\Finder;
 
 final class FolderScanner
 {
-    private const MIME_TYPE_BY_EXTENSION = [
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        'gif' => 'image/gif',
-    ];
-
     /**
-     * Walks the folder and yields convertible images that don't yet have a `.webp` sibling.
+     * Walks the folder and yields convertible images that are still missing at
+     * least one of the requested sibling formats. A file with every requested
+     * format already on disk is skipped.
      *
-     * @param list<string> $allowedMimeTypes
+     * @param list<string>       $allowedMimeTypes
+     * @param list<OutputFormat> $expectedFormats  sibling formats the caller plans to generate
      *
-     * @return \Generator<array{path: string, mimeType: string}>
+     * @return \Generator<array{path: string, mimeType: string, missingFormats: list<OutputFormat>}>
      */
-    public function scan(string $folder, array $allowedMimeTypes): \Generator
+    public function scan(string $folder, array $allowedMimeTypes, array $expectedFormats): \Generator
     {
-        if (!\is_dir($folder)) {
+        if (!\is_dir($folder) || [] === $expectedFormats) {
             return;
         }
-        $extensionToMime = $this->extensionToMimeMap($allowedMimeTypes);
-        if ([] === $extensionToMime) {
+        $extensions = SourceMimeType::extensionsAllowedBy($allowedMimeTypes);
+        if ([] === $extensions) {
             return;
         }
 
         $finder = (new Finder())
             ->files()
             ->in($folder)
-            ->name(\array_map(static fn (string $ext): string => '*.' . $ext, \array_keys($extensionToMime)));
+            ->name(\array_map(static fn (string $ext): string => '*.' . $ext, $extensions));
 
         foreach ($finder as $fileInfo) {
             $path = $fileInfo->getPathname();
-            if (\is_file($path . '.webp')) {
+            $missing = [];
+            foreach ($expectedFormats as $format) {
+                if (!\is_file($path . $format->suffix())) {
+                    $missing[] = $format;
+                }
+            }
+            if ([] === $missing) {
                 continue;
             }
-            $extension = \strtolower($fileInfo->getExtension());
-            $mimeType = $extensionToMime[$extension] ?? null;
+            $mimeType = SourceMimeType::fromExtension($fileInfo->getExtension());
             if (null === $mimeType) {
                 continue;
             }
-            yield ['path' => $path, 'mimeType' => $mimeType];
+            yield ['path' => $path, 'mimeType' => $mimeType, 'missingFormats' => $missing];
         }
-    }
-
-    /**
-     * @param list<string> $mimeTypes
-     *
-     * @return array<string, string> extension => mime type
-     */
-    private function extensionToMimeMap(array $mimeTypes): array
-    {
-        $allowed = \array_flip(\array_map('strtolower', $mimeTypes));
-        $map = [];
-        foreach (self::MIME_TYPE_BY_EXTENSION as $extension => $mime) {
-            if (isset($allowed[$mime])) {
-                $map[$extension] = $mime;
-            }
-        }
-
-        return $map;
     }
 }

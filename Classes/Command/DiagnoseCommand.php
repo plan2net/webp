@@ -12,7 +12,6 @@ use Plan2net\Webp\Converter\MagickConverter;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Converter\VipsConverter;
 use Plan2net\Webp\Service\Configuration;
-use Plan2net\Webp\Service\SiblingGenerator;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -47,7 +46,6 @@ final class DiagnoseCommand extends Command
     public function __construct(
         private readonly StorageRepository $storageRepository,
         private readonly Configuration $configuration,
-        private readonly SiblingGenerator $siblingGenerator,
         private readonly RequestFactory $requestFactory,
         private readonly SiteFinder $siteFinder,
         private readonly ConnectionPool $connectionPool,
@@ -551,7 +549,7 @@ final class DiagnoseCommand extends Command
     private function checkParameterParsing(SymfonyStyle $io): void
     {
         foreach ($this->configuration->getMimeTypes() as $mimeType) {
-            $resolved = $this->siblingGenerator->getParametersForMimeType($mimeType);
+            $resolved = $this->configuration->getParametersFor(\Plan2net\Webp\Format\OutputFormat::Webp, $mimeType);
             if (null === $resolved) {
                 $this->writeStatus($io, '!', \sprintf('parameters for %s could not be resolved — falls back to old single-options format', $mimeType));
                 ++$this->warningCount;

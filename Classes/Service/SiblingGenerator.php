@@ -6,64 +6,62 @@ namespace Plan2net\Webp\Service;
 
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
+use Plan2net\Webp\Converter\Exception\UnsupportedFormatException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
+use Plan2net\Webp\Converter\MultiFormatConverter;
+use Plan2net\Webp\Format\OutputFormat;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
+use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-final class SiblingGenerator
+final class SiblingGenerator implements LoggerAwareInterface
 {
+    use LoggerAwareTrait;
+
     public function __construct(
         private readonly Configuration $configuration,
         private readonly FailedAttemptsRepository $failedAttempts,
+        private readonly ProcessedFileRepository $processedFileRepository,
+        private readonly ProcessedFileWriter $processedFileWriter,
     ) {
     }
 
     /**
-     * @param FileInterface|File $originalFile
-     *
-     * @throws ConvertedFileLargerThanOriginalException
-     * @throws WillNotRetryWithConfigurationException
+     * Generate every enabled sibling format for the given source. Each format
+     * gets its own ProcessedFile row; failures in one format never block the
+     * others. The incoming $sourceVariant (TYPO3's variant row, or the original
+     * File when no real transformation happened) is NOT mutated.
      */
-    public function process(FileInterface $originalFile, ProcessedFile $processedFile): void
-    {
-        if ('webp' === $originalFile->getExtension()) {
+    public function process(
+        File $originalFile,
+        FileInterface $sourceVariant,
+        string $taskType,
+        array $taskConfiguration,
+        ?OutputFormat $onlyFormat = null,
+    ): void {
+        if (null !== OutputFormat::tryFrom(\strtolower($originalFile->getExtension()))) {
             return;
         }
 
-        $processedFile->setName($originalFile->getName() . '.webp');
-        $processedFile->setIdentifier($originalFile->getIdentifier() . '.webp');
-
-        $sourceLocalPath = $originalFile->getForLocalProcessing(false);
+        $sourceLocalPath = $sourceVariant->getForLocalProcessing(false);
         if (!@\is_file($sourceLocalPath)) {
             return;
         }
 
         $mimeType = $originalFile->getMimeType();
-        $parameters = $this->getParametersForMimeType($mimeType);
-        $fileUid = (int) $originalFile->getUid();
-        if (null !== $parameters && $this->failedAttempts->wasAttempted($fileUid, $parameters)) {
-            throw new WillNotRetryWithConfigurationException(\sprintf('Conversion for file "%s" failed before! Will not retry with this configuration!', $sourceLocalPath));
-        }
+        $formats = null === $onlyFormat
+            ? $this->configuration->getEnabledFormats()
+            : [$onlyFormat];
 
-        $tempTarget = GeneralUtility::tempnam('webp-', '.webp');
-        try {
-            $fileSize = $this->convertFilePath($sourceLocalPath, $tempTarget, $mimeType);
-            $this->publishToStorage($originalFile, $processedFile, $tempTarget);
-
-            $processedFile->updateProperties([
-                'width' => $originalFile->getProperty('width'),
-                'height' => $originalFile->getProperty('height'),
-                'size' => $fileSize,
-            ]);
-        } catch (ConvertedFileLargerThanOriginalException $e) {
-            if (null !== $parameters) {
-                $this->failedAttempts->record($fileUid, $parameters);
+        foreach ($formats as $format) {
+            if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
+                continue;
             }
-            throw $e;
-        } finally {
-            GeneralUtility::unlink_tempfile($tempTarget);
+            $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $taskConfiguration, $format);
         }
     }
 
@@ -79,55 +77,118 @@ final class SiblingGenerator
      *
      * @return int Size in bytes of the converted file
      *
-     * @throws ConvertedFileLargerThanOriginalException if the WebP output is not smaller than the source — the oversize target is removed before the exception is thrown
+     * @throws ConvertedFileLargerThanOriginalException
+     * @throws UnsupportedFormatException
      */
-    public function convertFilePath(string $sourcePath, string $targetPath, string $mimeType): int
+    public function convertFilePath(string $sourcePath, string $targetPath, string $mimeType, OutputFormat $format = OutputFormat::Webp): int
     {
-        $converterClass = $this->configuration->getConverter();
-        if (empty($converterClass)) {
-            throw new \RuntimeException('No WebP converter configured. Please check extension configuration.');
+        $converterClass = $this->configuration->getConverterFor($format);
+        if ('' === $converterClass) {
+            throw new \RuntimeException(\sprintf('No %s converter configured. Please check extension configuration.', $format->value));
         }
 
-        $parameters = $this->getParametersForMimeType($mimeType);
-        if (empty($parameters)) {
-            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s" and mime type "%s" (file "%s")!', $converterClass, $mimeType, $sourcePath));
+        $parameters = $this->configuration->getParametersFor($format, $mimeType);
+        if (null === $parameters || '' === $parameters) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s", mime "%s", format %s (file "%s").', $converterClass, $mimeType, $format->value, $sourcePath));
         }
 
-        /** @var Converter $converter */
         $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
-        $converter->convert($sourcePath, $targetPath);
+        if ($converter instanceof MultiFormatConverter) {
+            $converter->convertTo($sourcePath, $targetPath, $format);
+        } elseif ($converter instanceof Converter) {
+            if (OutputFormat::Webp !== $format) {
+                throw new UnsupportedFormatException(\sprintf('Converter %s does not implement MultiFormatConverter; cannot produce %s.', $converterClass, $format->value));
+            }
+            $converter->convert($sourcePath, $targetPath);
+        } else {
+            throw new \RuntimeException(\sprintf('Converter class %s does not implement Plan2net\\Webp\\Converter\\Converter.', $converterClass));
+        }
 
         $sourceSize = (int) @\filesize($sourcePath);
         $targetSize = (int) @\filesize($targetPath);
         if ($targetSize > 0 && $sourceSize > 0 && $sourceSize <= $targetSize) {
             @\unlink($targetPath);
 
-            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s)!', $targetPath, $targetSize, $sourceSize, $sourcePath));
+            throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s).', $targetPath, $targetSize, $sourceSize, $sourcePath));
         }
 
         return $targetSize;
     }
 
-    /**
-     * @internal
-     */
-    public function getParametersForMimeType(string $mimeType): ?string
-    {
-        $parameters = \explode('|', $this->configuration->getParameters());
-        foreach ($parameters as $parameter) {
-            $typeAndOptions = \explode('::', $parameter, 2);
-            $type = $typeAndOptions[0] ?? null;
-            $options = $typeAndOptions[1] ?? null;
-            // Fallback to old options format
-            if (empty($options)) {
-                return $type;
-            }
-            if ($type === $mimeType) {
-                return $options;
-            }
+    private function processFormat(
+        File $originalFile,
+        FileInterface $sourceVariant,
+        string $sourceLocalPath,
+        string $mimeType,
+        string $taskType,
+        array $taskConfiguration,
+        OutputFormat $format,
+    ): void {
+        $formatConfiguration = $taskConfiguration + ['format' => $format->value, 'webp' => true];
+        $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
+            $originalFile,
+            $taskType,
+            $formatConfiguration,
+        );
+        if (!$this->needsReprocessing($formatRow)) {
+            return;
         }
 
-        return null;
+        $parameters = $this->configuration->getParametersFor($format, $mimeType);
+        $fileUid = (int) $originalFile->getUid();
+        if (null !== $parameters && $this->failedAttempts->wasAttempted($fileUid, $parameters, $format)) {
+            $this->logger?->notice(\sprintf('webp: skipping %s for file "%s" — prior attempt failed with same configuration.', $format->value, $sourceLocalPath));
+
+            return;
+        }
+
+        $tempTarget = GeneralUtility::tempnam(\sprintf('sibling-%s-', $format->value), $format->suffix());
+        try {
+            $fileSize = $this->convertFilePath($sourceLocalPath, $tempTarget, $mimeType, $format);
+
+            $formatRow->setName($sourceVariant->getName() . $format->suffix());
+            $formatRow->setIdentifier($sourceVariant->getIdentifier() . $format->suffix());
+
+            $this->publishToStorage($sourceVariant, $formatRow, $tempTarget);
+            $formatRow->updateProperties([
+                'width' => (int) $sourceVariant->getProperty('width'),
+                'height' => (int) $sourceVariant->getProperty('height'),
+                'size' => $fileSize,
+            ]);
+            $this->processedFileWriter->add($formatRow, $taskType, $formatConfiguration);
+        } catch (UnsupportedFormatException $e) {
+            $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
+        } catch (ConvertedFileLargerThanOriginalException $e) {
+            if (null !== $parameters) {
+                $this->failedAttempts->record($fileUid, $parameters, $format);
+            }
+            $this->removeExistingSibling($formatRow, $sourceVariant, $format);
+            $this->logger?->warning($e->getMessage());
+        } catch (WillNotRetryWithConfigurationException $e) {
+            $this->logger?->notice($e->getMessage());
+        } catch (\Throwable $e) {
+            $this->logger?->error(\sprintf('webp: %s conversion of "%s" failed: %s', $format->value, $originalFile->getIdentifier(), $e->getMessage()));
+        } finally {
+            GeneralUtility::unlink_tempfile($tempTarget);
+        }
+    }
+
+    /**
+     * Drops the sibling DB row (if persisted) and unlinks the on-disk file so
+     * the conversion target is free for the next attempt.
+     */
+    private function removeExistingSibling(ProcessedFile $formatRow, FileInterface $sourceVariant, OutputFormat $format): void
+    {
+        if (!$formatRow->isNew()) {
+            try {
+                $formatRow->delete(true);
+            } catch (\Throwable) {
+            }
+        }
+        $localSiblingPath = $sourceVariant->getForLocalProcessing(false) . $format->suffix();
+        if (@\is_file($localSiblingPath)) {
+            @\unlink($localSiblingPath);
+        }
     }
 
     private function publishToStorage(FileInterface $sourceFile, ProcessedFile $processedFile, string $tempTarget): void
@@ -135,28 +196,14 @@ final class SiblingGenerator
         $storage = $sourceFile->getStorage();
 
         if ($storage->isWithinProcessingFolder($sourceFile->getIdentifier())) {
-            // The .webp lives alongside the processed variant inside the
-            // (potentially nested) processing folder. We call
-            // ResourceStorage::updateProcessedFile() directly — same method
-            // ProcessedFile::updateWithLocalFile() uses internally — to avoid
-            // a v12 path that NPEs on getProperties() for fresh ProcessedFile
-            // instances. ResourceStorage::addFile() isn't usable either: its
-            // post-write getFileByIdentifier() routes through
-            // ProcessedFileRepository inside the processing folder and
-            // returns null until our row is written downstream.
             $processingFolder = $storage->getProcessingFolder($processedFile->getOriginalFile());
             $storage->updateProcessedFile($tempTarget, $processedFile, $processingFolder);
 
             return;
         }
 
-        // The .webp lives alongside the original in the source folder.
-        // REPLACE conflict mode is atomic at the driver level (PHP copy()
-        // overwrites the destination); the previous sibling survives a
-        // transient upload failure.
         $folder = $sourceFile->getParentFolder();
-        $targetName = $sourceFile->getName() . '.webp';
-        $newFile = $folder->addFile($tempTarget, $targetName, self::replaceConflictMode());
+        $newFile = $folder->addFile($tempTarget, $processedFile->getName(), self::replaceConflictMode());
         $processedFile->setIdentifier($newFile->getIdentifier());
     }
 

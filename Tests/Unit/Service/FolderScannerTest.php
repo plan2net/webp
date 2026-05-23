@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\FolderScanner;
 
 final class FolderScannerTest extends TestCase
@@ -21,18 +22,51 @@ final class FolderScannerTest extends TestCase
         $this->touchAtPath($this->tempDir . '/baz.png.webp');
 
         $entries = \iterator_to_array(
-            (new FolderScanner())->scan($this->tempDir, ['image/jpeg', 'image/png']),
+            (new FolderScanner())->scan($this->tempDir, ['image/jpeg', 'image/png'], [OutputFormat::Webp]),
             false
         );
 
         \usort($entries, static fn (array $a, array $b): int => $a['path'] <=> $b['path']);
         self::assertSame(
             [
-                ['path' => $this->tempDir . '/bar.jpg', 'mimeType' => 'image/jpeg'],
-                ['path' => $this->tempDir . '/foo.png', 'mimeType' => 'image/png'],
+                ['path' => $this->tempDir . '/bar.jpg', 'mimeType' => 'image/jpeg', 'missingFormats' => [OutputFormat::Webp]],
+                ['path' => $this->tempDir . '/foo.png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Webp]],
             ],
             $entries
         );
+    }
+
+    #[Test]
+    public function yieldsImageWhenAnyExpectedSiblingIsMissing(): void
+    {
+        // .webp exists, .avif missing — must still be yielded so the AVIF sibling can be generated.
+        $this->touchAtPath($this->tempDir . '/photo.png');
+        $this->touchAtPath($this->tempDir . '/photo.png.webp');
+
+        $entries = \iterator_to_array(
+            (new FolderScanner())->scan($this->tempDir, ['image/png'], [OutputFormat::Webp, OutputFormat::Avif]),
+            false
+        );
+
+        self::assertSame(
+            [['path' => $this->tempDir . '/photo.png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Avif]]],
+            $entries
+        );
+    }
+
+    #[Test]
+    public function skipsImageWhenAllExpectedSiblingsExist(): void
+    {
+        $this->touchAtPath($this->tempDir . '/photo.png');
+        $this->touchAtPath($this->tempDir . '/photo.png.webp');
+        $this->touchAtPath($this->tempDir . '/photo.png.avif');
+
+        $entries = \iterator_to_array(
+            (new FolderScanner())->scan($this->tempDir, ['image/png'], [OutputFormat::Webp, OutputFormat::Avif]),
+            false
+        );
+
+        self::assertSame([], $entries);
     }
 
     #[Test]
@@ -42,12 +76,12 @@ final class FolderScannerTest extends TestCase
         $this->touchAtPath($this->tempDir . '/bar.gif');
 
         $entries = \iterator_to_array(
-            (new FolderScanner())->scan($this->tempDir, ['image/png']),
+            (new FolderScanner())->scan($this->tempDir, ['image/png'], [OutputFormat::Webp]),
             false
         );
 
         self::assertSame(
-            [['path' => $this->tempDir . '/foo.png', 'mimeType' => 'image/png']],
+            [['path' => $this->tempDir . '/foo.png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Webp]]],
             $entries
         );
     }
@@ -59,12 +93,12 @@ final class FolderScannerTest extends TestCase
         $this->touchAtPath($this->tempDir . '/sub/deep.png');
 
         $entries = \iterator_to_array(
-            (new FolderScanner())->scan($this->tempDir, ['image/png']),
+            (new FolderScanner())->scan($this->tempDir, ['image/png'], [OutputFormat::Webp]),
             false
         );
 
         self::assertSame(
-            [['path' => $this->tempDir . '/sub/deep.png', 'mimeType' => 'image/png']],
+            [['path' => $this->tempDir . '/sub/deep.png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Webp]]],
             $entries
         );
     }
@@ -73,7 +107,7 @@ final class FolderScannerTest extends TestCase
     public function returnsEmptyForMissingFolder(): void
     {
         $entries = \iterator_to_array(
-            (new FolderScanner())->scan('/nonexistent/path', ['image/png']),
+            (new FolderScanner())->scan('/nonexistent/path', ['image/png'], [OutputFormat::Webp]),
             false
         );
 
@@ -86,7 +120,7 @@ final class FolderScannerTest extends TestCase
         $this->touchAtPath($this->tempDir . '/photo.png');
 
         $entries = \iterator_to_array(
-            (new FolderScanner())->scan($this->tempDir, ['image/avif']),
+            (new FolderScanner())->scan($this->tempDir, ['image/avif'], [OutputFormat::Webp]),
             false
         );
 
