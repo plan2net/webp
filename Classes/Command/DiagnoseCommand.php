@@ -365,6 +365,13 @@ final class DiagnoseCommand extends Command
         if (!\class_exists($converterClass)) {
             return false;
         }
+        // PhpGdConverter inherits the MultiFormatConverter marker via AbstractConverter
+        // but throws UnsupportedFormatException for everything except WebP. Treat it
+        // as WebP-only here so diagnose doesn't certify AVIF/JXL pipelines that will
+        // fail on every render.
+        if (PhpGdConverter::class === $converterClass) {
+            return false;
+        }
 
         return \is_subclass_of($converterClass, MultiFormatConverter::class);
     }
