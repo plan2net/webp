@@ -22,7 +22,7 @@ jobs:
         exclude:
           - { php: '8.4', typo3: '^12.4' }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # libheif-plugin-aomenc gives libheif a real AV1 encoder; without it
       # heifsave fails with "Unsupported compression" on Ubuntu 24.04.
@@ -50,7 +50,7 @@ jobs:
       # Composer download cache — independent of TYPO3 version pin.
       - name: Cache Composer downloads
         if: ${{ !env.ACT }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.composer/cache
           key: e2e-composer-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json') }}
@@ -65,7 +65,7 @@ jobs:
       - name: Cache built TYPO3 instance
         id: instance-cache
         if: ${{ !env.ACT }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/plan2net-webp-e2e/instance
           key: e2e-instance-${{ matrix.php }}-${{ matrix.typo3 }}-${{ hashFiles('composer.json', 'Classes/**', 'Configuration/**', 'ext_*.php', 'ext_tables.sql', 'Resources/Private/Language/**', 'Tests/E2E/bootstrap.sh', 'Tests/E2E/fixtures/**') }}
@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-logs-php${{ matrix.php }}-typo3-${{ strategy.job-index }}
           path: |
