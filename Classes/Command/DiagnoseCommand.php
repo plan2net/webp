@@ -147,9 +147,11 @@ final class DiagnoseCommand extends Command
         try {
             $storages = $this->storageRepository->findAll();
         } catch (\Exception $exception) {
-            $this->writeStatus($io, '✗', \sprintf('StorageRepository::findAll() failed: %s', $exception->getMessage()));
-            ++$this->failureCount;
-            $this->captureFirstFailure(\sprintf("StorageRepository::findAll() threw %s: %s\nThis usually means a sys_file_storage row has invalid configuration. Inspect the table directly to identify the broken row.", $exception::class, $exception->getMessage()));
+            $this->recordFailure(
+                $io,
+                \sprintf('StorageRepository::findAll() failed: %s', $exception->getMessage()),
+                \sprintf("StorageRepository::findAll() threw %s: %s\nThis usually means a sys_file_storage row has invalid configuration. Inspect the table directly to identify the broken row.", $exception::class, $exception->getMessage()),
+            );
 
             return;
         }
@@ -318,17 +320,21 @@ final class DiagnoseCommand extends Command
             $io->writeln(\sprintf('· parameters: %s', '' === $rawParameters ? '(empty)' : $rawParameters));
 
             if ('' === $converterClass) {
-                $this->writeStatus($io, '✗', \sprintf('no converter configured for %s — set EXTENSIONS/webp/converter_%s in TYPO3 settings', $format->value, $format->value));
-                ++$this->failureCount;
-                $this->captureFirstFailure(\sprintf('No converter configured for %s. Edit the TYPO3 extension settings for webp and pick PhpGdConverter, MagickConverter, or ExternalConverter.', $format->value));
+                $this->recordFailure(
+                    $io,
+                    \sprintf('no converter configured for %s — set EXTENSIONS/webp/converter_%s in TYPO3 settings', $format->value, $format->value),
+                    \sprintf('No converter configured for %s. Edit the TYPO3 extension settings for webp and pick PhpGdConverter, MagickConverter, or ExternalConverter.', $format->value),
+                );
                 $io->newLine();
                 continue;
             }
 
             if (!$this->converterAdvertisesFormat($converterClass, $format)) {
-                $this->writeStatus($io, '✗', \sprintf('%s does not support output format %s', $converterClass, $format->value));
-                ++$this->failureCount;
-                $this->captureFirstFailure(\sprintf('The converter "%s" does not support the %s output format. Use MagickConverter, ExternalConverter, or VipsConverter for AVIF/JXL output.', $converterClass, $format->value));
+                $this->recordFailure(
+                    $io,
+                    \sprintf('%s does not support output format %s', $converterClass, $format->value),
+                    \sprintf('The converter "%s" does not support the %s output format. Use MagickConverter, ExternalConverter, or VipsConverter for AVIF/JXL output.', $converterClass, $format->value),
+                );
                 $io->newLine();
                 continue;
             }
@@ -833,9 +839,11 @@ final class DiagnoseCommand extends Command
         }
 
         if (!$taskFound) {
-            $this->writeStatus($io, '!', 'no ProcessWebpQueueTask registered in the scheduler');
-            ++$this->warningCount;
-            $this->captureFirstFailure("Async mode is enabled but no ProcessWebpQueueTask scheduler entry exists.\nEither create a scheduler task for Plan2net\\Webp\\Task\\ProcessWebpQueueTask, or invoke `vendor/bin/typo3 webp:process-queue` from a system cron.");
+            $this->recordWarning(
+                $io,
+                'no ProcessWebpQueueTask registered in the scheduler',
+                "Async mode is enabled but no ProcessWebpQueueTask scheduler entry exists.\nEither create a scheduler task for Plan2net\\Webp\\Task\\ProcessWebpQueueTask, or invoke `vendor/bin/typo3 webp:process-queue` from a system cron.",
+            );
         }
 
         $stale = null !== $maxOldestEnqueuedAt
@@ -843,9 +851,11 @@ final class DiagnoseCommand extends Command
             && (!$taskFound || $taskDisabled || (\time() - $lastExecutionTime) > 3600);
 
         if ($stale) {
-            $this->writeStatus($io, '✗', 'queue is not draining (oldest entry > 1h and no recent scheduler run)');
-            ++$this->failureCount;
-            $this->captureFirstFailure("Async queue has entries older than 1 hour and no recent scheduler activity.\nRun `vendor/bin/typo3 webp:process-queue` manually to confirm the converter still works, then check the scheduler task / cron entry.");
+            $this->recordFailure(
+                $io,
+                'queue is not draining (oldest entry > 1h and no recent scheduler run)',
+                "Async queue has entries older than 1 hour and no recent scheduler activity.\nRun `vendor/bin/typo3 webp:process-queue` manually to confirm the converter still works, then check the scheduler task / cron entry.",
+            );
         }
     }
 
@@ -1116,8 +1126,7 @@ final class DiagnoseCommand extends Command
         $pick = $this->pickProbeTarget($selectedFormats);
         if (null === $pick) {
             $suffixes = \implode('/', \array_map(static fn (OutputFormat $f): string => $f->suffix(), $selectedFormats));
-            $this->writeStatus($io, '!', \sprintf('no original/sibling pair (%s) available on disk — probe skipped', $suffixes));
-            ++$this->warningCount;
+            $this->recordWarning($io, \sprintf('no original/sibling pair (%s) available on disk — probe skipped', $suffixes));
 
             return;
         }
@@ -1129,8 +1138,7 @@ final class DiagnoseCommand extends Command
 
         $publicUrl = $probeTarget->getPublicUrl();
         if (null === $publicUrl || '' === $publicUrl) {
-            $this->writeStatus($io, '!', 'probe target has no public URL (storage not public?) — probe skipped');
-            ++$this->warningCount;
+            $this->recordWarning($io, 'probe target has no public URL (storage not public?) — probe skipped');
 
             return;
         }
@@ -1200,9 +1208,11 @@ final class DiagnoseCommand extends Command
         if ($gradeType === $expectedMime && $gradeType !== $originalType) {
             $this->writeStatus($io, '✓', \sprintf('Accept-header rewrite is working for %s', $targetFormat->value));
         } elseif ($targetFormat === $topFormat && OutputFormat::Avif === $topFormat && 'image/webp' === $avifType) {
-            $this->writeStatus($io, '!', 'server prefers webp over avif — check content-negotiation priority in rewrite rules');
-            ++$this->warningCount;
-            $this->captureFirstFailure("The server is serving WebP when AVIF was expected as the top format.\nAdjust your Accept-header rewrite rules to give AVIF priority when the client supports it.");
+            $this->recordWarning(
+                $io,
+                'server prefers webp over avif — check content-negotiation priority in rewrite rules',
+                "The server is serving WebP when AVIF was expected as the top format.\nAdjust your Accept-header rewrite rules to give AVIF priority when the client supports it.",
+            );
         } elseif ($gradeType === $expectedMime && $gradeType === $originalType) {
             $this->failUnconditionalRewrite($io);
         } else {
@@ -1211,9 +1221,11 @@ final class DiagnoseCommand extends Command
 
         $vary = $avifResponse->getHeaderLine('Vary');
         if ('' === $vary || !\str_contains(\strtolower($vary), 'accept')) {
-            $this->writeStatus($io, '!', 'Vary: Accept header missing on webp response — any CDN in front will cache-poison');
-            ++$this->warningCount;
-            $this->captureFirstFailure("The webserver returned a .webp variant but did not add `Vary: Accept`.\nWithout that header any caching layer (Varnish, CloudFront, Cloudflare) will serve the WebP response to clients that did not request it. Add `Vary: Accept` to your rewrite rule.");
+            $this->recordWarning(
+                $io,
+                'Vary: Accept header missing on webp response — any CDN in front will cache-poison',
+                "The webserver returned a .webp variant but did not add `Vary: Accept`.\nWithout that header any caching layer (Varnish, CloudFront, Cloudflare) will serve the WebP response to clients that did not request it. Add `Vary: Accept` to your rewrite rule.",
+            );
         }
     }
 
@@ -1384,16 +1396,20 @@ final class DiagnoseCommand extends Command
 
     private function failNoRewrite(SymfonyStyle $io): void
     {
-        $this->writeStatus($io, '✗', 'webserver returns the original mime type even when the client accepts webp — no rewrite configured');
-        ++$this->failureCount;
-        $this->captureFirstFailure("The webserver is not rewriting requests to .webp siblings.\nAdd an Accept-header content-negotiation rule to your webserver config. See README → 'Webserver configuration' for Apache, nginx, and Caddy snippets.");
+        $this->recordFailure(
+            $io,
+            'webserver returns the original mime type even when the client accepts webp — no rewrite configured',
+            "The webserver is not rewriting requests to .webp siblings.\nAdd an Accept-header content-negotiation rule to your webserver config. See README → 'Webserver configuration' for Apache, nginx, and Caddy snippets.",
+        );
     }
 
     private function failUnconditionalRewrite(SymfonyStyle $io): void
     {
-        $this->writeStatus($io, '✗', 'webserver returns image/webp regardless of Accept header — unconditional rewrite (breaks clients that did not ask for webp)');
-        ++$this->failureCount;
-        $this->captureFirstFailure("The webserver rewrites every image request to .webp, even when the client did not send `Accept: image/webp`.\nThe rewrite must be gated by the Accept header. Check your rewrite rule for a missing `RewriteCond %{HTTP_ACCEPT} image/webp` (Apache) or `if (\$http_accept ~* webp)` (nginx).");
+        $this->recordFailure(
+            $io,
+            'webserver returns image/webp regardless of Accept header — unconditional rewrite (breaks clients that did not ask for webp)',
+            "The webserver rewrites every image request to .webp, even when the client did not send `Accept: image/webp`.\nThe rewrite must be gated by the Accept header. Check your rewrite rule for a missing `RewriteCond %{HTTP_ACCEPT} image/webp` (Apache) or `if (\$http_accept ~* webp)` (nginx).",
+        );
     }
 
     /**
@@ -1597,6 +1613,22 @@ final class DiagnoseCommand extends Command
         if (null === $this->firstFailure) {
             $this->firstFailure = $message;
         }
+    }
+
+    private function recordWarning(SymfonyStyle $io, string $line, string $recommendation = ''): void
+    {
+        $this->writeStatus($io, '!', $line);
+        ++$this->warningCount;
+        if ('' !== $recommendation) {
+            $this->captureFirstFailure($recommendation);
+        }
+    }
+
+    private function recordFailure(SymfonyStyle $io, string $line, string $recommendation): void
+    {
+        $this->writeStatus($io, '✗', $line);
+        ++$this->failureCount;
+        $this->captureFirstFailure($recommendation);
     }
 
     private function writeHeader(SymfonyStyle $io, string $title, string $style = 'fg=black;bg=cyan;options=bold'): void
