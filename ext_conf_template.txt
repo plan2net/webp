@@ -23,14 +23,14 @@ async = 0
 # cat=async; type=int+; label=Random sleep (ms) between conversions in the worker (0 = no sleep); each pause is randomized between half and 1.5x of this value
 async_throttle_ms = 0
 # cat=avif; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,External converter=Plan2net\Webp\Converter\ExternalConverter,libvips (native)=Plan2net\Webp\Converter\VipsConverter]; label=AVIF conversion adapter (see documentation)
-converter_avif =
+converter_avif = Plan2net\Webp\Converter\MagickConverter
 # cat=avif; type=string; label=AVIF conversion parameters (per mime type, separated by |)
-parameters_avif =
+parameters_avif = image/jpeg::-quality 60|image/png::-quality 75|image/gif::-quality 60
 # cat=avif; type=string; label=AVIF supported mime types (comma separated)
 mime_types_avif = image/jpeg,image/png,image/gif
 # cat=jxl; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,External converter=Plan2net\Webp\Converter\ExternalConverter,libvips (native)=Plan2net\Webp\Converter\VipsConverter]; label=JPEG XL conversion adapter (see documentation)
-converter_jxl =
+converter_jxl = Plan2net\Webp\Converter\MagickConverter
 # cat=jxl; type=string; label=JPEG XL conversion parameters (per mime type, separated by |)
-parameters_jxl =
+parameters_jxl = image/jpeg::-quality 75|image/png::-quality 90|image/gif::-quality 75
 # cat=jxl; type=string; label=JPEG XL supported mime types (comma separated)
 mime_types_jxl = image/jpeg,image/png,image/gif

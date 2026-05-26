@@ -663,23 +663,95 @@ final class DiagnoseCommand extends Command
 
     private function checkParameterParsing(SymfonyStyle $io, OutputFormat $format): void
     {
+        // Distinguish three states so the message tells the admin exactly what to do:
+        //   (1) parameters string is completely empty       → no per-mime check possible, one warning
+        //   (2) parameters set but no '::' separator        → applies to every mime type, one warning
+        //   (3) parameters set with mime entries but the    → per-mime warning for each missing entry
+        //       current mime isn't covered
+        $suggestion = $this->recommendedParametersFor($format);
+
+        if ('' === $this->configuration->getRawParameters($format)) {
+            $this->writeStatus($io, '!', \sprintf('parameters_%s is empty — recommended: %s', $format->value, $suggestion));
+            ++$this->warningCount;
+            $this->captureFirstFailure(\sprintf(
+                "parameters_%s is empty. Set it in the Extension Configuration to:\n  %s",
+                $format->value,
+                $suggestion,
+            ));
+
+            return;
+        }
+
+        $hasMimePrefix = \str_contains($this->configuration->getRawParameters($format), '::');
+        if (!$hasMimePrefix) {
+            $this->writeStatus($io, '!', \sprintf('parameters_%s has no `mime/type::` prefix — the same options apply to every supported mime type. Recommended: %s', $format->value, $suggestion));
+            ++$this->warningCount;
+            $this->captureFirstFailure(\sprintf(
+                "parameters_%s uses the legacy single-options format (no `mime/type::` prefix). It passes the same options to every supported mime. Replace with:\n  %s",
+                $format->value,
+                $suggestion,
+            ));
+
+            return;
+        }
+
         foreach (\Plan2net\Webp\Format\SourceMimeType::all() as $mimeType) {
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
                 continue;
             }
-            $resolved = $this->configuration->getParametersFor($format, $mimeType);
-            if (null === $resolved) {
-                $this->writeStatus($io, '!', \sprintf('parameters for %s @ %s could not be resolved — falls back to old single-options format', $format->value, $mimeType));
+            if (null === $this->configuration->getParametersFor($format, $mimeType)) {
+                $mimeSuggestion = $this->recommendedMimeEntry($format, $mimeType);
+                $this->writeStatus($io, '!', \sprintf('parameters_%s has no entry for %s — append `|%s`', $format->value, $mimeType, $mimeSuggestion));
                 ++$this->warningCount;
                 $this->captureFirstFailure(\sprintf(
-                    "Converter parameters cannot be resolved for format %s and mime type %s.\nThe parameters_%s string should look like 'image/jpeg::Q=85|image/png::Q=75'. Check the parameters_%s setting in the extension config.",
+                    'parameters_%s is missing a `%s::…` entry. Append `|%s` to the existing value so files of that mime type are converted.',
                     $format->value,
                     $mimeType,
-                    $format->value,
-                    $format->value,
+                    $mimeSuggestion,
                 ));
             }
         }
+    }
+
+    /**
+     * Looks at the currently-configured converter and returns the recommended
+     * parameter string for the given output format. Defaults to the
+     * ImageMagick recipe (which is what ext_conf_template ships) so the
+     * suggestion is always concrete instead of "see README".
+     */
+    private function recommendedParametersFor(OutputFormat $format): string
+    {
+        $converterClass = $this->configuration->getConverterFor($format);
+
+        if (VipsConverter::class === $converterClass) {
+            return match ($format) {
+                OutputFormat::Webp => 'image/jpeg::Q=85 smart_subsample=true effort=4|image/png::Q=75 lossless=true effort=4|image/gif::Q=75 lossless=true mixed=true effort=4',
+                OutputFormat::Avif => 'image/jpeg::Q=60 effort=4|image/png::Q=60 effort=4|image/gif::Q=60 effort=4',
+                OutputFormat::Jxl => 'image/jpeg::Q=75 effort=7|image/png::lossless=true effort=7|image/gif::lossless=true effort=7',
+            };
+        }
+
+        // MagickConverter, ExternalConverter and any custom converter that
+        // accepts ImageMagick-style flags fall through to this branch — also
+        // matches the empty `converter_<format>` default during boot.
+        return match ($format) {
+            OutputFormat::Webp => 'image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true',
+            OutputFormat::Avif => 'image/jpeg::-quality 60|image/png::-quality 75|image/gif::-quality 60',
+            OutputFormat::Jxl => 'image/jpeg::-quality 75|image/png::-quality 90|image/gif::-quality 75',
+        };
+    }
+
+    private function recommendedMimeEntry(OutputFormat $format, string $mimeType): string
+    {
+        foreach (\explode('|', $this->recommendedParametersFor($format)) as $segment) {
+            if (\str_starts_with($segment, $mimeType . '::')) {
+                return $segment;
+            }
+        }
+
+        // The recommendation table above always covers jpeg/png/gif, so this
+        // is only reached for hypothetical future mime types.
+        return $mimeType . '::-quality 75';
     }
 
     /**

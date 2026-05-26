@@ -162,10 +162,12 @@ Existing installs keep generating WebP only because `formats_enabled` defaults t
 | [`hide_webp`](#hide_webp)                     | `1`                                         | Hide generated sibling files (`.webp` / `.avif` / `.jxl`) in the BE file list |
 | [`mime_types`](#mime_types)                   | `image/jpeg,image/png,image/gif`            | Source mime types convertible to `webp`                |
 | [`parameters`](#parameters)                   | See below                                   | Per-mime-type WebP converter parameters (the `webp` slot) |
+| [`parameters_avif`](#parameters_avif)         | See below                                   | Per-mime-type AVIF converter parameters                 |
+| [`parameters_jxl`](#parameters_jxl)           | See below                                   | Per-mime-type JPEG XL converter parameters              |
 | [`silent`](#silent)                           | `1`                                         | Suppress converter stdout/stderr (Linux only)          |
 | [`use_system_settings`](#use_system_settings) | `1`                                         | Reuse GFX color profile settings (MagickConverter)     |
 
-Each non-webp format adds its own `converter_<format>`, `parameters_<format>`, and `mime_types_<format>` settings in dedicated `cat=avif` / `cat=jxl` tabs of the Extension Configuration form. See [`formats_enabled`](#formats_enabled) below.
+Each non-webp format adds its own `converter_<format>`, `parameters_<format>`, and `mime_types_<format>` settings in dedicated `cat=avif` / `cat=jxl` tabs of the Extension Configuration form. See [`formats_enabled`](#formats_enabled) and the per-format `parameters_avif` / `parameters_jxl` sections below.
 
 ### `async`
 
@@ -231,17 +233,12 @@ Comma-separated list of output formats this install should produce. Each enabled
 
 Each non-webp format reads its converter and parameters from per-format keys (in their own `cat=avif` / `cat=jxl` tabs in the Extension Configuration form):
 
-- `converter_avif`, `parameters_avif`, `mime_types_avif`
-- `converter_jxl`, `parameters_jxl`, `mime_types_jxl`
+- `converter_avif`, [`parameters_avif`](#parameters_avif), `mime_types_avif`
+- `converter_jxl`, [`parameters_jxl`](#parameters_jxl), `mime_types_jxl`
 
 The legacy `converter` + `parameters` + `mime_types` keys remain the source of truth for the WebP slot.
 
-**Recommended parameter strings** for libvips:
-
-```
-parameters_avif = image/jpeg::Q=60 effort=4|image/png::Q=60 effort=4|image/gif::Q=60 effort=4
-parameters_jxl  = image/jpeg::Q=75 effort=7|image/png::lossless=true effort=7|image/gif::lossless=true effort=7
-```
+Both `parameters_avif` and `parameters_jxl` ship with ImageMagick-compatible defaults so enabling a format works out of the box on the typical TYPO3 host. Tune to your stack — recipes for libvips and external binaries are under [`parameters_avif`](#parameters_avif) and [`parameters_jxl`](#parameters_jxl) below.
 
 ### `hide_webp`
 
@@ -332,6 +329,51 @@ Options are passed straight to libvips's `webpsave` — see the [option referenc
 
 > [!IMPORTANT]
 > Set `ffi.enable=true` in php.ini (not `preload` — jcupitt/vips does not support FFI preloading). On PHP 8.3+ also set `zend.max_allowed_stack_size=-1`; without it the default stack limit can cause spurious conversion failures.
+
+### `parameters_avif`
+
+Same `mime/type::params|…` syntax as [`parameters`](#parameters). Default targets ImageMagick (matches the default `converter_avif`):
+
+```
+parameters_avif = image/jpeg::-quality 60|image/png::-quality 75|image/gif::-quality 60
+```
+
+| Backend             | Recommended `parameters_avif`                                                          |
+|---------------------|----------------------------------------------------------------------------------------|
+| `MagickConverter`   | `image/jpeg::-quality 60\|image/png::-quality 75\|image/gif::-quality 60`              |
+| `VipsConverter`     | `image/jpeg::Q=60 effort=4\|image/png::Q=60 effort=4\|image/gif::Q=60 effort=4`        |
+| `ExternalConverter` | `image/jpeg::/usr/bin/avifenc --min 30 --max 50 %s %s\|image/png::…\|image/gif::…`     |
+
+AVIF at quality ~60 typically matches WebP at quality ~85 in filesize, often at better SSIM. For ImageMagick, `-quality` covers the common case; advanced encoders also accept `-define heic:speed=2` (slower, better compression) on builds with the libheif AV1 delegate.
+
+References:
+
+- [libheif AV1 encoder options](https://github.com/strukturag/libheif/blob/master/aom-options.md) (used by ImageMagick when compiled with libheif)
+- [libvips `heifsave` reference](https://www.libvips.org/API/current/VipsForeignSave.html#vips-heifsave) (the libvips AVIF entry point)
+- [`avifenc`](https://github.com/AOMediaCodec/libavif#installation) command-line flags
+
+`webp:diagnose` reports per-mime-type parameter resolution; if you enable AVIF and leave entries missing, it tells you which lines to add.
+
+### `parameters_jxl`
+
+Same syntax. Default targets ImageMagick:
+
+```
+parameters_jxl = image/jpeg::-quality 75|image/png::-quality 90|image/gif::-quality 75
+```
+
+| Backend             | Recommended `parameters_jxl`                                                                       |
+|---------------------|----------------------------------------------------------------------------------------------------|
+| `MagickConverter`   | `image/jpeg::-quality 75\|image/png::-quality 90\|image/gif::-quality 75`                          |
+| `VipsConverter`     | `image/jpeg::Q=75 effort=7\|image/png::lossless=true effort=7\|image/gif::lossless=true effort=7`  |
+| `ExternalConverter` | `image/jpeg::/usr/bin/cjxl --quality 75 %s %s\|image/png::/usr/bin/cjxl --lossless_jpeg=0 %s %s\|…`|
+
+JXL preserves PNG well in modular (lossless) mode — for `image/png`, prefer a higher quality value (or `lossless=true` on libvips) than for JPEG.
+
+References:
+
+- [libjxl encoder options](https://github.com/libjxl/libjxl/blob/main/doc/man/cjxl.txt)
+- [libvips `jxlsave` reference](https://www.libvips.org/API/current/VipsForeignSave.html#vips-jxlsave)
 
 ### `silent`
 
