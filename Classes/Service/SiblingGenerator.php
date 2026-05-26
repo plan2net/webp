@@ -44,7 +44,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         array $taskConfiguration,
         ?OutputFormat $onlyFormat = null,
     ): void {
-        if (null !== OutputFormat::tryFrom(\strtolower($originalFile->getExtension()))) {
+        if (OutputFormat::isOutputExtension($originalFile->getExtension())) {
             return;
         }
 

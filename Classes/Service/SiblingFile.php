@@ -104,7 +104,7 @@ final class SiblingFile implements LoggerAwareInterface
 
     private function shouldSkip(FileInterface $file): bool
     {
-        if (null !== OutputFormat::tryFrom(\strtolower($file->getExtension()))) {
+        if (OutputFormat::isOutputExtension($file->getExtension())) {
             return true;
         }
 

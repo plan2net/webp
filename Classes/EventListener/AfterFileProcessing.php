@@ -123,7 +123,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         $originalFile = $processedFile->getOriginalFile();
-        if (null !== OutputFormat::tryFrom(\strtolower($originalFile->getExtension()))) {
+        if (OutputFormat::isOutputExtension($originalFile->getExtension())) {
             return false;
         }
 

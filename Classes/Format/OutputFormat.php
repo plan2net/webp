@@ -23,4 +23,9 @@ enum OutputFormat: string
             self::Jxl => 'image/jxl',
         };
     }
+
+    public static function isOutputExtension(string $extension): bool
+    {
+        return null !== self::tryFrom(\strtolower($extension));
+    }
 }
