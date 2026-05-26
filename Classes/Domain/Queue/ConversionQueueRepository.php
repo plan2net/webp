@@ -8,12 +8,12 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Plan2net\Webp\Format\OutputFormat;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
-final class ConversionQueueRepository
+final readonly class ConversionQueueRepository
 {
     private const TABLE = 'tx_webp_queue';
 
     public function __construct(
-        private readonly ConnectionPool $connectionPool,
+        private ConnectionPool $connectionPool,
     ) {
     }
 

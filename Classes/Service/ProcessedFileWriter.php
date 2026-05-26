@@ -9,12 +9,12 @@ use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
 use TYPO3\CMS\Core\Resource\Processing\TaskTypeRegistry;
 
-final class ProcessedFileWriter
+final readonly class ProcessedFileWriter
 {
     public function __construct(
-        private readonly ProcessedFileRepository $repository,
-        private readonly TaskTypeRegistry $taskTypeRegistry,
-        private readonly Typo3Version $typo3Version,
+        private ProcessedFileRepository $repository,
+        private TaskTypeRegistry $taskTypeRegistry,
+        private Typo3Version $typo3Version,
     ) {
     }
 
