@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.5.1] - 2026-05-26
+
+### Changed
+
+- `parameters_avif` and `parameters_jxl` now ship ImageMagick-compatible defaults; `converter_avif` and `converter_jxl` default to `MagickConverter`. Enabling AVIF or JPEG XL via `formats_enabled` works out of the box on the typical TYPO3 host — no manual parameter string required. Override either to switch to libvips or an external binary.
+
+### Fixed
+
+- `webp:diagnose` parameter-parsing check now distinguishes empty, malformed-global, and missing-per-mime cases and emits the concrete recommended value for the configured converter, instead of pointing at the README.
+
+### Documentation
+
+- README adds dedicated `parameters_avif` and `parameters_jxl` sections with per-backend recipes (ImageMagick, libvips, external binaries).
+
 ## [14.5.0] - 2026-05-26
 
 ### Added
@@ -111,6 +125,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.5.1]: https://github.com/plan2net/webp/releases/tag/14.5.1
 [14.5.0]: https://github.com/plan2net/webp/releases/tag/14.5.0
 [14.4.1]: https://github.com/plan2net/webp/releases/tag/14.4.1
 [14.4.0]: https://github.com/plan2net/webp/releases/tag/14.4.0
