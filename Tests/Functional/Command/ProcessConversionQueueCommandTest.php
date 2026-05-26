@@ -7,6 +7,7 @@ namespace Plan2net\Webp\Tests\Functional\Command;
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Command\ProcessConversionQueueCommand;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\CMS\Core\Resource\File;
@@ -35,7 +36,8 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
-            ['webp' => true]
+            ['webp' => true],
+            OutputFormat::Webp,
         );
 
         $exitCode = $this->runCommand([]);
@@ -55,7 +57,8 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
-            ['webp' => true]
+            ['webp' => true],
+            OutputFormat::Webp,
         );
         $this->runCommand([]);
         self::assertFileExists($this->fileadminPath . 'tiny.png.webp');
@@ -66,7 +69,8 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
             (int) $file->getUid(),
             0,
             'Image.CropScaleMask',
-            ['webp' => true]
+            ['webp' => true],
+            OutputFormat::Webp,
         );
         $this->runCommand([]);
 
@@ -77,7 +81,7 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
     #[Test]
     public function queueModeSkipsMissingFiles(): void
     {
-        $this->get(ConversionQueueRepository::class)->enqueue(99999, 0, 'Image.CropScaleMask', []);
+        $this->get(ConversionQueueRepository::class)->enqueue(99999, 0, 'Image.CropScaleMask', [], OutputFormat::Webp);
 
         $exitCode = $this->runCommand([]);
 

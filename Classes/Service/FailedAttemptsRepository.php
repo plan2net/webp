@@ -15,7 +15,7 @@ final readonly class FailedAttemptsRepository
     ) {
     }
 
-    public function wasAttempted(int $fileUid, string $configuration, OutputFormat $format = OutputFormat::Webp): bool
+    public function wasAttempted(int $fileUid, string $configuration, OutputFormat $format): bool
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
 
@@ -40,7 +40,7 @@ final readonly class FailedAttemptsRepository
         }
     }
 
-    public function record(int $fileUid, string $configuration, OutputFormat $format = OutputFormat::Webp): void
+    public function record(int $fileUid, string $configuration, OutputFormat $format): void
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
         $queryBuilder->insert('tx_webp_failed')

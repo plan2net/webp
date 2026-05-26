@@ -17,7 +17,7 @@ final readonly class ConversionQueueRepository
     ) {
     }
 
-    public function enqueue(int $originalFileId, int $processedFileId, string $taskType, array $configuration, OutputFormat $format = OutputFormat::Webp): void
+    public function enqueue(int $originalFileId, int $processedFileId, string $taskType, array $configuration, OutputFormat $format): void
     {
         $serialized = \serialize($configuration);
         $hash = \md5($serialized);
