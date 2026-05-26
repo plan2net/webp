@@ -15,56 +15,6 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 final class ConfigurationTest extends TestCase
 {
     #[Test]
-    public function getConverterReturnsConfiguredClass(): void
-    {
-        $config = $this->configurationWith(['converter' => 'Plan2net\\Webp\\Converter\\PhpGdConverter']);
-
-        self::assertSame('Plan2net\\Webp\\Converter\\PhpGdConverter', $config->getConverter());
-    }
-
-    #[Test]
-    public function getConverterReturnsEmptyStringWhenKeyMissing(): void
-    {
-        $config = $this->configurationWith([]);
-
-        self::assertSame('', $config->getConverter());
-    }
-
-    #[Test]
-    public function getParametersReturnsRawString(): void
-    {
-        $config = $this->configurationWith(['parameters' => 'image/jpeg::-quality 85|image/png::-quality 75']);
-
-        self::assertSame('image/jpeg::-quality 85|image/png::-quality 75', $config->getParameters());
-    }
-
-    #[Test]
-    public function getParametersReturnsEmptyStringWhenKeyMissing(): void
-    {
-        $config = $this->configurationWith([]);
-
-        self::assertSame('', $config->getParameters());
-    }
-
-    #[Test]
-    public function isSupportedMimeTypeMatchesCaseInsensitively(): void
-    {
-        $config = $this->configurationWith(['mime_types' => 'image/jpeg,image/png']);
-
-        self::assertTrue($config->isSupportedMimeType('IMAGE/JPEG'));
-        self::assertTrue($config->isSupportedMimeType('image/png'));
-        self::assertFalse($config->isSupportedMimeType('image/gif'));
-    }
-
-    #[Test]
-    public function isSupportedMimeTypeReturnsFalseWhenListEmpty(): void
-    {
-        $config = $this->configurationWith([]);
-
-        self::assertFalse($config->isSupportedMimeType('image/jpeg'));
-    }
-
-    #[Test]
     #[DataProvider('booleanAccessorProvider')]
     public function booleanAccessorsCoerceStringFlag(string $key, string $accessor): void
     {
@@ -94,21 +44,6 @@ final class ConfigurationTest extends TestCase
     public function getAsyncThrottleMsReturnsConfiguredInteger(): void
     {
         self::assertSame(500, $this->configurationWith(['async_throttle_ms' => '500'])->getAsyncThrottleMs());
-    }
-
-    #[Test]
-    public function getMimeTypesReturnsLowercasedList(): void
-    {
-        self::assertSame(
-            ['image/jpeg', 'image/png'],
-            $this->configurationWith(['mime_types' => ' Image/JPEG , image/png '])->getMimeTypes()
-        );
-    }
-
-    #[Test]
-    public function getMimeTypesReturnsEmptyListWhenMissing(): void
-    {
-        self::assertSame([], $this->configurationWith([])->getMimeTypes());
     }
 
     #[Test]
@@ -160,9 +95,9 @@ final class ConfigurationTest extends TestCase
             ->willThrowException(new ExtensionConfigurationExtensionNotConfiguredException('not configured'));
         $config = new Configuration($extConfig);
 
-        self::assertSame('', $config->getConverter());
-        self::assertSame('', $config->getParameters());
-        self::assertFalse($config->isSupportedMimeType('image/jpeg'));
+        self::assertSame('', $config->getConverterFor(OutputFormat::Webp));
+        self::assertSame('', $config->getRawParameters(OutputFormat::Webp));
+        self::assertFalse($config->isSupportedMimeTypeFor(OutputFormat::Webp, 'image/jpeg'));
         self::assertFalse($config->isConvertAll());
         self::assertSame([], $config->getExcludeDirectories());
         self::assertFalse($config->isSilent());

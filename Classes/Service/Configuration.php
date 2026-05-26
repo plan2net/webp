@@ -16,31 +16,6 @@ final readonly class Configuration
     ) {
     }
 
-    public function getConverter(): string
-    {
-        return $this->stringValue('converter');
-    }
-
-    public function getParameters(): string
-    {
-        return $this->stringValue('parameters');
-    }
-
-    public function isSupportedMimeType(string $mimeType): bool
-    {
-        $list = $this->stringValue('mime_types');
-        if ('' === $list) {
-            return false;
-        }
-
-        $configured = array_map(
-            static fn (string $value): string => strtolower(trim($value)),
-            explode(',', $list),
-        );
-
-        return in_array(strtolower($mimeType), $configured, true);
-    }
-
     public function isConvertAll(): bool
     {
         return $this->boolValue('convert_all');
@@ -82,22 +57,6 @@ final readonly class Configuration
     public function getAsyncThrottleMs(): int
     {
         return (int) $this->stringValue('async_throttle_ms');
-    }
-
-    /**
-     * @return list<string>
-     */
-    public function getMimeTypes(): array
-    {
-        $raw = $this->stringValue('mime_types');
-        if ('' === $raw) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map(static fn (string $value): string => strtolower(trim($value)), explode(',', $raw)),
-            static fn (string $value): bool => '' !== $value,
-        ));
     }
 
     public function getFilterPattern(): ?string
