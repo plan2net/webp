@@ -108,12 +108,7 @@ final readonly class Configuration
 
     public function getConverterFor(OutputFormat $format): string
     {
-        $perFormat = $this->stringValue('converter_' . $format->value);
-        if ('' !== $perFormat) {
-            return $perFormat;
-        }
-
-        return OutputFormat::Webp === $format ? $this->stringValue('converter') : '';
+        return $this->perFormatOrLegacyWebp($format, 'converter');
     }
 
     public function getParametersFor(OutputFormat $format, string $mimeType): ?string
@@ -128,10 +123,7 @@ final readonly class Configuration
 
     public function isSupportedMimeTypeFor(OutputFormat $format, string $mimeType): bool
     {
-        $list = $this->stringValue('mime_types_' . $format->value);
-        if ('' === $list && OutputFormat::Webp === $format) {
-            $list = $this->stringValue('mime_types');
-        }
+        $list = $this->perFormatOrLegacyWebp($format, 'mime_types');
         if ('' === $list) {
             return false;
         }
@@ -146,12 +138,17 @@ final readonly class Configuration
 
     public function getRawParameters(OutputFormat $format): string
     {
-        $perFormat = $this->stringValue('parameters_' . $format->value);
+        return $this->perFormatOrLegacyWebp($format, 'parameters');
+    }
+
+    private function perFormatOrLegacyWebp(OutputFormat $format, string $baseKey): string
+    {
+        $perFormat = $this->stringValue($baseKey . '_' . $format->value);
         if ('' !== $perFormat) {
             return $perFormat;
         }
 
-        return OutputFormat::Webp === $format ? $this->stringValue('parameters') : '';
+        return OutputFormat::Webp === $format ? $this->stringValue($baseKey) : '';
     }
 
     private static function lookupMimeType(string $rawParameters, string $mimeType): ?string
