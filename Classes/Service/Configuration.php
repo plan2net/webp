@@ -65,14 +65,7 @@ final readonly class Configuration
         if ('' === $pattern) {
             return null;
         }
-
-        // Belt-and-braces: @ suppresses PHP 8.x E_WARNING for an invalid pattern;
-        // try/catch covers the forward-compat case where preg_match throws.
-        try {
-            if (false === @preg_match($pattern, '')) {
-                return null;
-            }
-        } catch (\Throwable) {
+        if (false === @preg_match($pattern, '')) {
             return null;
         }
 
