@@ -76,10 +76,10 @@ final class FileNameFilterTest extends TestCase
 
     protected function setUp(): void
     {
+        $reflection = new \ReflectionClass(FileNameFilter::class);
+        $reflection->setStaticPropertyValue('pattern', null);
+
         $this->extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
-        // One Configuration instance per test — filterSiblingFiles() consumes it on
-        // its first GeneralUtility::makeInstance call. Each #[Test] body in this
-        // class calls filterSiblingFiles exactly once, so one addInstance suffices.
         GeneralUtility::addInstance(
             Configuration::class,
             new Configuration($this->extensionConfiguration),

@@ -10,6 +10,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class FileNameFilter
 {
+    private static ?string $pattern = null;
+
     /** Hides generated sibling files (.webp/.avif/.jxl) from FAL file lists. */
     public static function filterSiblingFiles(
         string $itemName,
@@ -18,8 +20,9 @@ final class FileNameFilter
         array $additionalInformation = [],
         ?DriverInterface $driverInstance = null,
     ): int {
-        $pattern = GeneralUtility::makeInstance(Configuration::class)->getFilterPattern();
-        if (null !== $pattern && 1 === \preg_match($pattern, $itemIdentifier)) {
+        self::$pattern ??= GeneralUtility::makeInstance(Configuration::class)->getFilterPattern();
+
+        if (null !== self::$pattern && 1 === \preg_match(self::$pattern, $itemIdentifier)) {
             return -1;
         }
 
