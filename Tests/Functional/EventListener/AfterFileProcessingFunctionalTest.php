@@ -223,6 +223,24 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         self::assertSame(0, $queueRows, 'Existing current webp must not be re-enqueued');
     }
 
+    #[Test]
+    public function fallsBackToSynchronousConversionWhenQueueTableMissing(): void
+    {
+        // Upgrade install with async enabled but the DB analyzer not yet run:
+        // tx_webp_queue is absent, enqueue() throws, and the listener must
+        // convert synchronously instead of silently dropping the conversion.
+        $this->applyConfigOverride('async', '1');
+        $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->executeStatement('DROP TABLE tx_webp_queue');
+
+        $file = $this->getFile(1);
+        $processed = $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertFileExists($processed->getForLocalProcessing(false) . '.webp', 'sync fallback must still produce the webp sibling');
+        self::assertSame(1, $this->countWebpRowsForOriginal((int) $file->getUid()), 'sync fallback must finalize the processed-file row');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
