@@ -31,22 +31,26 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - [Troubleshooting](#troubleshooting)
 - [Known limitations](#known-limitations)
 
-## When to use this vs. TYPO3 14 native WebP
+## When to use this vs. TYPO3 core image conversion
 
-TYPO3 v14 introduced native WebP support via `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imageFileConversionFormats']`. The core mechanism converts processed image **output** to WebP: the processed file's extension is `.webp` and the URL changes accordingly (`photo.jpg` → `photo.webp`). It's WebP-only.
+TYPO3 core can already produce modern formats — this extension solves a different problem. The distinction is the delivery model, not the format list:
 
-This extension solves a different problem and supports all three formats:
+- **WebP** is a processing format since TYPO3 v13.0.
+- **AVIF** is a processing format since TYPO3 v13.4, but only via **ImageMagick** and **not by default** — GraphicsMagick has no AVIF support, so core only enables it when ImageMagick reports the capability (or you add `avif` to `imagefile_ext` yourself).
+- TYPO3 **v14** added `$GLOBALS['TYPO3_CONF_VARS']['GFX']['imageFileConversionFormats']`, an input→output format map (e.g. `'jpg' => 'webp'`, `'default' => 'avif'`).
 
-| Concern                                                | This extension                                                                                  | TYPO3 v14 native              |
-|--------------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------|
-| Formats supported                                      | WebP, AVIF, JPEG XL                                                                             | WebP only                     |
-| URL of served image                                    | Unchanged (`photo.jpg`)                                                                         | Changed (`photo.webp`)        |
-| HTML / templates                                       | Unchanged                                                                                       | Reference new URL             |
-| Fallback for browsers that lack the served format      | Transparent via webserver                                                                       | Need `<picture>` or polyfill  |
-| Requires webserver rewrite rule                        | Yes                                                                                             | No                            |
-| Works with cached HTML / CDN URLs                      | Yes                                                                                             | Cache invalidation needed     |
+In every core variant the processed file's extension — and therefore its URL — changes (`photo.jpg` → `photo.webp` / `photo.avif`). This extension instead writes sibling files next to the original and serves them via webserver content negotiation, so the URL never changes.
 
-Use the core mechanism if you can change URLs and only need WebP. Use this extension if URLs must stay stable, or you want AVIF/JPEG XL alongside WebP.
+| Concern                                                | This extension                                                                                  | TYPO3 core                                                  |
+|--------------------------------------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| Formats supported                                      | WebP, AVIF, JPEG XL                                                                             | WebP (13.0+), AVIF (13.4+, ImageMagick) — **no JPEG XL**    |
+| URL of served image                                    | Unchanged (`photo.jpg`)                                                                         | Changed (`photo.webp` / `photo.avif`)                       |
+| HTML / templates                                       | Unchanged                                                                                       | Reference new URL                                           |
+| Fallback for browsers that lack the served format      | Transparent via webserver                                                                       | Need `<picture>` or polyfill                                |
+| Requires webserver rewrite rule                        | Yes                                                                                             | No                                                          |
+| Works with cached HTML / CDN URLs                      | Yes                                                                                             | Cache invalidation needed                                   |
+
+Use the core mechanism if you can change URLs. Use this extension if URLs must stay stable (cached HTML, CDN, stable references), you want transparent per-request fallback, or you want **JPEG XL**.
 
 ## About the formats
 
@@ -420,7 +424,19 @@ Register this as a second Scheduler task ("Execute console command") if you want
 
 The webserver inspects the client's `Accept` header and rewrites the request to the best-matching sibling that's available on disk. If only WebP is enabled, the server has two candidates: serve `.webp` when the client accepts it, otherwise fall back to the original JPEG/PNG/GIF. With AVIF or JPEG XL enabled too, the server picks among the available siblings in client-preference order.
 
-Below are examples for nginx and Apache. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for both servers: [nginx.conf](Tests/E2E/nginx.conf) and [apache.conf](Tests/E2E/apache.conf).
+Below are examples for nginx, Apache, and Caddy. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for nginx and Apache: [nginx.conf](Tests/E2E/nginx.conf) and [apache.conf](Tests/E2E/apache.conf).
+
+### Which blocks do I need?
+
+Generate rules **only for the formats your install actually produces** (the [`formats_enabled`](#formats_enabled) setting), and always list them in this fixed preference order — **AVIF → WebP → JPEG XL**. The first match wins, so the wrong order is the single most common reason only one format ever gets served.
+
+| `formats_enabled` | Keep these rules            |
+|-------------------|-----------------------------|
+| `webp`            | WebP only                   |
+| `webp,avif`       | AVIF + WebP (AVIF first)     |
+| `webp,avif,jxl`   | all three, AVIF → WebP → JXL |
+
+Delete the blocks for any format you didn't enable; each per-server example below is shown with all three formats.
 
 > [!IMPORTANT]
 > Make sure no earlier rule in your config short-circuits the request for the image extensions you target (e.g. a generic static-asset block). If so, move the sibling-rewrite rules above it or rework the earlier rule.
@@ -542,6 +558,53 @@ Substitute either for the `RewriteRule ^ %{REQUEST_FILENAME}\.webp …` line abo
 RewriteCond %{HTTP_ACCEPT} image/webp
 RewriteCond %{HTTP_USER_AGENT} ^.*(Chrome|Firefox|Edge).*$ [NC]
 …
+```
+
+### Caddy
+
+Caddy negotiates on the `Accept` header with one `map` per format and a single `try_files` in preference order. Because the sibling naming matches this extension (`photo.jpg.avif`), the public URL never changes — `try_files` just serves the first sibling that exists. Place this inside your site block; it assumes a `file_server` (and `root`) is already configured, as in a standard TYPO3 Caddy vhost:
+
+```caddy
+map {header.Accept} {avif_suffix} {
+    ~image/avif avif
+    default     ""
+}
+map {header.Accept} {webp_suffix} {
+    ~image/webp webp
+    default     ""
+}
+map {header.Accept} {jxl_suffix} {
+    ~image/jxl  jxl
+    default     ""
+}
+
+@images {
+    path_regexp \.(png|gif|jpe?g)$
+}
+handle @images {
+    header Vary Accept
+    try_files {path}.{avif_suffix} {path}.{webp_suffix} {path}.{jxl_suffix} {path} =404
+}
+```
+
+`try_files` lists the formats in preference order (AVIF → WebP → JPEG XL); Caddy serves the first sibling present on disk and falls back to the original. A format the client didn't ask for expands to an empty suffix (`{path}.`), which never matches a real file and is skipped.
+
+If you only generate `.webp`, reduce it to the single `webp_suffix` map and `try_files {path}.{webp_suffix} {path}`.
+
+> [!NOTE]
+> Caddy derives `Content-Type` from the **served sibling's** extension (via Go's MIME database and your system `mime.types`). `.webp` and `.avif` usually resolve out of the box; if `.jxl` comes back as `application/octet-stream`, add `image/jxl jxl` to your `mime.types`. Verify with `curl -I` as in [Verifying it works](#verifying-it-works).
+
+Unlike the nginx and Apache examples, the Caddy snippet is not yet exercised by the E2E suite.
+
+#### Restrict by user agent (optional)
+
+Add a `header User-Agent` condition to the `@images` matcher — requests from other agents skip the `handle` and fall through to the original file:
+
+```caddy
+@images {
+    path_regexp \.(png|gif|jpe?g)$
+    header User-Agent *Chrome* *Firefox* *Edge*
+}
 ```
 
 ## Remote storages (S3, Azure, custom FAL drivers)
@@ -697,7 +760,7 @@ The next page render will regenerate siblings for every currently-enabled format
 
 ## Alternatives
 
-- **TYPO3 v14 native WebP** — see [the comparison above](#when-to-use-this-vs-typo3-14-native-webp). Best fit when you can change URLs.
+- **TYPO3 core image conversion** — see [the comparison above](#when-to-use-this-vs-typo3-core-image-conversion). Best fit when you can change URLs.
 - **Apache `mod_pagespeed` / nginx `ngx_pagespeed`** — Google's automatic image-rewriting modules. Equal end-result with `pagespeed EnableFilters convert_jpeg_to_webp;` plus `convert_to_webp_lossless;`, but more involved to set up and operate.
 - **Cloudflare Polish** or similar CDN-level image optimisation.
 
