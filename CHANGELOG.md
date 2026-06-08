@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.5.2] - 2026-06-08
+
+### Documentation
+
+- Added a Caddy webserver recipe for `Accept`-header content negotiation, alongside the existing nginx and Apache examples. All three configs are now exercised by the E2E suite.
+- Rewrote the core-vs-extension comparison: TYPO3 core handles WebP (13.0+) and AVIF (13.4+, ImageMagick); this extension's distinct value is unchanged URLs, transparent per-request fallback, and JPEG XL.
+
+### Changed
+
+- `FileNameFilter` caches the resolved filter pattern instead of recompiling it on every backend file-list row.
+
 ## [14.5.1] - 2026-05-26
 
 ### Changed
@@ -125,6 +136,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.5.2]: https://github.com/plan2net/webp/releases/tag/14.5.2
 [14.5.1]: https://github.com/plan2net/webp/releases/tag/14.5.1
 [14.5.0]: https://github.com/plan2net/webp/releases/tag/14.5.0
 [14.4.1]: https://github.com/plan2net/webp/releases/tag/14.4.1
