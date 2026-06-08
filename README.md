@@ -424,7 +424,7 @@ Register this as a second Scheduler task ("Execute console command") if you want
 
 The webserver inspects the client's `Accept` header and rewrites the request to the best-matching sibling that's available on disk. If only WebP is enabled, the server has two candidates: serve `.webp` when the client accepts it, otherwise fall back to the original JPEG/PNG/GIF. With AVIF or JPEG XL enabled too, the server picks among the available siblings in client-preference order.
 
-Below are examples for nginx, Apache, and Caddy. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for nginx and Apache: [nginx.conf](Tests/E2E/nginx.conf) and [apache.conf](Tests/E2E/apache.conf).
+Below are examples for nginx, Apache, and Caddy. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for all three: [nginx.conf](Tests/E2E/nginx.conf), [apache.conf](Tests/E2E/apache.conf) and [caddy.conf](Tests/E2E/caddy.conf).
 
 ### Which blocks do I need?
 
@@ -593,8 +593,6 @@ If you only generate `.webp`, reduce it to the single `webp_suffix` map and `try
 
 > [!NOTE]
 > Caddy derives `Content-Type` from the **served sibling's** extension (via Go's MIME database and your system `mime.types`). `.webp` and `.avif` usually resolve out of the box; if `.jxl` comes back as `application/octet-stream`, add `image/jxl jxl` to your `mime.types`. Verify with `curl -I` as in [Verifying it works](#verifying-it-works).
-
-Unlike the nginx and Apache examples, the Caddy snippet is not yet exercised by the E2E suite.
 
 #### Restrict by user agent (optional)
 

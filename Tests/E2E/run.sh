@@ -10,7 +10,7 @@
 #      → IMG_RESOURCE renders → FAL processing fires → AfterFileProcessing
 #        listener creates .webp/.avif/.jxl siblings next to the ProcessedFile
 #   4. Assert each enabled format's sibling exists on disk
-#   5. For nginx then Apache: start with our recipe, curl with four
+#   5. For nginx, Apache then Caddy: start with our recipe, curl with four
 #      Accept headers against the processed-file URL, assert Content-Type, stop
 #
 set -euo pipefail
@@ -298,9 +298,24 @@ stop_apache() {
     APACHE_PID=
 }
 
+start_caddy() {
+    render_server_conf "$script_dir/caddy.conf" /tmp/plan2net-webp-e2e/caddy.conf
+    caddy run --config /tmp/plan2net-webp-e2e/caddy.conf --adapter caddyfile &
+    CADDY_PID=$!
+    sleep 1
+}
+stop_caddy() {
+    if [[ -n "${CADDY_PID:-}" ]] && kill -0 "$CADDY_PID" 2>/dev/null; then
+        kill "$CADDY_PID" 2>/dev/null || true
+        wait "$CADDY_PID" 2>/dev/null || true
+    fi
+    CADDY_PID=
+}
+
 cleanup() {
     stop_nginx
     stop_apache
+    stop_caddy
 }
 trap cleanup EXIT
 
@@ -324,6 +339,16 @@ else
     skip_count=$((skip_count + 1))
 fi
 
+if command -v caddy >/dev/null 2>&1; then
+    start_caddy
+    probe_all_accept_variants "caddy"
+    stop_caddy
+else
+    echo
+    echo "== caddy: skipped — daemon not installed =="
+    skip_count=$((skip_count + 1))
+fi
+
 # Summary
 echo
 echo "================================="
@@ -338,6 +363,10 @@ if [[ $fail_count -gt 0 ]]; then
     if [[ -f /tmp/plan2net-webp-e2e/apache-error.log ]]; then
         echo "--- apache-error.log ---"
         tail -30 /tmp/plan2net-webp-e2e/apache-error.log
+    fi
+    if [[ -f /tmp/plan2net-webp-e2e/caddy-error.log ]]; then
+        echo "--- caddy-error.log ---"
+        tail -30 /tmp/plan2net-webp-e2e/caddy-error.log
     fi
     exit 1
 fi

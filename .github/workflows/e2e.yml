@@ -10,8 +10,43 @@ on:
   pull_request:
 
 jobs:
+  # Fetch the Caddy binary once, with retries + a fallback mirror, and publish
+  # it as an artifact. The matrix jobs below then pull it from GitHub's own
+  # artifact store instead of all hammering the release CDN in parallel (which
+  # was 504-ing under the thundering herd of 8 simultaneous downloads).
+  setup-caddy:
+    name: Fetch Caddy binary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Caddy
+        run: |
+          CADDY_VERSION=2.8.4
+          for url in \
+            "https://github.com/caddyserver/caddy/releases/download/v${CADDY_VERSION}/caddy_${CADDY_VERSION}_linux_amd64.tar.gz" \
+            "https://caddyserver.com/api/download?os=linux&arch=amd64" ; do
+            echo "Trying $url"
+            if curl -fSL --retry 8 --retry-all-errors --retry-delay 5 -o /tmp/caddy.dl "$url"; then
+              break
+            fi
+          done
+          # The GitHub asset is a .tar.gz; the download API returns a raw binary.
+          if file /tmp/caddy.dl | grep -q gzip; then
+            tar -xzf /tmp/caddy.dl -C /tmp caddy
+          else
+            mv /tmp/caddy.dl /tmp/caddy
+          fi
+          chmod +x /tmp/caddy
+          /tmp/caddy version
+      - name: Upload Caddy binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: caddy-bin
+          path: /tmp/caddy
+          retention-days: 1
+
   e2e:
     name: E2E PHP ${{ matrix.php }} / TYPO3 ${{ matrix.typo3 }}
+    needs: setup-caddy
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -37,6 +72,18 @@ jobs:
       - name: Install system packages (act fallback)
         if: ${{ env.ACT }}
         run: sudo apt-get update && sudo apt-get install -y nginx apache2 sqlite3 imagemagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools libvips-tools
+
+      # Caddy isn't in Ubuntu's apt repos. Pull the binary fetched once by the
+      # setup-caddy job (artifacts don't preserve the exec bit, so re-set it).
+      - name: Install Caddy
+        uses: actions/download-artifact@v7
+        with:
+          name: caddy-bin
+          path: /tmp/caddy-bin
+      - name: Register Caddy on PATH
+        run: |
+          sudo install -m 0755 /tmp/caddy-bin/caddy /usr/local/bin/caddy
+          caddy version
 
       - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2

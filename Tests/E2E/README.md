@@ -3,11 +3,11 @@
 Black-box end-to-end coverage of two things the functional tests can't reach:
 
 1. **Sibling generation** — that a real TYPO3 install with `formats_enabled = webp,avif,jxl` actually writes all three sibling files to disk when an image is processed.
-2. **Webserver content negotiation** — that the documented nginx and Apache rewrite recipes in [README.md](../../README.md) actually serve the right format per `Accept` header against a real `nginx` / `apache2` daemon (not just our `webp:diagnose` HTTP probe).
+2. **Webserver content negotiation** — that the documented nginx, Apache and Caddy rewrite recipes in [README.md](../../README.md) actually serve the right format per `Accept` header against a real `nginx` / `apache2` / `caddy` daemon (not just our `webp:diagnose` HTTP probe).
 
 ## Running locally
 
-Requires a Linux host with `nginx`, `apache2`, `imagemagick`, `libvips-tools`, `libheif1`, `libjxl-tools`, PHP 8.2+ with `pdo_sqlite` + `ffi`, and Composer.
+Requires a Linux host with `nginx`, `apache2`, `caddy`, `imagemagick`, `libvips-tools`, `libheif1`, `libjxl-tools`, PHP 8.2+ with `pdo_sqlite` + `ffi`, and Composer. Each webserver is skipped cleanly if its binary is absent.
 
 ```sh
 bash Tests/E2E/run.sh
@@ -28,7 +28,7 @@ TYPO3_VERSION='^13.4' bash Tests/E2E/run.sh
 3. Drops a fixture JPEG into `fileadmin/`, writes the multi-format extension config into `config/system/settings.php`.
 4. Runs `vendor/bin/typo3 webp:process-queue --folder=fileadmin` so all three sibling formats land on disk.
 5. Asserts each sibling exists (or is skipped cleanly when the underlying delegate is missing on this host).
-6. For **each** webserver (nginx, then Apache):
+6. For **each** webserver (nginx, Apache, then Caddy):
    - Starts the daemon on `127.0.0.1:8090` against the test instance, configured with the rewrite recipe straight from the project README.
    - Sends four `curl -I` requests with different `Accept` headers (avif / jxl / webp / `*/*`) and asserts the `Content-Type` is what the recipe should serve.
    - Stops the daemon.
