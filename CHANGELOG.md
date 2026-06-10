@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.5.3] - 2026-06-10
+
+### Changed
+
+- `Configuration` memoizes parsed settings (enabled formats, mime-type lists, exclude directories) instead of re-parsing them on every processed image. The cache is keyed by the raw setting value, so runtime configuration changes are still picked up.
+- `FileNameFilter` now also caches an absent filter pattern instead of re-resolving the configuration for every backend file-list row.
+- `webp:process-queue --folder` converts images while scanning instead of loading the complete file list into memory first.
+
+### Fixed
+
+- The folder sweep now matches uppercase and mixed-case file extensions (`IMAGE.JPG`), consistent with the FAL-driven conversion path.
+
 ## [14.5.2] - 2026-06-08
 
 ### Documentation
