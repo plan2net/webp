@@ -247,6 +247,22 @@ final class ConfigurationTest extends TestCase
         self::assertTrue($config->isFormatRunnable(OutputFormat::Webp));
     }
 
+    #[Test]
+    public function reflectsRuntimeConfigurationChangesBetweenCalls(): void
+    {
+        $extConfig = $this->createMock(ExtensionConfiguration::class);
+        $extConfig->method('get')
+            ->with('webp')
+            ->willReturnOnConsecutiveCalls(
+                ['formats_enabled' => 'webp'],
+                ['formats_enabled' => 'avif'],
+            );
+        $configuration = new Configuration($extConfig);
+
+        self::assertSame([OutputFormat::Webp], $configuration->getEnabledFormats());
+        self::assertSame([OutputFormat::Avif], $configuration->getEnabledFormats());
+    }
+
     private function configurationWith(array $settings): Configuration
     {
         $extConfig = $this->createMock(ExtensionConfiguration::class);

@@ -9,10 +9,13 @@ use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationExtensionNotCon
 use TYPO3\CMS\Core\Configuration\Exception\ExtensionConfigurationPathDoesNotExistException;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 
-final readonly class Configuration
+final class Configuration
 {
+    /** @var array<string, array{raw: string, parsed: mixed}> */
+    private array $parsedValues = [];
+
     public function __construct(
-        private ExtensionConfiguration $extensionConfiguration,
+        private readonly ExtensionConfiguration $extensionConfiguration,
     ) {
     }
 
@@ -23,15 +26,14 @@ final readonly class Configuration
 
     public function getExcludeDirectories(): array
     {
-        $raw = $this->stringValue('exclude_directories');
-        if ('' === $raw) {
-            return [];
-        }
-
-        return array_values(array_filter(
-            array_map('trim', explode(';', $raw)),
-            static fn (string $value): bool => '' !== $value,
-        ));
+        return $this->memoizedParse(
+            'exclude_directories',
+            $this->stringValue('exclude_directories'),
+            static fn (string $raw): array => array_values(array_filter(
+                array_map('trim', explode(';', $raw)),
+                static fn (string $value): bool => '' !== $value,
+            )),
+        );
     }
 
     public function isSilent(): bool
@@ -77,20 +79,11 @@ final readonly class Configuration
      */
     public function getEnabledFormats(): array
     {
-        $raw = $this->stringValue('formats_enabled');
-        if ('' === $raw) {
-            return [OutputFormat::Webp];
-        }
-
-        $formats = [];
-        foreach (\explode(',', $raw) as $token) {
-            $format = OutputFormat::tryFrom(\strtolower(\trim($token)));
-            if (null !== $format) {
-                $formats[] = $format;
-            }
-        }
-
-        return $formats;
+        return $this->memoizedParse(
+            'formats_enabled',
+            $this->stringValue('formats_enabled'),
+            self::parseEnabledFormats(...),
+        );
     }
 
     public function isFormatRunnable(OutputFormat $format): bool
@@ -116,14 +109,16 @@ final readonly class Configuration
 
     public function isSupportedMimeTypeFor(OutputFormat $format, string $mimeType): bool
     {
-        $list = $this->perFormatOrLegacyWebp($format, 'mime_types');
-        if ('' === $list) {
-            return false;
-        }
-
-        $configured = \array_map(
-            static fn (string $value): string => \strtolower(\trim($value)),
-            \explode(',', $list),
+        $configured = $this->memoizedParse(
+            'mime_types_' . $format->value,
+            $this->perFormatOrLegacyWebp($format, 'mime_types'),
+            static fn (string $raw): array => \array_values(\array_filter(
+                \array_map(
+                    static fn (string $value): string => \strtolower(\trim($value)),
+                    \explode(',', $raw),
+                ),
+                static fn (string $value): bool => '' !== $value,
+            )),
         );
 
         return \in_array(\strtolower($mimeType), $configured, true);
@@ -132,6 +127,44 @@ final readonly class Configuration
     public function getRawParameters(OutputFormat $format): string
     {
         return $this->perFormatOrLegacyWebp($format, 'parameters');
+    }
+
+    /**
+     * @template T
+     *
+     * @param \Closure(string): T $parse
+     *
+     * @return T
+     */
+    private function memoizedParse(string $cacheKey, string $raw, \Closure $parse): mixed
+    {
+        $entry = $this->parsedValues[$cacheKey] ?? null;
+        if (null === $entry || $entry['raw'] !== $raw) {
+            $entry = ['raw' => $raw, 'parsed' => $parse($raw)];
+            $this->parsedValues[$cacheKey] = $entry;
+        }
+
+        return $entry['parsed'];
+    }
+
+    /**
+     * @return list<OutputFormat>
+     */
+    private static function parseEnabledFormats(string $raw): array
+    {
+        if ('' === $raw) {
+            return [OutputFormat::Webp];
+        }
+
+        $formats = [];
+        foreach (\explode(',', $raw) as $token) {
+            $format = OutputFormat::tryFrom(\strtolower(\trim($token)));
+            if (null !== $format) {
+                $formats[] = $format;
+            }
+        }
+
+        return $formats;
     }
 
     private function perFormatOrLegacyWebp(OutputFormat $format, string $baseKey): string
