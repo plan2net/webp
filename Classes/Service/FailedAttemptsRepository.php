@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Service;
 
 use Doctrine\DBAL\Exception;
 use Plan2net\Webp\Format\OutputFormat;
+use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 final readonly class FailedAttemptsRepository
@@ -23,7 +24,10 @@ final readonly class FailedAttemptsRepository
             return (bool) $queryBuilder->count('uid')
                 ->from('tx_webp_failed')
                 ->where(
-                    $queryBuilder->expr()->eq('file_id', $fileUid),
+                    $queryBuilder->expr()->eq(
+                        'file_id',
+                        $queryBuilder->createNamedParameter($fileUid, Connection::PARAM_INT),
+                    ),
                     $queryBuilder->expr()->eq(
                         'configuration_hash',
                         $queryBuilder->createNamedParameter(md5($configuration)),
