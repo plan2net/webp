@@ -74,10 +74,27 @@ final class FileNameFilterTest extends TestCase
         ];
     }
 
+    #[Test]
+    public function resolvesConfigurationOnlyOnceWhenNoPatternIsConfigured(): void
+    {
+        $this->seedPattern('');
+
+        $unexpectedExtensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        $unexpectedExtensionConfiguration->expects(self::never())->method('get');
+        GeneralUtility::addInstance(
+            Configuration::class,
+            new Configuration($unexpectedExtensionConfiguration),
+        );
+
+        FileNameFilter::filterSiblingFiles('photo.jpg.webp', '/_processed_/photo.jpg.webp');
+        FileNameFilter::filterSiblingFiles('icon.png.webp', '/_processed_/icon.png.webp');
+    }
+
     protected function setUp(): void
     {
         $reflection = new \ReflectionClass(FileNameFilter::class);
         $reflection->setStaticPropertyValue('pattern', null);
+        $reflection->setStaticPropertyValue('patternResolved', false);
 
         $this->extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
         GeneralUtility::addInstance(

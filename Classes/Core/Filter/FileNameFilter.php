@@ -11,6 +11,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 final class FileNameFilter
 {
     private static ?string $pattern = null;
+    private static bool $patternResolved = false;
 
     /** Hides generated sibling files (.webp/.avif/.jxl) from FAL file lists. */
     public static function filterSiblingFiles(
@@ -20,7 +21,10 @@ final class FileNameFilter
         array $additionalInformation = [],
         ?DriverInterface $driverInstance = null,
     ): int {
-        self::$pattern ??= GeneralUtility::makeInstance(Configuration::class)->getFilterPattern();
+        if (!self::$patternResolved) {
+            self::$pattern = GeneralUtility::makeInstance(Configuration::class)->getFilterPattern();
+            self::$patternResolved = true;
+        }
 
         if (null !== self::$pattern && 1 === \preg_match(self::$pattern, $itemIdentifier)) {
             return -1;
