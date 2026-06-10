@@ -87,6 +87,27 @@ final class FolderScannerTest extends TestCase
     }
 
     #[Test]
+    public function matchesExtensionsCaseInsensitively(): void
+    {
+        $this->touchAtPath($this->tempDir . '/UPPER.JPG');
+        $this->touchAtPath($this->tempDir . '/mixed.Png');
+
+        $entries = \iterator_to_array(
+            (new FolderScanner())->scan($this->tempDir, ['image/jpeg', 'image/png'], [OutputFormat::Webp]),
+            false
+        );
+
+        \usort($entries, static fn (array $a, array $b): int => $a['path'] <=> $b['path']);
+        self::assertSame(
+            [
+                ['path' => $this->tempDir . '/UPPER.JPG', 'mimeType' => 'image/jpeg', 'missingFormats' => [OutputFormat::Webp]],
+                ['path' => $this->tempDir . '/mixed.Png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Webp]],
+            ],
+            $entries
+        );
+    }
+
+    #[Test]
     public function recursesIntoSubdirectories(): void
     {
         \mkdir($this->tempDir . '/sub', 0o777, true);

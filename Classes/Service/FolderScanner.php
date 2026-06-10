@@ -30,10 +30,14 @@ final class FolderScanner
             return;
         }
 
+        $extensionPattern = \implode('|', \array_map(
+            static fn (string $extension): string => \preg_quote($extension, '/'),
+            $extensions,
+        ));
         $finder = (new Finder())
             ->files()
             ->in($folder)
-            ->name(\array_map(static fn (string $ext): string => '*.' . $ext, $extensions));
+            ->name('/\\.(?:' . $extensionPattern . ')$/i');
 
         foreach ($finder as $fileInfo) {
             $path = $fileInfo->getPathname();
