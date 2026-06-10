@@ -112,7 +112,9 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
                 $this->logger?->error('webp queue: ' . $e->getMessage(), ['originalFileId' => $entry->originalFileId, 'format' => $entry->format->value]);
             } finally {
                 $this->queueRepository->remove($entry->uid);
-                $this->applyThrottle($throttleMs, $index === $lastIndex);
+                if ($index !== $lastIndex) {
+                    $this->applyThrottle($throttleMs);
+                }
             }
         }
 
@@ -135,10 +137,12 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         }
         $mimeTypes = $this->mimeTypeUnion($enabledFormats);
 
-        $entries = \iterator_to_array($this->folderScanner->scan($rootPath, $mimeTypes, $enabledFormats), false);
-        $lastIndex = \count($entries) - 1;
-
-        foreach ($entries as $index => $entry) {
+        $isFirstEntry = true;
+        foreach ($this->folderScanner->scan($rootPath, $mimeTypes, $enabledFormats) as $entry) {
+            if (!$isFirstEntry) {
+                $this->applyThrottle($throttleMs);
+            }
+            $isFirstEntry = false;
             foreach ($entry['missingFormats'] as $format) {
                 if (!$this->configuration->isSupportedMimeTypeFor($format, $entry['mimeType'])) {
                     continue;
@@ -155,7 +159,6 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
                     $this->logger?->error('webp folder: ' . $exception->getMessage(), ['path' => $entry['path'], 'format' => $format->value]);
                 }
             }
-            $this->applyThrottle($throttleMs, $index === $lastIndex);
         }
 
         return Command::SUCCESS;
@@ -211,9 +214,9 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         return $candidate;
     }
 
-    private function applyThrottle(int $throttleMs, bool $isLast): void
+    private function applyThrottle(int $throttleMs): void
     {
-        if ($throttleMs <= 0 || $isLast) {
+        if ($throttleMs <= 0) {
             return;
         }
         $min = \intdiv($throttleMs, 2);
