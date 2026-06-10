@@ -127,15 +127,15 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return false;
         }
 
+        if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
+            return false;
+        }
+
         if (!$this->anyEnabledFormatAcceptsMimeType($originalFile->getMimeType())) {
             return false;
         }
 
         if (!$this->configuration->isConvertAll() && !$this->isFileInProcessingFolder($processedFile)) {
-            return false;
-        }
-
-        if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
             return false;
         }
 
