@@ -23,6 +23,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - [Installation](#installation)
 - [Updating](#updating)
 - [Configuration](#configuration)
+- [Per-image quality override](#per-image-quality-override)
 - [Async mode](#async-mode)
 - [Webserver configuration](#webserver-configuration)
 - [Remote storages (S3, Azure, custom FAL drivers)](#remote-storages-s3-azure-custom-fal-drivers)
@@ -398,6 +399,16 @@ use_system_settings = 1
 Applies only to `MagickConverter`. When enabled, the value of `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_stripColorProfileCommand']` and `processor_stripColorProfileParameters` is appended to converter arguments automatically — no need to repeat the setting per mime type.
 
 `PhpGdConverter` and external-binary configurations ignore this flag.
+
+## Per-image quality override
+
+The [`parameters`](#parameters) quality is a site-wide default. A single large image — a full-bleed hero, for example — often tolerates stronger compression than that default without a visible loss, while smaller images do not. Editors can override the quality for one image from its file metadata.
+
+In the **Filelist** module, edit a file's metadata and set **Compression quality** (`1`–`100`, lower = stronger compression and a smaller file). Leave it at `0` to use the global setting. The value applies to that file across every enabled output format and overrides the `-quality` / `Q=` / `quality=` token in the active converter's parameters.
+
+The override is a property of the **file**, not of a single usage, so it applies everywhere the image is referenced. It is read from the current metadata at conversion time, so changing it regenerates the sibling on the next image processing.
+
+> Already-rendered pages keep serving the previous sibling from cache until they are re-rendered. After changing the quality of an image that is already in use, flush the affected frontend caches (or wait for them to expire) to see the new sibling.
 
 ## Async mode
 

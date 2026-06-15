@@ -8,6 +8,7 @@ use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
+use Plan2net\Webp\Service\QualityOverride;
 use Plan2net\Webp\Service\SiblingGenerator;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Log\LoggerAwareInterface;
@@ -80,6 +81,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
     {
         $processedFileId = $processedFile->usesOriginalFile() ? 0 : (int) $processedFile->getUid();
         $mimeType = $originalFile->getMimeType();
+        $quality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
 
         foreach ($this->configuration->getEnabledFormats() as $format) {
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
@@ -89,6 +91,9 @@ final class AfterFileProcessing implements LoggerAwareInterface
                 continue;
             }
             $formatConfiguration = $taskConfiguration + ['format' => $format->value, 'webp' => true];
+            if (null !== $quality) {
+                $formatConfiguration['tx_webp_quality'] = $quality;
+            }
             $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $originalFile,
                 $taskType,

@@ -31,3 +31,10 @@ CREATE TABLE sys_file_storage
 (
     tx_webp_mode smallint(5) unsigned DEFAULT '0' NOT NULL
 );
+
+# Per-image compression quality override.
+# 0 = use the global extension setting, 1-100 = override the quality token for this file.
+CREATE TABLE sys_file_metadata
+(
+    tx_webp_quality smallint(5) unsigned DEFAULT '0' NOT NULL
+);

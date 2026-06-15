@@ -188,6 +188,25 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function asyncEnqueueCarriesPerFileQualityOverride(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata.csv');
+        $this->applyConfigOverride('async', '1');
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $queueRow = $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->select(['configuration'], 'tx_webp_queue', [])
+            ->fetchAssociative();
+        self::assertNotFalse($queueRow, 'Async mode should enqueue a row');
+
+        $configuration = unserialize($queueRow['configuration'], ['allowed_classes' => false]);
+        self::assertSame(50, $configuration['tx_webp_quality'] ?? null);
+    }
+
+    #[Test]
     public function processesSynchronouslyWhenAsyncDisabled(): void
     {
         $this->applyConfigOverride('async', '0');

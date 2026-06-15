@@ -85,16 +85,15 @@ final class SiblingGenerator implements LoggerAwareInterface
      * @throws ConvertedFileLargerThanOriginalException
      * @throws UnsupportedFormatException
      */
-    public function convertFilePath(string $sourcePath, string $targetPath, string $mimeType, OutputFormat $format = OutputFormat::Webp): int
+    public function convertFilePath(string $sourcePath, string $targetPath, string $parameters, OutputFormat $format = OutputFormat::Webp): int
     {
         $converterClass = $this->configuration->getConverterFor($format);
         if ('' === $converterClass) {
             throw new \RuntimeException(\sprintf('No %s converter configured. Please check extension configuration.', $format->value));
         }
 
-        $parameters = $this->configuration->getParametersFor($format, $mimeType);
-        if (null === $parameters || '' === $parameters) {
-            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s", mime "%s", format %s (file "%s").', $converterClass, $mimeType, $format->value, $sourcePath));
+        if ('' === $parameters) {
+            throw new \InvalidArgumentException(\sprintf('No options given for adapter "%s", format %s (file "%s").', $converterClass, $format->value, $sourcePath));
         }
 
         $converter = GeneralUtility::makeInstance($converterClass, $parameters, $this->configuration);
@@ -129,7 +128,17 @@ final class SiblingGenerator implements LoggerAwareInterface
         array $taskConfiguration,
         OutputFormat $format,
     ): void {
-        $formatConfiguration = $taskConfiguration + ['format' => $format->value, 'webp' => true];
+        // Quality is resolved from current metadata only; any tx_webp_quality carried in by an
+        // inbound (queued) configuration is stripped and re-derived so the persisted
+        // configuration and the converter parameters can never disagree — including a reset to 0.
+        $quality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
+        $baseConfiguration = $taskConfiguration;
+        unset($baseConfiguration['tx_webp_quality']);
+        $formatConfiguration = $baseConfiguration + ['format' => $format->value, 'webp' => true];
+        if (null !== $quality) {
+            $formatConfiguration['tx_webp_quality'] = $quality;
+        }
+
         $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
             $originalFile,
             $taskType,
@@ -140,8 +149,17 @@ final class SiblingGenerator implements LoggerAwareInterface
         }
 
         $parameters = $this->configuration->getParametersFor($format, $mimeType);
+        if (null === $parameters || '' === $parameters) {
+            $this->logger?->notice(\sprintf('webp: no %s parameters for mime "%s" — skipping "%s".', $format->value, $mimeType, $sourceLocalPath));
+
+            return;
+        }
+        if (null !== $quality) {
+            $parameters = QualityOverride::applyToParameters($parameters, $quality);
+        }
+
         $fileUid = (int) $originalFile->getUid();
-        if (null !== $parameters && $this->failedAttempts->wasAttempted($fileUid, $parameters, $format)) {
+        if ($this->failedAttempts->wasAttempted($fileUid, $parameters, $format)) {
             $this->logger?->notice(\sprintf('webp: skipping %s for file "%s" — prior attempt failed with same configuration.', $format->value, $sourceLocalPath));
 
             return;
@@ -149,7 +167,7 @@ final class SiblingGenerator implements LoggerAwareInterface
 
         $tempTarget = GeneralUtility::tempnam(\sprintf('sibling-%s-', $format->value), $format->suffix());
         try {
-            $fileSize = $this->convertFilePath($sourceLocalPath, $tempTarget, $mimeType, $format);
+            $fileSize = $this->convertFilePath($sourceLocalPath, $tempTarget, $parameters, $format);
 
             $formatRow->setName($sourceVariant->getName() . $format->suffix());
             $formatRow->setIdentifier($sourceVariant->getIdentifier() . $format->suffix());
@@ -164,9 +182,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         } catch (UnsupportedFormatException $e) {
             $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
         } catch (ConvertedFileLargerThanOriginalException $e) {
-            if (null !== $parameters) {
-                $this->failedAttempts->record($fileUid, $parameters, $format);
-            }
+            $this->failedAttempts->record($fileUid, $parameters, $format);
             $this->logger?->warning($e->getMessage());
         } catch (WillNotRetryWithConfigurationException $e) {
             $this->logger?->notice($e->getMessage());

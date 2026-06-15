@@ -27,6 +27,12 @@
       <trans-unit id="sys_file_storage.tx_webp_mode.disabled">
         <source>Disabled</source>
       </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_quality">
+        <source>Compression quality</source>
+      </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_quality.description">
+        <source>Overrides the global compression quality for this image only (1–100, lower = stronger compression and smaller file). Applies to all enabled output formats. Leave at 0 to use the global extension setting.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

@@ -147,8 +147,13 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
                 if (!$this->configuration->isSupportedMimeTypeFor($format, $entry['mimeType'])) {
                     continue;
                 }
+                $parameters = $this->configuration->getParametersFor($format, $entry['mimeType']);
+                if (null === $parameters || '' === $parameters) {
+                    $this->logger?->notice('webp folder: no parameters for ' . $entry['path'], ['path' => $entry['path'], 'format' => $format->value]);
+                    continue;
+                }
                 try {
-                    $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . $format->suffix(), $entry['mimeType'], $format);
+                    $this->siblingGenerator->convertFilePath($entry['path'], $entry['path'] . $format->suffix(), $parameters, $format);
                 } catch (ConvertedFileLargerThanOriginalException $exception) {
                     // No FAL UID in folder mode, so we can't persist to
                     // tx_webp_failed; subsequent sweeps will re-attempt.

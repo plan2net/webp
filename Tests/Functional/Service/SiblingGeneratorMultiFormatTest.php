@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Tests\Functional\Service;
 
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\CapturingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
@@ -98,9 +99,66 @@ final class SiblingGeneratorMultiFormatTest extends FunctionalTestCase
         self::assertNotContains('avif', $formats, 'PhpGd refuses AVIF — no row');
     }
 
+    #[Test]
+    public function perFileQualityOverrideReachesTheConverter(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata.csv');
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=50', CapturingConverter::$receivedParameters);
+        self::assertNotContains('Q=80', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function withoutOverrideTheGlobalQualityIsUsed(): void
+    {
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=80', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function overrideIsRecordedInTheProcessedFileConfiguration(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata.csv');
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $configurations = $this->fetchSiblingConfigurations((int) $file->getUid());
+        self::assertNotEmpty($configurations);
+        foreach ($configurations as $configuration) {
+            self::assertSame(50, $configuration['tx_webp_quality'] ?? null);
+        }
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        CapturingConverter::$receivedParameters = [];
 
         $this->get(StorageRepository::class)->findAll();
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file.csv');
@@ -132,6 +190,27 @@ final class SiblingGeneratorMultiFormatTest extends FunctionalTestCase
         }
 
         return $formats;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function fetchSiblingConfigurations(int $originalUid): array
+    {
+        $rows = $this->getConnectionPool()
+            ->getConnectionForTable('sys_file_processedfile')
+            ->select(['configuration'], 'sys_file_processedfile', ['original' => $originalUid])
+            ->fetchAllAssociative();
+
+        $configurations = [];
+        foreach ($rows as $row) {
+            $cfg = null === $row['configuration'] ? [] : \unserialize($row['configuration']);
+            if (\is_array($cfg) && !empty($cfg['format'])) {
+                $configurations[] = $cfg;
+            }
+        }
+
+        return $configurations;
     }
 
     private function applyConfig(array $overrides): void

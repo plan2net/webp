@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Command\ProcessConversionQueueCommand;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\CapturingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\CMS\Core\Resource\File;
@@ -76,6 +77,38 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
 
         self::assertSame(0, $this->countQueueRows(), 'Row removed even when conversion is skipped');
         self::assertSame($firstSize, (int) \filesize($this->fileadminPath . 'tiny.png.webp'), 'Webp must not be re-written when current');
+    }
+
+    #[Test]
+    public function workerReDerivesQualityFromCurrentMetadataNotQueueSnapshot(): void
+    {
+        // Override was 50 when enqueued, then reset to 0 (no metadata row) before the drain.
+        // The worker must strip the stale queued quality and re-derive from current metadata,
+        // so the converter gets the global parameters and the persisted config carries no override.
+        CapturingConverter::$receivedParameters = [];
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['converter'] = CapturingConverter::class;
+
+        $file = $this->getFile(1);
+        $this->get(ConversionQueueRepository::class)->enqueue(
+            (int) $file->getUid(),
+            0,
+            'Image.CropScaleMask',
+            ['webp' => true, 'tx_webp_quality' => 50],
+            OutputFormat::Webp,
+        );
+
+        $this->runCommand([]);
+
+        self::assertContains('-quality 75', CapturingConverter::$receivedParameters, 'worker must use the global quality, not the stale queued 50');
+        self::assertNotContains('-quality 50', CapturingConverter::$receivedParameters);
+
+        $row = $this->getConnectionPool()
+            ->getConnectionForTable('sys_file_processedfile')
+            ->select(['configuration'], 'sys_file_processedfile', ['original' => (int) $file->getUid()])
+            ->fetchAssociative();
+        self::assertNotFalse($row);
+        $configuration = unserialize((string) $row['configuration'], ['allowed_classes' => false]);
+        self::assertArrayNotHasKey('tx_webp_quality', $configuration, 'stale queued quality must not survive into the persisted config');
     }
 
     #[Test]
