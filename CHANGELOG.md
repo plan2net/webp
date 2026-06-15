@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.6.0] - 2026-06-15
+
+### Added
+
+- Per-image compression quality override. Editors can set a **Compression quality** (1–100) on a file's metadata in the Filelist; it overrides the global converter quality for that file across every enabled output format. Leave at `0` to use the global setting. The value is read from current metadata at conversion time, so changing it regenerates the sibling on the next image processing.
+
 ## [14.5.4] - 2026-06-15
 
 ### Fixed
@@ -154,6 +160,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.6.0]: https://github.com/plan2net/webp/releases/tag/14.6.0
 [14.5.4]: https://github.com/plan2net/webp/releases/tag/14.5.4
 [14.5.3]: https://github.com/plan2net/webp/releases/tag/14.5.3
 [14.5.2]: https://github.com/plan2net/webp/releases/tag/14.5.2
