@@ -1284,7 +1284,7 @@ final class DiagnoseCommand extends Command
                 'p1',
                 'sys_file_processedfile',
                 'p2',
-                'p1.storage = p2.storage AND p2.identifier = CONCAT(p1.identifier, ' . $processedQuery->createNamedParameter($suffix) . ')',
+                'p1.storage = p2.storage AND p2.identifier = CONCAT(p1.identifier, ' . $processedQuery->quote($suffix) . ')',
             )
             ->where($processedQuery->expr()->notLike('p1.identifier', $processedQuery->createNamedParameter('%' . $suffix)))
             ->orderBy('p1.uid', 'ASC')
@@ -1317,7 +1317,7 @@ final class DiagnoseCommand extends Command
                 's',
                 'sys_file',
                 'w',
-                's.storage = w.storage AND w.identifier = CONCAT(s.identifier, ' . $originalQuery->createNamedParameter($suffix) . ') AND w.extension = ' . $originalQuery->createNamedParameter($format->value),
+                's.storage = w.storage AND w.identifier = CONCAT(s.identifier, ' . $originalQuery->quote($suffix) . ') AND w.extension = ' . $originalQuery->createNamedParameter($format->value),
             )
             ->where(
                 $originalQuery->expr()->in(
