@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.5.4] - 2026-06-15
+
+### Fixed
+
+- `webp:diagnose` no longer fails on PostgreSQL when probing for sibling files; the sibling suffix is now inlined as a literal instead of an untyped bound parameter inside `CONCAT()`.
+
 ## [14.5.3] - 2026-06-10
 
 ### Changed
@@ -148,6 +154,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.5.4]: https://github.com/plan2net/webp/releases/tag/14.5.4
+[14.5.3]: https://github.com/plan2net/webp/releases/tag/14.5.3
 [14.5.2]: https://github.com/plan2net/webp/releases/tag/14.5.2
 [14.5.1]: https://github.com/plan2net/webp/releases/tag/14.5.1
 [14.5.0]: https://github.com/plan2net/webp/releases/tag/14.5.0
