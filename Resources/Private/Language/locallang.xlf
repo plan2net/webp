@@ -33,6 +33,18 @@
       <trans-unit id="sys_file_metadata.tx_webp_quality.description">
         <source>Overrides the global compression quality for this image only (1–100, lower = stronger compression and smaller file). Applies to all enabled output formats. Leave at 0 to use the global extension setting.</source>
       </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_compression_report">
+        <source>Compression results</source>
+      </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_compression_report.empty">
+        <source>No optimized versions generated yet — render a page that uses this image, then reopen.</source>
+      </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_compression_report.source">
+        <source>Source</source>
+      </trans-unit>
+      <trans-unit id="sys_file_metadata.tx_webp_compression_report.missing">
+        <source>No %s version generated for this variant.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

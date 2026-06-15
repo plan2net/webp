@@ -22,4 +22,19 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
         '',
         'after:description'
     );
+
+    $GLOBALS['TCA']['sys_file_metadata']['columns']['tx_webp_compression_report'] = [
+        'label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_compression_report',
+        'config' => [
+            'type' => 'user',
+            'renderType' => 'webpCompressionInfo',
+        ],
+    ];
+
+    ExtensionManagementUtility::addToAllTCAtypes(
+        'sys_file_metadata',
+        'tx_webp_compression_report',
+        '',
+        'after:tx_webp_quality'
+    );
 })();

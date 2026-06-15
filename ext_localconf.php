@@ -39,4 +39,12 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
             'additionalFields' => Plan2net\Webp\Task\ProcessWebpQueueTaskAdditionalFieldProvider::class,
         ];
     }
+
+    // Read-only FormEngine widget showing per-format compression results
+    // (sys_file_metadata). Registered globally; stable API across v12–v14.
+    $GLOBALS['TYPO3_CONF_VARS']['SYS']['formEngine']['nodeRegistry'][1718200000] = [
+        'nodeName' => 'webpCompressionInfo',
+        'priority' => 40,
+        'class' => Plan2net\Webp\Form\Element\CompressionInfoElement::class,
+    ];
 })();

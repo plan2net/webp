@@ -23,7 +23,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - [Installation](#installation)
 - [Updating](#updating)
 - [Configuration](#configuration)
-- [Per-image quality override](#per-image-quality-override)
+- [Per-image compression](#per-image-compression)
 - [Async mode](#async-mode)
 - [Webserver configuration](#webserver-configuration)
 - [Remote storages (S3, Azure, custom FAL drivers)](#remote-storages-s3-azure-custom-fal-drivers)
@@ -400,15 +400,14 @@ Applies only to `MagickConverter`. When enabled, the value of `$GLOBALS['TYPO3_C
 
 `PhpGdConverter` and external-binary configurations ignore this flag.
 
-## Per-image quality override
+## Per-image compression
 
-The [`parameters`](#parameters) quality is a site-wide default. A single large image — a full-bleed hero, for example — often tolerates stronger compression than that default without a visible loss, while smaller images do not. Editors can override the quality for one image from its file metadata.
+The [`parameters`](#parameters) quality is a site-wide default. For a single image that tolerates stronger compression — a full-bleed hero, say — edit its metadata in the **Filelist** and set **Compression quality** (`1`–`100`, lower = smaller file; `0` keeps the global setting); it applies to that file across every enabled format, overrides the `-quality` / `Q=` / `quality=` token, and is read at conversion time so changing it regenerates the sibling on the next render. Right below the field, a read-only report shows what was achieved — per processed variant and format, the generated sibling's size and the saving versus the source it replaces — filling in as the image is rendered at more sizes (a dash means the converter produced nothing smaller at the current quality).
 
-In the **Filelist** module, edit a file's metadata and set **Compression quality** (`1`–`100`, lower = stronger compression and a smaller file). Leave it at `0` to use the global setting. The value applies to that file across every enabled output format and overrides the `-quality` / `Q=` / `quality=` token in the active converter's parameters.
+![Per-image compression quality and results in the file metadata form](Documentation/compression_report.png)
 
-The override is a property of the **file**, not of a single usage, so it applies everywhere the image is referenced. It is read from the current metadata at conversion time, so changing it regenerates the sibling on the next image processing.
-
-> Already-rendered pages keep serving the previous sibling from cache until they are re-rendered. After changing the quality of an image that is already in use, flush the affected frontend caches (or wait for them to expire) to see the new sibling.
+> [!NOTE]
+> Already-rendered pages keep serving the previous sibling from cache until they are re-rendered. After changing an in-use image's quality, flush the affected frontend caches (or wait for them to expire) to see the new sibling.
 
 ## Async mode
 
