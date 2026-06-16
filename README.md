@@ -773,8 +773,17 @@ Common cases:
 | File still served as JPEG after a successful generation | Webserver rewrite rule missing or shadowed by another rule                  |
 | Only one format is served when several are enabled     | Rewrite rule lists the formats in the wrong priority order — AVIF should come before WebP, see [Webserver configuration](#webserver-configuration) |
 | Sibling left behind after deleting the source          | None — fixed in 14.0.0; upgrade                                              |
+| Large/high-resolution originals fail or time out, or produce no sibling | See [Very large or high-resolution originals](#very-large-or-high-resolution-originals) |
 
 After changing `processor_colorspace`, clean up any processed files via the Maintenance backend module (*System → Maintenance → Remove Temporary Assets* on TYPO3 v14; *Admin Tools → Maintenance* on v12/v13) so the change takes effect on existing images.
+
+### Very large or high-resolution originals
+
+Multi-megabyte originals (e.g. 4000px+ photos) rendered into several responsive widths are where conversion most often struggles: ImageMagick can run out of memory or hit the request time limit, and at the default quality the largest WebP can come out *bigger* than the source and is dropped (so that variant gets no sibling at all). Three settings, which combine well, address this:
+
+- **Use the [`VipsConverter`](#parameters).** libvips converts large images with far less memory and 2–3× faster than ImageMagick, which removes the usual memory/timeout failures on big originals.
+- **Enable [`async`](#async-mode).** Conversions move off the page-render request to a scheduler worker, so a slow or heavy conversion can never fail or delay the frontend response.
+- **Configure a [width-to-quality curve](#compress-larger-variants-harder).** Large variants are compressed harder, so they stay smaller than the original and actually produce a sibling — instead of being rejected for exceeding the source size.
 
 ## Known limitations
 
