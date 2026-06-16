@@ -471,9 +471,12 @@ Register this as a second Scheduler task ("Execute console command") if you want
 
 ## Webserver configuration
 
+> [!TIP]
+> Run `./vendor/bin/typo3 webp:webserver-config --server=nginx` (or `apache` / `caddy`) to print a ready-to-paste snippet generated for **your** enabled formats and source types — with the AVIF→WebP→JXL priority already correct. The hand-written recipes below are the same output, shown in full for reference (including the Cloudflare and user-agent variants the command points to).
+
 The webserver inspects the client's `Accept` header and rewrites the request to the best-matching sibling that's available on disk. If only WebP is enabled, the server has two candidates: serve `.webp` when the client accepts it, otherwise fall back to the original JPEG/PNG/GIF. With AVIF or JPEG XL enabled too, the server picks among the available siblings in client-preference order.
 
-Below are examples for nginx, Apache, and Caddy. **Adapt them to your stack** — these aren't drop-in copies. The E2E suite runs minimal complete configs for all three: [nginx.conf](Tests/E2E/nginx.conf), [apache.conf](Tests/E2E/apache.conf) and [caddy.conf](Tests/E2E/caddy.conf).
+Below are the full hand-written examples for nginx, Apache, and Caddy. The `webp:webserver-config` command above generates these same negotiation rules tailored to your enabled formats — paste the output into your own server or vhost context. The E2E suite injects that generated output into per-server scaffolds ([nginx.conf](Tests/E2E/nginx.conf), [apache.conf](Tests/E2E/apache.conf), [caddy.conf](Tests/E2E/caddy.conf)) and runs real nginx, Apache, and Caddy against them, so the generated config is verified to negotiate correctly.
 
 ### Which blocks do I need?
 

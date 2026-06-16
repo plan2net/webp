@@ -190,6 +190,23 @@ render_server_conf() {
         "$template" > "$out"
 }
 
+# Replace a single-line marker in $1 with the multi-line output of the generator
+# for the given --server/--scope (sed r+d injects multi-line content cleanly).
+inject_webp_fragment() {
+    local conf="$1" marker="$2" server="$3" scope="$4"
+    local frag="/tmp/plan2net-webp-e2e/frag-${server}-${scope}.txt"
+    "$INSTANCE_DIR/vendor/bin/typo3" webp:webserver-config --server="$server" --scope="$scope" >"$frag"
+    if [[ ! -s "$frag" ]]; then
+        echo "FAIL: webp:webserver-config --server=$server --scope=$scope produced no output" >&2
+        exit 1
+    fi
+    if ! grep -q "$marker" "$conf"; then
+        echo "FAIL: injection marker $marker not found in $conf" >&2
+        exit 1
+    fi
+    sed -i -e "/${marker}/{r ${frag}" -e "d}" "$conf"
+}
+
 probe() {
     local accept="$1"
     local expected="$2"
@@ -262,6 +279,8 @@ probe_vary_header() {
 
 start_nginx() {
     render_server_conf "$script_dir/nginx.conf" /tmp/plan2net-webp-e2e/nginx.conf
+    inject_webp_fragment /tmp/plan2net-webp-e2e/nginx.conf __WEBP_HTTP__ nginx http
+    inject_webp_fragment /tmp/plan2net-webp-e2e/nginx.conf __WEBP_SERVER__ nginx server
     nginx -c /tmp/plan2net-webp-e2e/nginx.conf &
     NGINX_PID=$!
     sleep 1
@@ -276,6 +295,7 @@ stop_nginx() {
 
 start_apache() {
     render_server_conf "$script_dir/apache.conf" /tmp/plan2net-webp-e2e/apache.conf
+    inject_webp_fragment /tmp/plan2net-webp-e2e/apache.conf __WEBP_MAIN__ apache main
     # /etc/apache2/envvars uses unset vars internally, so it can't be sourced
     # under `set -u`. Define the minimum apache2 needs to start.
     export APACHE_CONFDIR="${APACHE_CONFDIR:-/etc/apache2}"
@@ -300,6 +320,7 @@ stop_apache() {
 
 start_caddy() {
     render_server_conf "$script_dir/caddy.conf" /tmp/plan2net-webp-e2e/caddy.conf
+    inject_webp_fragment /tmp/plan2net-webp-e2e/caddy.conf __WEBP_MAIN__ caddy main
     caddy run --config /tmp/plan2net-webp-e2e/caddy.conf --adapter caddyfile &
     CADDY_PID=$!
     sleep 1
