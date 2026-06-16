@@ -774,6 +774,7 @@ Common cases:
 | Only one format is served when several are enabled     | Rewrite rule lists the formats in the wrong priority order — AVIF should come before WebP, see [Webserver configuration](#webserver-configuration) |
 | Sibling left behind after deleting the source          | None — fixed in 14.0.0; upgrade                                              |
 | Large/high-resolution originals fail or time out, or produce no sibling | See [Very large or high-resolution originals](#very-large-or-high-resolution-originals) |
+| WebP/AVIF looks softer or blurrier than the JPEG       | See [Sharp output](#sharp-output)                                            |
 
 After changing `processor_colorspace`, clean up any processed files via the Maintenance backend module (*System → Maintenance → Remove Temporary Assets* on TYPO3 v14; *Admin Tools → Maintenance* on v12/v13) so the change takes effect on existing images.
 
@@ -784,6 +785,12 @@ Multi-megabyte originals (e.g. 4000px+ photos) rendered into several responsive 
 - **Use the [`VipsConverter`](#parameters).** libvips converts large images with far less memory and 2–3× faster than ImageMagick, which removes the usual memory/timeout failures on big originals.
 - **Enable [`async`](#async-mode).** Conversions move off the page-render request to a scheduler worker, so a slow or heavy conversion can never fail or delay the frontend response.
 - **Configure a [width-to-quality curve](#compress-larger-variants-harder).** Large variants are compressed harder, so they stay smaller than the original and actually produce a sibling — instead of being rejected for exceeding the source size.
+
+### Sharp output
+
+TYPO3 core sharpens generated JPEGs but not WebP/AVIF, so images converted *directly* to WebP can look softer. This extension avoids that: it converts the **already-processed image variant** — the cropped, scaled, and (for JPEG) sharpened intermediate TYPO3 produced — so the sibling inherits that sharpening rather than re-deriving a soft one from the original.
+
+If you still want extra sharpening, the `MagickConverter` passes its [`parameters`](#parameters) straight to ImageMagick, so you can append a sharpen operator per mime type, e.g. `image/jpeg::-quality 85 -unsharp 0x0.75+0.75+0.008`. The `VipsConverter` applies encoder save-options only and has no sharpening parameter — choose `MagickConverter` for that format if you need it.
 
 ## Known limitations
 
