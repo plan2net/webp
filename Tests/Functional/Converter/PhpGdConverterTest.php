@@ -60,6 +60,27 @@ final class PhpGdConverterTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function transparencyIsPreservedInTheWebpSibling(): void
+    {
+        // Fixture is 16×16: left half (x<8) opaque blue, right half fully transparent.
+        $sourceFile = $this->workingDirectory . '/transparent.png';
+        \copy(__DIR__ . '/../Fixtures/Images/transparent.png', $sourceFile);
+        $targetFile = $sourceFile . '.webp';
+
+        $converter = new PhpGdConverter('-quality 80', $this->createConfiguration());
+        $converter->convertTo($sourceFile, $targetFile, OutputFormat::Webp);
+
+        $webp = \imagecreatefromwebp($targetFile);
+        self::assertNotFalse($webp, 'Generated WebP must be readable');
+        $opaqueAlpha = (\imagecolorat($webp, 4, 8) >> 24) & 0x7F;
+        $transparentAlpha = (\imagecolorat($webp, 12, 8) >> 24) & 0x7F;
+        \imagedestroy($webp);
+
+        self::assertSame(0, $opaqueAlpha, 'Opaque pixel must stay opaque');
+        self::assertSame(127, $transparentAlpha, 'Transparent pixel must stay fully transparent');
+    }
+
+    #[Test]
     #[DataProvider('qualityClampProvider')]
     public function parsedQualityIsClampedToValidRange(string $parameters, int $expected): void
     {
