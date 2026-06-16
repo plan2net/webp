@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.7.0] - 2026-06-16
+
+### Added
+
+- Per-image compression report. The file metadata form shows, below the compression quality field, what each enabled format achieved for that image — per processed variant, the generated sibling's size and the saving versus the source it replaces. Read-only; fills in as the image is rendered at more sizes.
+- Width-to-quality compression curve. Optional per-format settings (`quality_by_width`, `quality_by_width_avif`, `quality_by_width_jxl`) map a rendered variant's width to a quality, so larger variants are compressed harder automatically — best practice for responsive images. Off by default; a per-image quality override still wins, and lossless parameters are left untouched. See the README for a recommended starting curve.
+
 ## [14.6.0] - 2026-06-15
 
 ### Added
@@ -160,6 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.7.0]: https://github.com/plan2net/webp/releases/tag/14.7.0
 [14.6.0]: https://github.com/plan2net/webp/releases/tag/14.6.0
 [14.5.4]: https://github.com/plan2net/webp/releases/tag/14.5.4
 [14.5.3]: https://github.com/plan2net/webp/releases/tag/14.5.3
