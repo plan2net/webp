@@ -154,6 +154,98 @@ final class SiblingGeneratorMultiFormatTest extends FunctionalTestCase
         }
     }
 
+    #[Test]
+    public function widthCurveSetsQualityForTheVariantWidth(): void
+    {
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+            'quality_by_width' => '16:55|9999:30',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=55', CapturingConverter::$receivedParameters);
+        self::assertNotContains('Q=80', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function perImageOverrideBeatsTheWidthCurve(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata.csv');
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+            'quality_by_width' => '16:55',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=50', CapturingConverter::$receivedParameters);
+        self::assertNotContains('Q=55', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function withoutCurveTheBaseQualityIsUsed(): void
+    {
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=80', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function widthCurveIsSkippedForLosslessParameters(): void
+    {
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80 lossless=true',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+            'quality_by_width' => '16:55',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=80 lossless=true', CapturingConverter::$receivedParameters);
+        self::assertNotContains('Q=55 lossless=true', CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
+    public function curveQualityIsNotWrittenToTheProcessedFileConfiguration(): void
+    {
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+            'quality_by_width' => '16:55',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        $configurations = $this->fetchSiblingConfigurations((int) $file->getUid());
+        self::assertNotEmpty($configurations);
+        foreach ($configurations as $configuration) {
+            self::assertArrayNotHasKey('tx_webp_quality', $configuration);
+        }
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

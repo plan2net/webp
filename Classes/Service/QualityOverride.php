@@ -8,6 +8,8 @@ final class QualityOverride
 {
     private const QUALITY_TOKEN = '/(\\bquality[\\s=]|\\bQ=)\\d{1,3}(?!\\d)/i';
 
+    private const LOSSLESS_TOKEN = '/\\blossless\\s*=\\s*(?:true|1)\\b/i';
+
     public static function fromMetadataValue(mixed $value): ?int
     {
         if (!\is_numeric($value)) {
@@ -20,6 +22,11 @@ final class QualityOverride
         }
 
         return $quality;
+    }
+
+    public static function isLossless(string $parameters): bool
+    {
+        return 1 === \preg_match(self::LOSSLESS_TOKEN, $parameters);
     }
 
     public static function applyToParameters(string $parameters, int $quality): string

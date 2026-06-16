@@ -2,6 +2,8 @@
 converter = Plan2net\Webp\Converter\MagickConverter
 # cat=basic; type=string; label=For each mime type conversion parameters (for internal adapter) or command + parameters (in sprintf format for external adapter) (see documentation)
 parameters = image/jpeg::-quality 85 -define webp:lossless=false|image/png::-quality 75 -define webp:lossless=true|image/gif::-quality 85 -define webp:lossless=true
+# cat=basic; type=string; label=WebP width-to-quality curve: maxWidth:quality pairs separated by | (e.g. 640:80|1024:72|1536:64). Empty = off. Larger variants are compressed harder; ignored for lossless parameters.
+quality_by_width =
 # cat=basic; type=boolean; label=Convert all images in local and writable storages (see documentation)
 convert_all = 1
 # cat=basic; type=boolean; label=Suppress output (stdout, stderr) from the external converter command (Linux only)
@@ -26,11 +28,15 @@ async_throttle_ms = 0
 converter_avif = Plan2net\Webp\Converter\MagickConverter
 # cat=avif; type=string; label=AVIF conversion parameters (per mime type, separated by |)
 parameters_avif = image/jpeg::-quality 60|image/png::-quality 75|image/gif::-quality 60
+# cat=avif; type=string; label=AVIF width-to-quality curve (same syntax as quality_by_width)
+quality_by_width_avif =
 # cat=avif; type=string; label=AVIF supported mime types (comma separated)
 mime_types_avif = image/jpeg,image/png,image/gif
 # cat=jxl; type=options[Local ImageMagick/GraphicsMagick converter=Plan2net\Webp\Converter\MagickConverter,External converter=Plan2net\Webp\Converter\ExternalConverter,libvips (native)=Plan2net\Webp\Converter\VipsConverter]; label=JPEG XL conversion adapter (see documentation)
 converter_jxl = Plan2net\Webp\Converter\MagickConverter
 # cat=jxl; type=string; label=JPEG XL conversion parameters (per mime type, separated by |)
 parameters_jxl = image/jpeg::-quality 75|image/png::-quality 90|image/gif::-quality 75
+# cat=jxl; type=string; label=JPEG XL width-to-quality curve (same syntax as quality_by_width)
+quality_by_width_jxl =
 # cat=jxl; type=string; label=JPEG XL supported mime types (comma separated)
 mime_types_jxl = image/jpeg,image/png,image/gif

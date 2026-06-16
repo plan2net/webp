@@ -263,6 +263,31 @@ final class ConfigurationTest extends TestCase
         self::assertSame([OutputFormat::Avif], $configuration->getEnabledFormats());
     }
 
+    #[Test]
+    public function qualityForWidthSelectsBandForTheWebpSlot(): void
+    {
+        $config = $this->configurationWith(['quality_by_width' => '640:80|1536:64']);
+
+        self::assertSame(80, $config->qualityForWidth(OutputFormat::Webp, 500));
+        self::assertSame(64, $config->qualityForWidth(OutputFormat::Webp, 1536));
+        self::assertSame(64, $config->qualityForWidth(OutputFormat::Webp, 4096));
+    }
+
+    #[Test]
+    public function qualityForWidthReturnsNullWhenUnset(): void
+    {
+        self::assertNull($this->configurationWith([])->qualityForWidth(OutputFormat::Webp, 1536));
+    }
+
+    #[Test]
+    public function qualityForWidthUsesPerFormatSetting(): void
+    {
+        $config = $this->configurationWith(['quality_by_width_avif' => '1536:50']);
+
+        self::assertSame(50, $config->qualityForWidth(OutputFormat::Avif, 1536));
+        self::assertNull($config->qualityForWidth(OutputFormat::Webp, 1536));
+    }
+
     private function configurationWith(array $settings): Configuration
     {
         $extConfig = $this->createMock(ExtensionConfiguration::class);

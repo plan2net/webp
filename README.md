@@ -24,6 +24,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release notes.
 - [Updating](#updating)
 - [Configuration](#configuration)
 - [Per-image compression](#per-image-compression)
+- [Compress larger variants harder](#compress-larger-variants-harder)
 - [Async mode](#async-mode)
 - [Webserver configuration](#webserver-configuration)
 - [Remote storages (S3, Azure, custom FAL drivers)](#remote-storages-s3-azure-custom-fal-drivers)
@@ -408,6 +409,44 @@ The [`parameters`](#parameters) quality is a site-wide default. For a single ima
 
 > [!NOTE]
 > Already-rendered pages keep serving the previous sibling from cache until they are re-rendered. After changing an in-use image's quality, flush the affected frontend caches (or wait for them to expire) to see the new sibling.
+
+## Compress larger variants harder
+
+A responsive site renders the same image at many widths (`480`, `768`, `1200`, `1536`, …). A fixed quality over-pays on the large variants: at high pixel density the eye no longer resolves compression artifacts — they shrink to sub-pixel noise once the image is displayed or downscaled — so a large variant can be compressed far harder than a small one with no visible loss. Image CDNs already do this; imgix, for example, serves roughly quality **80 at 1×, 40 at 2×, 20 at 3×**. The biggest variants are also the most expensive to download, so this is where the bytes are.
+
+This extension applies the same idea through a **width-to-quality curve** per output format. It ships **off by default** (no change to existing output on upgrade) — paste a curve into the Extension Configuration to switch it on.
+
+### Recommended starting point — copy & paste
+
+Paste these into *Settings → Extension Configuration → webp* (the `basic`, `avif`, and `jxl` tabs). They take effect for siblings generated from then on:
+
+```
+quality_by_width       = 640:80|768:74|1024:70|1536:64|2048:58
+quality_by_width_avif  = 640:62|1024:54|1536:48|2048:44
+quality_by_width_jxl   = 640:70|1024:62|1536:56|2048:50
+```
+
+These are a sensible **starting point — tune to your content**: photographic images take aggressive compression well, flat graphics and text show artifacts sooner. AVIF and JPEG XL reach the same perceived quality roughly 10–15 points below WebP, which is why their curves sit lower. Only configure the formats you have enabled in [`formats_enabled`](#formats_enabled); leave a setting empty to disable the curve for that format.
+
+### How it works
+
+Each setting is a list of `maxWidth:quality` bands separated by `|`. When webp generates a sibling it looks up the **rendered variant's width** and uses the quality of the smallest band whose `maxWidth` is greater than or equal to that width; a variant wider than the largest band takes the largest band's quality. The resolved value replaces the `-quality` / `Q=` / `quality=` token in that format's [`parameters`](#parameters).
+
+Worked example for `quality_by_width = 640:80|1024:72|1536:64`:
+
+| Variant width | Band used | Quality |
+|---------------|-----------|---------|
+| 480           | `640`     | 80      |
+| 700           | `1024`    | 72      |
+| 1536          | `1536`    | 64      |
+| 2048          | `1536` (widest) | 64 |
+
+**Precedence.** A [per-image quality override](#per-image-compression) always wins for that file — when set, the curve is not consulted. Otherwise the curve applies. With neither, the format's base `parameters` quality is used unchanged.
+
+**Lossy only.** The curve is skipped for lossless parameters (those containing `lossless=true`), so the default lossless PNG/GIF settings are never touched — only lossy output is scaled.
+
+> [!NOTE]
+> Like the global `parameters` quality, changing a curve does not regenerate existing siblings. Clear processed files (*Admin Tools → Maintenance → Remove Temporary Assets*) to apply a new curve.
 
 ## Async mode
 

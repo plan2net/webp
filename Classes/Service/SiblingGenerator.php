@@ -128,15 +128,17 @@ final class SiblingGenerator implements LoggerAwareInterface
         array $taskConfiguration,
         OutputFormat $format,
     ): void {
-        // Quality is resolved from current metadata only; any tx_webp_quality carried in by an
-        // inbound (queued) configuration is stripped and re-derived so the persisted
-        // configuration and the converter parameters can never disagree — including a reset to 0.
-        $quality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
+        // Only the per-image override drives the processed-file configuration hash; it is resolved
+        // from current metadata, and any tx_webp_quality carried in by an inbound (queued)
+        // configuration is stripped and re-derived so the persisted configuration and the converter
+        // parameters can never disagree — including a reset to 0. The width curve must NEVER enter
+        // the configuration (it would diverge from the enqueue-side hash and re-enqueue forever).
+        $overrideQuality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
         $baseConfiguration = $taskConfiguration;
         unset($baseConfiguration['tx_webp_quality']);
         $formatConfiguration = $baseConfiguration + ['format' => $format->value, 'webp' => true];
-        if (null !== $quality) {
-            $formatConfiguration['tx_webp_quality'] = $quality;
+        if (null !== $overrideQuality) {
+            $formatConfiguration['tx_webp_quality'] = $overrideQuality;
         }
 
         $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
@@ -154,8 +156,15 @@ final class SiblingGenerator implements LoggerAwareInterface
 
             return;
         }
-        if (null !== $quality) {
-            $parameters = QualityOverride::applyToParameters($parameters, $quality);
+        // Effective quality drives only the converter parameters: the per-image override wins;
+        // otherwise the per-format width curve applies, but only to lossy parameters (rewriting the
+        // -quality token of a lossless string would change its compression effort, not quality).
+        $effectiveQuality = $overrideQuality;
+        if (null === $effectiveQuality && !QualityOverride::isLossless($parameters)) {
+            $effectiveQuality = $this->configuration->qualityForWidth($format, (int) $sourceVariant->getProperty('width'));
+        }
+        if (null !== $effectiveQuality) {
+            $parameters = QualityOverride::applyToParameters($parameters, $effectiveQuality);
         }
 
         $fileUid = (int) $originalFile->getUid();

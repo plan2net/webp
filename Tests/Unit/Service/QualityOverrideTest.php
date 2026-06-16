@@ -56,4 +56,25 @@ final class QualityOverrideTest extends TestCase
             'upper boundary' => ['-quality 85', 100, '-quality 100'],
         ];
     }
+
+    #[Test]
+    #[DataProvider('losslessProvider')]
+    public function isLosslessDetectsLosslessParameterStrings(string $parameters, bool $expected): void
+    {
+        self::assertSame($expected, QualityOverride::isLossless($parameters));
+    }
+
+    public static function losslessProvider(): array
+    {
+        return [
+            'magick webp lossless' => ['-quality 75 -define webp:lossless=true', true],
+            'vips lossless' => ['Q=75 lossless=true effort=4', true],
+            'lossless one' => ['lossless=1', true],
+            'magick lossless false' => ['-quality 85 -define webp:lossless=false', false],
+            'lossless zero' => ['lossless=0', false],
+            'lossless_jpeg is not lossless flag' => ['/usr/bin/cjxl --lossless_jpeg=0 %s %s', false],
+            'plain lossy quality' => ['-quality 85', false],
+            'vips Q only' => ['Q=80', false],
+        ];
+    }
 }

@@ -107,6 +107,17 @@ final class Configuration
         return self::lookupMimeType($raw, $mimeType);
     }
 
+    public function qualityForWidth(OutputFormat $format, int $width): ?int
+    {
+        $bands = $this->memoizedParse(
+            'quality_by_width_' . $format->value,
+            $this->perFormatOrLegacyWebp($format, 'quality_by_width'),
+            WidthQualityCurve::parse(...),
+        );
+
+        return WidthQualityCurve::qualityForWidth($bands, $width);
+    }
+
     public function isSupportedMimeTypeFor(OutputFormat $format, string $mimeType): bool
     {
         $configured = $this->memoizedParse(

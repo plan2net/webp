@@ -112,6 +112,36 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function queueWorkerAppliesTheWidthCurveButKeepsItOutOfTheConfig(): void
+    {
+        CapturingConverter::$receivedParameters = [];
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['converter'] = CapturingConverter::class;
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['parameters'] = 'image/png::Q=80';
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['quality_by_width'] = '99999:55';
+
+        $file = $this->getFile(1);
+        $this->get(ConversionQueueRepository::class)->enqueue(
+            (int) $file->getUid(),
+            0,
+            'Image.CropScaleMask',
+            ['webp' => true],
+            OutputFormat::Webp,
+        );
+
+        $this->runCommand([]);
+
+        self::assertContains('Q=55', CapturingConverter::$receivedParameters);
+
+        $row = $this->getConnectionPool()
+            ->getConnectionForTable('sys_file_processedfile')
+            ->select(['configuration'], 'sys_file_processedfile', ['original' => (int) $file->getUid()])
+            ->fetchAssociative();
+        self::assertNotFalse($row);
+        $configuration = unserialize((string) $row['configuration'], ['allowed_classes' => false]);
+        self::assertArrayNotHasKey('tx_webp_quality', $configuration, 'width curve must not enter the persisted config');
+    }
+
+    #[Test]
     public function queueModeSkipsMissingFiles(): void
     {
         $this->get(ConversionQueueRepository::class)->enqueue(99999, 0, 'Image.CropScaleMask', [], OutputFormat::Webp);
