@@ -40,6 +40,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
         ];
     }
 
+    // A forced per-file quality is only meaningful with a quality of 1-100;
+    // reset the mode on save instead of persisting a contradictory state.
+    $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['processDatamapClass'][]
+        = Plan2net\Webp\DataHandler\QualityModeGuard::class;
+
     // Read-only FormEngine widget showing per-format compression results
     // (sys_file_metadata). Registered globally; stable API across v12–v14.
     $GLOBALS['TYPO3_CONF_VARS']['SYS']['formEngine']['nodeRegistry'][1718200000] = [

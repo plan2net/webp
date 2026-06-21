@@ -403,7 +403,7 @@ Applies only to `MagickConverter`. When enabled, the value of `$GLOBALS['TYPO3_C
 
 ## Per-image compression
 
-The [`parameters`](#parameters) quality is a site-wide default. For a single image that tolerates stronger compression — a full-bleed hero, say — edit its metadata in the **Filelist** and set **Compression quality** (`1`–`100`, lower = smaller file; `0` keeps the global setting); it applies to that file across every enabled format, overrides the `-quality` / `Q=` / `quality=` token, and is read at conversion time so changing it regenerates the sibling on the next render. Right below the field, a read-only report shows what was achieved — per processed variant and format, the generated sibling's size and the saving versus the source it replaces — filling in as the image is rendered at more sizes (a dash means the converter produced nothing smaller at the current quality).
+The [`parameters`](#parameters) quality is a site-wide default. For a single image, edit its metadata in the **Filelist** and pick a **Compression quality mode**: *Global* (use the site settings) or *Force a fixed quality* (reveals a `1`–`100` number applied to that file across every enabled format). The resolved quality is read at conversion time, so changing the mode regenerates the sibling on the next render. Right below the field, a read-only report shows what was achieved — per processed variant and format, the generated sibling's size and the saving versus the source it replaces — filling in as the image is rendered at more sizes (a dash means the converter produced nothing smaller at the current quality).
 
 ![Per-image compression quality and results in the file metadata form](Documentation/compression_report.png)
 

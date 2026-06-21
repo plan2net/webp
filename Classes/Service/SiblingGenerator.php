@@ -128,18 +128,8 @@ final class SiblingGenerator implements LoggerAwareInterface
         array $taskConfiguration,
         OutputFormat $format,
     ): void {
-        // Only the per-image override drives the processed-file configuration hash; it is resolved
-        // from current metadata, and any tx_webp_quality carried in by an inbound (queued)
-        // configuration is stripped and re-derived so the persisted configuration and the converter
-        // parameters can never disagree — including a reset to 0. The width curve must NEVER enter
-        // the configuration (it would diverge from the enqueue-side hash and re-enqueue forever).
-        $overrideQuality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
-        $baseConfiguration = $taskConfiguration;
-        unset($baseConfiguration['tx_webp_quality']);
-        $formatConfiguration = $baseConfiguration + ['format' => $format->value, 'webp' => true];
-        if (null !== $overrideQuality) {
-            $formatConfiguration['tx_webp_quality'] = $overrideQuality;
-        }
+        $overrideQuality = QualityOverride::forcedQualityFor($originalFile);
+        $formatConfiguration = QualityOverride::formatConfiguration($taskConfiguration, $format, $overrideQuality);
 
         $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
             $originalFile,

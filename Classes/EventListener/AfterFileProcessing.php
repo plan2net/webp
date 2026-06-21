@@ -81,7 +81,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
     {
         $processedFileId = $processedFile->usesOriginalFile() ? 0 : (int) $processedFile->getUid();
         $mimeType = $originalFile->getMimeType();
-        $quality = QualityOverride::fromMetadataValue($originalFile->getProperty('tx_webp_quality'));
+        $quality = QualityOverride::forcedQualityFor($originalFile);
 
         foreach ($this->configuration->getEnabledFormats() as $format) {
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
@@ -90,10 +90,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
             if (!$this->configuration->isFormatRunnable($format)) {
                 continue;
             }
-            $formatConfiguration = $taskConfiguration + ['format' => $format->value, 'webp' => true];
-            if (null !== $quality) {
-                $formatConfiguration['tx_webp_quality'] = $quality;
-            }
+            $formatConfiguration = QualityOverride::formatConfiguration($taskConfiguration, $format, $quality);
             $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
                 $originalFile,
                 $taskType,

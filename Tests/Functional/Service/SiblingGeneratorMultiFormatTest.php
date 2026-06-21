@@ -246,6 +246,50 @@ final class SiblingGeneratorMultiFormatTest extends FunctionalTestCase
         }
     }
 
+    #[Test]
+    public function forceModeAppliesTheNumber(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata_mode.csv'); // file 1: mode=force, quality=50
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=50', CapturingConverter::$receivedParameters);
+        foreach ($this->fetchSiblingConfigurations((int) $file->getUid()) as $configuration) {
+            self::assertSame(50, $configuration['tx_webp_quality'] ?? null);
+        }
+    }
+
+    #[Test]
+    public function legacyEmptyModeWithNumberStillForcesQuality(): void
+    {
+        // BC regression guard: a pre-upgrade row has tx_webp_quality_mode='' (empty) + a number and
+        // must still Force — even with a width curve configured (force must win over the curve).
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata_legacy.csv'); // file 1: mode='', quality=50
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+            'quality_by_width' => '16:55',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertContains('Q=50', CapturingConverter::$receivedParameters, 'legacy empty-mode + number must Force');
+        self::assertNotContains('Q=55', CapturingConverter::$receivedParameters, 'force must win over the curve');
+        foreach ($this->fetchSiblingConfigurations((int) $file->getUid()) as $configuration) {
+            self::assertSame(50, $configuration['tx_webp_quality'] ?? null);
+        }
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

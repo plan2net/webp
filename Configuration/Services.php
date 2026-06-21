@@ -21,6 +21,10 @@ return static function (ContainerConfigurator $configurator): void {
             ->set(Updates\TruncateFailedAttemptsBeforeColumnResizeUpdate::class)
             ->autowire()
             ->tag('install.upgradewizard', ['identifier' => 'webp.truncateFailedAttemptsBeforeColumnResize']);
+        $services
+            ->set(Updates\MigrateLegacyForcedQualityUpdate::class)
+            ->autowire()
+            ->tag('install.upgradewizard', ['identifier' => 'webp.migrateLegacyForcedQuality']);
     }
 
     if (\class_exists(AbstractAdditionalFieldProvider::class)) {

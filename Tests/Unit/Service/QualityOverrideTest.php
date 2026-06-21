@@ -7,10 +7,69 @@ namespace Plan2net\Webp\Tests\Unit\Service;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\QualityOverride;
+use TYPO3\CMS\Core\Resource\File;
 
 final class QualityOverrideTest extends TestCase
 {
+    #[Test]
+    #[DataProvider('forcedQualityProvider')]
+    public function forcedQualityForDerivesTheQualityFromModeAndQuality(mixed $mode, mixed $quality, ?int $expected): void
+    {
+        self::assertSame($expected, QualityOverride::forcedQualityFor($this->fileWithMetadata($mode, $quality)));
+    }
+
+    public static function forcedQualityProvider(): array
+    {
+        return [
+            'force mode with quality' => ['force', 50, 50],
+            'force mode without quality' => ['force', 0, null],
+            'force mode with out-of-range quality' => ['force', 101, null],
+            'legacy row with quality forces it' => ['', 40, 40],
+            'legacy row without quality' => ['', 0, null],
+            'global mode ignores a stale quality' => ['global', 60, null],
+            'unknown mode is treated as global' => ['auto', 60, null],
+            'mode with surrounding whitespace' => [' force ', 50, 50],
+            'null mode from un-migrated schema' => [null, 40, 40],
+        ];
+    }
+
+    #[Test]
+    public function formatConfigurationStripsAnInboundQualityAndAppendsTheForcedOne(): void
+    {
+        $configuration = QualityOverride::formatConfiguration(
+            ['width' => 200, 'tx_webp_quality' => 85],
+            OutputFormat::Webp,
+            50,
+        );
+
+        self::assertSame(['width' => 200, 'format' => 'webp', 'webp' => true, 'tx_webp_quality' => 50], $configuration);
+    }
+
+    #[Test]
+    public function formatConfigurationOmitsTheQualityKeyWithoutAForcedQuality(): void
+    {
+        $configuration = QualityOverride::formatConfiguration(
+            ['width' => 200, 'tx_webp_quality' => 85],
+            OutputFormat::Avif,
+            null,
+        );
+
+        self::assertSame(['width' => 200, 'format' => 'avif', 'webp' => true], $configuration);
+    }
+
+    private function fileWithMetadata(mixed $mode, mixed $quality): File
+    {
+        $file = $this->createMock(File::class);
+        $file->method('getProperty')->willReturnMap([
+            ['tx_webp_quality_mode', $mode],
+            ['tx_webp_quality', $quality],
+        ]);
+
+        return $file;
+    }
+
     #[Test]
     #[DataProvider('metadataValueProvider')]
     public function fromMetadataValueValidatesAndCoerces(mixed $value, ?int $expected): void
