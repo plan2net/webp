@@ -14,6 +14,7 @@ use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileReference;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
@@ -243,6 +244,21 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function createsSiblingForVariantWhenProcessingFolderLivesInAnotherStorage(): void
+    {
+        $storage = $this->createLocalStorageWithProcessingFolderInStorageOne();
+        $file = $this->get(ResourceFactory::class)
+            ->getFileObjectFromCombinedIdentifier($storage->getUid() . ':/tiny.png');
+
+        $processed = $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16],
+        );
+
+        self::assertFileExists($processed->getForLocalProcessing(false) . '.webp');
+    }
+
+    #[Test]
     public function fallsBackToSynchronousConversionWhenQueueTableMissing(): void
     {
         // Upgrade install with async enabled but the DB analyzer not yet run:
@@ -305,6 +321,36 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     private function getFile(int $uid): File
     {
         return $this->get(ResourceFactory::class)->getFileObject($uid);
+    }
+
+    private function createLocalStorageWithProcessingFolderInStorageOne(): ResourceStorage
+    {
+        $basePath = $this->instancePath . '/second_storage/';
+        mkdir($basePath, 0o775, true);
+        copy(__DIR__ . '/../Fixtures/Images/tiny.png', $basePath . 'tiny.png');
+
+        $connection = $this->getConnectionPool()->getConnectionForTable('sys_file_storage');
+        $connection->insert('sys_file_storage', [
+            'name' => 'Second storage with processing folder inside storage 1',
+            'driver' => 'Local',
+            'is_writable' => 1,
+            'is_browsable' => 1,
+            'is_online' => 1,
+            'is_public' => 1,
+            'processingfolder' => '1:/second_storage_processed/',
+            'configuration' => sprintf(
+                '<T3FlexForms><data><sheet index="sDEF"><language index="lDEF">'
+                . '<field index="basePath"><value index="vDEF">%s</value></field>'
+                . '<field index="pathType"><value index="vDEF">absolute</value></field>'
+                . '</language></sheet></data></T3FlexForms>',
+                $basePath,
+            ),
+        ]);
+
+        $storageRepository = $this->get(StorageRepository::class);
+        $storageRepository->flush();
+
+        return $storageRepository->findByUid((int) $connection->lastInsertId());
     }
 
     private function getFileReference(int $referenceUid): FileReference

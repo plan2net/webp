@@ -164,9 +164,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
 
     private function isFileInProcessingFolder(ProcessedFile $file): bool
     {
-        $processingFolder = $file->getStorage()->getProcessingFolder();
-
-        return $this->pathMatcher->matches($file->getIdentifier(), $processingFolder->getIdentifier());
+        return $file->getStorage()->isWithinProcessingFolder($file->getIdentifier());
     }
 
     private function originalFileIsInExcludedDirectory(FileInterface $file): bool
