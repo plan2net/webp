@@ -54,7 +54,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         // so identifier/parent-folder lookups resolve correctly.
         $sourceVariant = $processedFile;
         $taskConfiguration = $event->getConfiguration();
-        if (!$this->isFileInProcessingFolder($processedFile)) {
+        if ($processedFile->usesOriginalFile()) {
             $sourceVariant = $originalFile;
             $taskConfiguration = [];
         }
