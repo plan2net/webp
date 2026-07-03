@@ -73,9 +73,9 @@ services:
         description: 'End-to-end health check: storages, converter, async pipeline, failed attempts, and optional HTTP delivery probe.'
         schedulable: false
 
-  Plan2net\Webp\Webserver\RewriteConfigGenerator: ~
+  Plan2net\Webp\Webserver\RewriteConfigurationGenerator: ~
 
-  Plan2net\Webp\Command\GenerateWebserverConfigCommand:
+  Plan2net\Webp\Command\GenerateWebserverConfigurationCommand:
     tags:
       - name: 'console.command'
         command: 'webp:webserver-config'

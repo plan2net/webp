@@ -7,13 +7,13 @@ namespace Plan2net\Webp\Tests\Unit\Webserver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Plan2net\Webp\Format\OutputFormat;
-use Plan2net\Webp\Webserver\RewriteConfigGenerator;
+use Plan2net\Webp\Webserver\RewriteConfigurationGenerator;
 use Plan2net\Webp\Webserver\WebserverType;
 
-final class RewriteConfigGeneratorTest extends TestCase
+final class RewriteConfigurationGeneratorTest extends TestCase
 {
     private const ALL = [OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl];
-    private const EXTS = ['jpg', 'jpeg', 'png', 'gif'];
+    private const SOURCE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
 
     #[Test]
     public function nginxHttpScopeMatchesGolden(): void
@@ -29,13 +29,13 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             NGINX;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Nginx, self::ALL, self::EXTS)['http']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, self::ALL, self::SOURCE_EXTENSIONS)['http']);
     }
 
     #[Test]
     public function commentsNameOnlyTheFormatsActuallyGenerated(): void
     {
-        $http = (new RewriteConfigGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp], self::EXTS)['http'];
+        $http = (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp], self::SOURCE_EXTENSIONS)['http'];
 
         self::assertStringContainsString('preference order WebP (first match wins)', $http);
     }
@@ -66,7 +66,7 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             NGINX;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Nginx, self::ALL, self::EXTS)['server']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, self::ALL, self::SOURCE_EXTENSIONS)['server']);
     }
 
     #[Test]
@@ -105,7 +105,7 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             APACHE;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Apache, self::ALL, self::EXTS)['main']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Apache, self::ALL, self::SOURCE_EXTENSIONS)['main']);
     }
 
     #[Test]
@@ -143,7 +143,7 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             CADDY;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Caddy, self::ALL, self::EXTS)['main']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Caddy, self::ALL, self::SOURCE_EXTENSIONS)['main']);
     }
 
     #[Test]
@@ -158,7 +158,7 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             NGINX;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp], self::EXTS)['http']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp], self::SOURCE_EXTENSIONS)['http']);
     }
 
     #[Test]
@@ -174,6 +174,6 @@ final class RewriteConfigGeneratorTest extends TestCase
 
             NGINX;
 
-        self::assertSame($expected, (new RewriteConfigGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp, OutputFormat::Avif], self::EXTS)['http']);
+        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp, OutputFormat::Avif], self::SOURCE_EXTENSIONS)['http']);
     }
 }

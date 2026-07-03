@@ -7,7 +7,7 @@ namespace Plan2net\Webp\Webserver;
 use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Format\SourceMimeType;
 
-final class RewriteConfigGenerator
+final class RewriteConfigurationGenerator
 {
     /**
      * @param list<OutputFormat> $formatsInPriorityOrder

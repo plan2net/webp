@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Tests\Functional\Command;
 
 use PHPUnit\Framework\Attributes\Test;
-use Plan2net\Webp\Command\GenerateWebserverConfigCommand;
+use Plan2net\Webp\Command\GenerateWebserverConfigurationCommand;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
-final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
+final class GenerateWebserverConfigurationCommandTest extends FunctionalTestCase
 {
     protected array $coreExtensionsToLoad = ['install', 'scheduler'];
     protected array $testExtensionsToLoad = ['plan2net/webp'];
 
-    private function applyConfig(array $overrides): void
+    private function applyConfigurationOverride(array $overrides): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp'] = $overrides + [
             'converter' => 'Plan2net\\Webp\\Converter\\MagickConverter',
@@ -26,7 +26,7 @@ final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
 
     private function executeCommand(array $input): CommandTester
     {
-        $tester = new CommandTester($this->get(GenerateWebserverConfigCommand::class));
+        $tester = new CommandTester($this->get(GenerateWebserverConfigurationCommand::class));
         $tester->execute($input);
 
         return $tester;
@@ -35,7 +35,7 @@ final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
     #[Test]
     public function fullOutputAddsPlacementHeadersAroundBothNginxScopes(): void
     {
-        $this->applyConfig([]);
+        $this->applyConfigurationOverride([]);
 
         $tester = $this->executeCommand(['--server' => 'nginx']);
 
@@ -50,7 +50,7 @@ final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
     #[Test]
     public function formatsAreOrderedAvifWebpJxlRegardlessOfConfigOrder(): void
     {
-        $this->applyConfig([
+        $this->applyConfigurationOverride([
             'formats_enabled' => 'jxl,webp,avif',
             'converter_avif' => 'Plan2net\\Webp\\Converter\\MagickConverter',
             'parameters_avif' => 'image/jpeg::-quality 60',
@@ -67,7 +67,7 @@ final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
     #[Test]
     public function scopeEmitsOnlyThatSectionRawWithoutPlacementHeader(): void
     {
-        $this->applyConfig([]);
+        $this->applyConfigurationOverride([]);
 
         $output = $this->executeCommand(['--server' => 'nginx', '--scope' => 'http'])->getDisplay();
 
@@ -79,28 +79,28 @@ final class GenerateWebserverConfigCommandTest extends FunctionalTestCase
     #[Test]
     public function unknownServerFails(): void
     {
-        $this->applyConfig([]);
+        $this->applyConfigurationOverride([]);
         self::assertNotSame(0, $this->executeCommand(['--server' => 'lighttpd'])->getStatusCode());
     }
 
     #[Test]
     public function invalidScopeForServerFails(): void
     {
-        $this->applyConfig([]);
+        $this->applyConfigurationOverride([]);
         self::assertNotSame(0, $this->executeCommand(['--server' => 'apache', '--scope' => 'http'])->getStatusCode());
     }
 
     #[Test]
     public function noConfiguredFormatsFails(): void
     {
-        $this->applyConfig(['formats_enabled' => 'webp', 'converter' => '', 'parameters' => '']);
+        $this->applyConfigurationOverride(['formats_enabled' => 'webp', 'converter' => '', 'parameters' => '']);
         self::assertNotSame(0, $this->executeCommand(['--server' => 'nginx'])->getStatusCode());
     }
 
     #[Test]
     public function noSourceExtensionsFails(): void
     {
-        $this->applyConfig(['mime_types' => '']);
+        $this->applyConfigurationOverride(['mime_types' => '']);
         self::assertNotSame(0, $this->executeCommand(['--server' => 'nginx'])->getStatusCode());
     }
 }

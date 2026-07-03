@@ -7,14 +7,14 @@ namespace Plan2net\Webp\Command;
 use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
-use Plan2net\Webp\Webserver\RewriteConfigGenerator;
+use Plan2net\Webp\Webserver\RewriteConfigurationGenerator;
 use Plan2net\Webp\Webserver\WebserverType;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-final class GenerateWebserverConfigCommand extends Command
+final class GenerateWebserverConfigurationCommand extends Command
 {
     private const PLACEMENT_HEADERS = [
         'http' => '# Place in the http {} block:',
@@ -24,7 +24,7 @@ final class GenerateWebserverConfigCommand extends Command
 
     public function __construct(
         private readonly Configuration $configuration,
-        private readonly RewriteConfigGenerator $generator,
+        private readonly RewriteConfigurationGenerator $generator,
     ) {
         parent::__construct();
     }
