@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.8.0] - 2026-07-03
+
+### Added
+
+- `webp:webserver-config` CLI command that prints a ready-to-paste content-negotiation snippet for nginx, Apache, or Caddy — generated for the formats actually enabled, including the MIME types stock nginx lacks for AVIF/JXL. `--scope` emits a single section raw for scripting. The E2E suite runs the generated output against real servers.
+
+### Changed
+
+- The per-image compression quality override is now an explicit **quality mode**: *Use global setting* or *Force a fixed quality* (1–100). An upgrade wizard migrates existing overrides (quality 1–100) to the force mode; saving *Force* without a valid quality falls back to the global setting.
+
+### Fixed
+
+- Storages whose processing folder lives inside another storage now get siblings for every processed variant; previously such variants were treated as unprocessed originals — a single full-size sibling per image and queued conversions without processing instructions (#117).
+- `webp:diagnose` and `webp:webserver-config` are no longer offered as schedulable commands in the Scheduler.
+
 ## [14.7.0] - 2026-06-16
 
 ### Added
@@ -167,6 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.8.0]: https://github.com/plan2net/webp/releases/tag/14.8.0
 [14.7.0]: https://github.com/plan2net/webp/releases/tag/14.7.0
 [14.6.0]: https://github.com/plan2net/webp/releases/tag/14.6.0
 [14.5.4]: https://github.com/plan2net/webp/releases/tag/14.5.4
