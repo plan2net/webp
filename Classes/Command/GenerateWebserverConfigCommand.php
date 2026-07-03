@@ -63,17 +63,17 @@ final class GenerateWebserverConfigCommand extends Command
         $scope = $input->getOption('scope');
         if (null !== $scope) {
             if (!isset($sections[$scope])) {
-                $output->writeln(\sprintf('<error>--scope for %s must be one of: %s</error>', $server->value, \implode(', ', $server->scopeKeys())));
+                $output->writeln(\sprintf('<error>--scope for %s must be one of: %s</error>', $server->value, \implode(', ', \array_keys($sections))));
 
                 return Command::INVALID;
             }
-            $output->write($sections[(string) $scope]);
+            $output->write($sections[$scope]);
 
             return Command::SUCCESS;
         }
 
         foreach ($sections as $key => $fragment) {
-            $output->writeln(self::PLACEMENT_HEADERS[$key] ?? \sprintf('# %s:', $key));
+            $output->writeln(self::PLACEMENT_HEADERS[$key]);
             $output->writeln($fragment);
         }
 

@@ -11,14 +11,6 @@ use Plan2net\Webp\Webserver\WebserverType;
 final class WebserverTypeTest extends TestCase
 {
     #[Test]
-    public function scopeKeysAreServerSpecific(): void
-    {
-        self::assertSame(['http', 'server'], WebserverType::Nginx->scopeKeys());
-        self::assertSame(['main'], WebserverType::Apache->scopeKeys());
-        self::assertSame(['main'], WebserverType::Caddy->scopeKeys());
-    }
-
-    #[Test]
     public function valuesMatchTheCliChoices(): void
     {
         self::assertSame('nginx', WebserverType::Nginx->value);
