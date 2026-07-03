@@ -16,9 +16,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 final class GenerateWebserverConfigCommand extends Command
 {
-    // Fixed delivery priority — first match wins in every server.
-    private const PRIORITY = [OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl];
-
     private const PLACEMENT_HEADERS = [
         'http' => '# Place in the http {} block:',
         'server' => '# Place in the server {} block:',
@@ -90,7 +87,7 @@ final class GenerateWebserverConfigCommand extends Command
     {
         $enabled = $this->configuration->getEnabledFormats();
         $ordered = [];
-        foreach (self::PRIORITY as $format) {
+        foreach (OutputFormat::casesInDeliveryPriority() as $format) {
             if (\in_array($format, $enabled, true) && $this->configuration->isFormatRunnable($format)) {
                 $ordered[] = $format;
             }

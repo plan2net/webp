@@ -1227,7 +1227,7 @@ final class DiagnoseCommand extends Command
      */
     private function expectedTopFormat(array $enabledFormats): OutputFormat
     {
-        foreach ([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl] as $candidate) {
+        foreach (OutputFormat::casesInDeliveryPriority() as $candidate) {
             if (\in_array($candidate, $enabledFormats, true)) {
                 return $candidate;
             }
@@ -1249,7 +1249,7 @@ final class DiagnoseCommand extends Command
      */
     private function pickProbeTarget(array $selectedFormats): ?array
     {
-        foreach ([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl] as $format) {
+        foreach (OutputFormat::casesInDeliveryPriority() as $format) {
             if (!\in_array($format, $selectedFormats, true)) {
                 continue;
             }

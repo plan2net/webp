@@ -46,7 +46,7 @@ final class RewriteConfigGenerator
             $typeLines[] = \sprintf('        %s %s;', $format->mimeType(), $format->value);
         }
 
-        $http = "# Accept header to sibling suffix, preference order AVIF > WebP > JXL (first match wins).\n"
+        $http = \sprintf("# Accept header to sibling suffix, preference order %s (first match wins).\n", $this->preferenceOrder($formats))
             . "map \$http_accept \$sibling_suffix {\n"
             . \implode("\n", $mapLines) . "\n"
             . "}\n";
@@ -67,6 +67,14 @@ final class RewriteConfigGenerator
             . "}\n";
 
         return ['http' => $http, 'server' => $server];
+    }
+
+    /**
+     * @param list<OutputFormat> $formats
+     */
+    private function preferenceOrder(array $formats): string
+    {
+        return \implode(' > ', \array_map(static fn (OutputFormat $format): string => $format->label(), $formats));
     }
 
     /**
@@ -108,7 +116,7 @@ final class RewriteConfigGenerator
             . "# with %{REQUEST_URI}; to restrict by user agent, see the README.\n"
             . $addTypes
             . "RewriteEngine On\n\n"
-            . "# Preference order AVIF > WebP > JXL (first matching rule wins).\n"
+            . \sprintf("# Preference order %s (first matching rule wins).\n", $this->preferenceOrder($formats))
             . $rewrites
             . "<IfModule mod_headers.c>\n"
             . \sprintf("    <FilesMatch \"\\.(%s)$\">\n", $extensions)
@@ -136,7 +144,7 @@ final class RewriteConfigGenerator
         $tryFiles .= ' {path}';
 
         return "# Paste inside your site block (a file_server and root must already be configured).\n"
-            . "# Accept header to sibling suffix, preference order AVIF > WebP > JXL. To restrict by user agent, see the README.\n"
+            . \sprintf("# Accept header to sibling suffix, preference order %s. To restrict by user agent, see the README.\n", $this->preferenceOrder($formats))
             . $maps
             . \sprintf("@images path_regexp \\.(%s)$\n", $extensions)
             . "handle @images {\n"

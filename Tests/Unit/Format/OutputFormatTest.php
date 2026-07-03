@@ -44,6 +44,20 @@ final class OutputFormatTest extends TestCase
     }
 
     #[Test]
+    public function casesInDeliveryPriorityListsEveryFormatBestFirst(): void
+    {
+        self::assertSame([OutputFormat::Avif, OutputFormat::Webp, OutputFormat::Jxl], OutputFormat::casesInDeliveryPriority());
+    }
+
+    #[Test]
+    public function labelUsesTheCanonicalSpelling(): void
+    {
+        self::assertSame('AVIF', OutputFormat::Avif->label());
+        self::assertSame('WebP', OutputFormat::Webp->label());
+        self::assertSame('JXL', OutputFormat::Jxl->label());
+    }
+
+    #[Test]
     public function valueRoundTripsViaTryFrom(): void
     {
         self::assertSame(OutputFormat::Webp, OutputFormat::tryFrom('webp'));

@@ -10,6 +10,23 @@ enum OutputFormat: string
     case Avif = 'avif';
     case Jxl = 'jxl';
 
+    /**
+     * @return list<self>
+     */
+    public static function casesInDeliveryPriority(): array
+    {
+        return [self::Avif, self::Webp, self::Jxl];
+    }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Webp => 'WebP',
+            self::Avif => 'AVIF',
+            self::Jxl => 'JXL',
+        };
+    }
+
     public function suffix(): string
     {
         return '.' . $this->value;

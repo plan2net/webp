@@ -33,6 +33,14 @@ final class RewriteConfigGeneratorTest extends TestCase
     }
 
     #[Test]
+    public function commentsNameOnlyTheFormatsActuallyGenerated(): void
+    {
+        $http = (new RewriteConfigGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp], self::EXTS)['http'];
+
+        self::assertStringContainsString('preference order WebP (first match wins)', $http);
+    }
+
+    #[Test]
     public function nginxServerScopeMatchesGolden(): void
     {
         $expected = <<<'NGINX'
@@ -142,7 +150,7 @@ final class RewriteConfigGeneratorTest extends TestCase
     public function webpOnlyNginxHttpOmitsOtherFormats(): void
     {
         $expected = <<<'NGINX'
-            # Accept header to sibling suffix, preference order AVIF > WebP > JXL (first match wins).
+            # Accept header to sibling suffix, preference order WebP (first match wins).
             map $http_accept $sibling_suffix {
                 default "";
                 "~*image/webp" ".webp";
@@ -157,7 +165,7 @@ final class RewriteConfigGeneratorTest extends TestCase
     public function nginxHttpPreservesInputFormatOrder(): void
     {
         $expected = <<<'NGINX'
-            # Accept header to sibling suffix, preference order AVIF > WebP > JXL (first match wins).
+            # Accept header to sibling suffix, preference order WebP > AVIF (first match wins).
             map $http_accept $sibling_suffix {
                 default "";
                 "~*image/webp" ".webp";
