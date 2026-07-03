@@ -69,12 +69,18 @@ services:
   Plan2net\Webp\Command\DiagnoseCommand:
     tags:
       - name: 'console.command'
+        command: 'webp:diagnose'
+        description: 'End-to-end health check: storages, converter, async pipeline, failed attempts, and optional HTTP delivery probe.'
+        schedulable: false
 
   Plan2net\Webp\Webserver\RewriteConfigGenerator: ~
 
   Plan2net\Webp\Command\GenerateWebserverConfigCommand:
     tags:
       - name: 'console.command'
+        command: 'webp:webserver-config'
+        description: 'Print the webserver content-negotiation snippet for the configured formats.'
+        schedulable: false
 
   # public: true required so GeneralUtility::makeInstance(Configuration::class) resolves
   # the service from the container (called from FileNameFilter::filterSiblingFiles and from

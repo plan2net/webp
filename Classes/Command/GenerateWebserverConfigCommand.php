@@ -9,18 +9,11 @@ use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Webserver\RewriteConfigGenerator;
 use Plan2net\Webp\Webserver\WebserverType;
-use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use TYPO3\CMS\Core\Attribute\AsNonSchedulableCommand;
 
-#[AsCommand(
-    name: 'webp:webserver-config',
-    description: 'Print the webserver content-negotiation snippet for the configured formats.'
-)]
-#[AsNonSchedulableCommand]
 final class GenerateWebserverConfigCommand extends Command
 {
     // Fixed delivery priority — first match wins in every server.

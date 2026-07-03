@@ -16,13 +16,11 @@ use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Http\Message\ResponseInterface;
-use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use TYPO3\CMS\Core\Attribute\AsNonSchedulableCommand;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -34,11 +32,6 @@ use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
-#[AsCommand(
-    name: 'webp:diagnose',
-    description: 'End-to-end health check: storages, converter, async pipeline, failed attempts, and optional HTTP delivery probe.',
-)]
-#[AsNonSchedulableCommand]
 final class DiagnoseCommand extends Command
 {
     private int $failureCount = 0;

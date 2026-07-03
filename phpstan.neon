@@ -10,7 +10,7 @@ parameters:
         # TYPO3 v13+ attributes used conditionally — PHP silently ignores them
         # on v12 (the lowest supported core), and the test matrix covers both.
         - identifier: attribute.notFound
-          message: '#TYPO3\\CMS\\Core\\Attribute\\(AsNonSchedulableCommand|AsEventListener|UpgradeWizard)#'
+          message: '#TYPO3\\CMS\\Core\\Attribute\\(AsEventListener|UpgradeWizard)#'
           reportUnmatched: false
         # jcupitt/vips is a soft dependency loaded only when VipsConverter runs.
         # Static analysis can't see the FFI-based 2.x line's type defs.
