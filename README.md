@@ -552,6 +552,9 @@ location ~* ^.+\.(png|gif|jpe?g)$ {
 }
 ```
 
+> [!IMPORTANT]
+> nginx `add_header` directives in a location discard **all** `add_header` lines inherited from the `server`/`http` level — repeat site-wide headers (HSTS etc.) inside the block.
+
 #### Restrict by user agent (optional)
 
 ```nginx

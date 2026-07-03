@@ -59,6 +59,8 @@ final class RewriteConfigGenerator
             . "    types {\n"
             . \implode("\n", $typeLines) . "\n"
             . "    }\n"
+            . "    # add_header directives below discard ALL add_header lines inherited from\n"
+            . "    # the server/http level — repeat site-wide headers (HSTS etc.) in here.\n"
             . "    add_header Vary \"Accept\";\n"
             . "    add_header Cache-Control \"public, no-transform\";\n"
             . "    try_files \$uri\$sibling_suffix \$uri =404;\n"

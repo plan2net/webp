@@ -49,6 +49,8 @@ final class RewriteConfigGeneratorTest extends TestCase
                     image/webp webp;
                     image/jxl jxl;
                 }
+                # add_header directives below discard ALL add_header lines inherited from
+                # the server/http level — repeat site-wide headers (HSTS etc.) in here.
                 add_header Vary "Accept";
                 add_header Cache-Control "public, no-transform";
                 try_files $uri$sibling_suffix $uri =404;
