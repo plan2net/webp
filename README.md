@@ -536,6 +536,16 @@ Add the location block to your `server`:
 
 ```nginx
 location ~* ^.+\.(png|gif|jpe?g)$ {
+    # Replaces the inherited MIME table for this location; stock mime.types
+    # lacks image/jxl (and image/avif on older nginx).
+    types {
+        image/jpeg jpg jpeg;
+        image/png png;
+        image/gif gif;
+        image/avif avif;
+        image/webp webp;
+        image/jxl jxl;
+    }
     add_header Vary "Accept";
     add_header Cache-Control "public, no-transform";
     try_files $uri$sibling_suffix $uri =404;

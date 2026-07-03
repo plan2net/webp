@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Plan2net\Webp\Webserver;
 
 use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Format\SourceMimeType;
 
 final class RewriteConfigGenerator
 {
@@ -19,7 +20,7 @@ final class RewriteConfigGenerator
         $extensions = \implode('|', $sourceExtensions);
 
         return match ($server) {
-            WebserverType::Nginx => $this->nginx($formatsInPriorityOrder, $extensions),
+            WebserverType::Nginx => $this->nginx($formatsInPriorityOrder, $sourceExtensions),
             WebserverType::Apache => ['main' => $this->apache($formatsInPriorityOrder, $extensions)],
             WebserverType::Caddy => ['main' => $this->caddy($formatsInPriorityOrder, $extensions)],
         };
@@ -30,11 +31,19 @@ final class RewriteConfigGenerator
      *
      * @return array{http: string, server: string}
      */
-    private function nginx(array $formats, string $extensions): array
+    private function nginx(array $formats, array $sourceExtensions): array
     {
         $mapLines = ['    default "";'];
         foreach ($formats as $format) {
             $mapLines[] = \sprintf('    "~*%s" "%s";', $format->mimeType(), $format->suffix());
+        }
+
+        $typeLines = [];
+        foreach ($this->mimeTypesByExtension($sourceExtensions) as $mimeType => $extensionsForMimeType) {
+            $typeLines[] = \sprintf('        %s %s;', $mimeType, \implode(' ', $extensionsForMimeType));
+        }
+        foreach ($formats as $format) {
+            $typeLines[] = \sprintf('        %s %s;', $format->mimeType(), $format->value);
         }
 
         $http = "# Accept header to sibling suffix, preference order AVIF > WebP > JXL (first match wins).\n"
@@ -44,13 +53,37 @@ final class RewriteConfigGenerator
 
         $server = "# Keep this above any generic static-asset location.\n"
             . "# Behind a CDN such as Cloudflare, or to restrict by user agent, see the README.\n"
-            . \sprintf("location ~* ^.+\\.(%s)$ {\n", $extensions)
+            . \sprintf("location ~* ^.+\\.(%s)$ {\n", \implode('|', $sourceExtensions))
+            . "    # Replaces the inherited MIME table for this location; stock mime.types\n"
+            . "    # lacks image/jxl (and image/avif on older nginx).\n"
+            . "    types {\n"
+            . \implode("\n", $typeLines) . "\n"
+            . "    }\n"
             . "    add_header Vary \"Accept\";\n"
             . "    add_header Cache-Control \"public, no-transform\";\n"
             . "    try_files \$uri\$sibling_suffix \$uri =404;\n"
             . "}\n";
 
         return ['http' => $http, 'server' => $server];
+    }
+
+    /**
+     * @param list<string> $sourceExtensions
+     *
+     * @return array<string, list<string>>
+     */
+    private function mimeTypesByExtension(array $sourceExtensions): array
+    {
+        $grouped = [];
+        foreach ($sourceExtensions as $extension) {
+            $mimeType = SourceMimeType::fromExtension($extension);
+            if (null === $mimeType) {
+                continue;
+            }
+            $grouped[$mimeType][] = $extension;
+        }
+
+        return $grouped;
     }
 
     /**

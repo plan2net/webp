@@ -39,6 +39,16 @@ final class RewriteConfigGeneratorTest extends TestCase
             # Keep this above any generic static-asset location.
             # Behind a CDN such as Cloudflare, or to restrict by user agent, see the README.
             location ~* ^.+\.(jpg|jpeg|png|gif)$ {
+                # Replaces the inherited MIME table for this location; stock mime.types
+                # lacks image/jxl (and image/avif on older nginx).
+                types {
+                    image/jpeg jpg jpeg;
+                    image/png png;
+                    image/gif gif;
+                    image/avif avif;
+                    image/webp webp;
+                    image/jxl jxl;
+                }
                 add_header Vary "Accept";
                 add_header Cache-Control "public, no-transform";
                 try_files $uri$sibling_suffix $uri =404;
