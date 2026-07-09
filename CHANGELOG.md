@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.8.1] - 2026-07-09
+
+### Fixed
+
+- Async installations on PostgreSQL no longer log an `ERROR` for every duplicate queue entry; `tx_webp_queue` writes now use a native `INSERT … ON CONFLICT` upsert, while other database platforms keep the existing insert/update fallback (#118).
+
 ## [14.8.0] - 2026-07-03
 
 ### Added
@@ -182,6 +188,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.8.1]: https://github.com/plan2net/webp/releases/tag/14.8.1
 [14.8.0]: https://github.com/plan2net/webp/releases/tag/14.8.0
 [14.7.0]: https://github.com/plan2net/webp/releases/tag/14.7.0
 [14.6.0]: https://github.com/plan2net/webp/releases/tag/14.6.0
