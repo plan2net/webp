@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [14.8.2] - 2026-07-29
 
 ### Fixed
 
-- The per-image **Compression quality** field is always visible now. It was only shown after the quality mode was already set to *Force a fixed quality*, but display conditions are evaluated on the server, so the field never appeared: without a quality between 1 and 100 every save fell back to *Use global setting*, and there was no way to enter one.
+- The per-image **Compression quality** field is no longer hidden until the quality mode is already *Force a fixed quality*; because display conditions are evaluated server-side, that field never appeared, so every save of *Force a fixed quality* fell back to *Use global setting* with no way to enter a quality at all.
 
 ## [14.8.1] - 2026-07-09
 
@@ -194,6 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.8.2]: https://github.com/plan2net/webp/releases/tag/14.8.2
 [14.8.1]: https://github.com/plan2net/webp/releases/tag/14.8.1
 [14.8.0]: https://github.com/plan2net/webp/releases/tag/14.8.0
 [14.7.0]: https://github.com/plan2net/webp/releases/tag/14.7.0
