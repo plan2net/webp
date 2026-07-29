@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The per-image **Compression quality** field is always visible now. It was only shown after the quality mode was already set to *Force a fixed quality*, but display conditions are evaluated on the server, so the field never appeared: without a quality between 1 and 100 every save fell back to *Use global setting*, and there was no way to enter one.
+
 ## [14.8.1] - 2026-07-09
 
 ### Fixed

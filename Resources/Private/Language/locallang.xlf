@@ -31,7 +31,7 @@
         <source>Compression quality</source>
       </trans-unit>
       <trans-unit id="sys_file_metadata.tx_webp_quality.description">
-        <source>Overrides the global compression quality for this image only (1–100, lower = stronger compression and smaller file). Applies to all enabled output formats. Leave at 0 to use the global extension setting.</source>
+        <source>Overrides the global compression quality for this image only (1–100, lower = stronger compression and smaller file). Applies to all enabled output formats. Only taken into account when the quality mode above is set to "Force a fixed quality".</source>
       </trans-unit>
       <trans-unit id="sys_file_metadata.tx_webp_quality_mode">
         <source>Compression quality mode</source>
