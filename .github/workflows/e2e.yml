@@ -61,16 +61,7 @@ jobs:
 
       # libheif-plugin-aomenc gives libheif a real AV1 encoder; without it
       # heifsave fails with "Unsupported compression" on Ubuntu 24.04.
-      - name: Install system packages (cached)
-        if: ${{ !env.ACT }}
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: nginx apache2 sqlite3 imagemagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools libvips-tools
-          execute_install_scripts: true
-          version: 1.0
-
-      - name: Install system packages (act fallback)
-        if: ${{ env.ACT }}
+      - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y nginx apache2 sqlite3 imagemagick libheif1 libheif-plugin-aomenc libheif-plugin-x265 libjxl-tools libvips-tools
 
       # Caddy isn't in Ubuntu's apt repos. Pull the binary fetched once by the
