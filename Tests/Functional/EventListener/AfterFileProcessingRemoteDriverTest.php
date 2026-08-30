@@ -59,9 +59,26 @@ final class AfterFileProcessingRemoteDriverTest extends FunctionalTestCase
         self::assertFileDoesNotExist($basePath . $processedFile->getIdentifier() . '.webp');
     }
 
+    #[Test]
+    public function repeatedRenderDoesNotFetchTheSourceAgainOnceSiblingsExist(): void
+    {
+        [$storage, $basePath] = $this->createFakeRemoteStorage(mode: 1);
+        \copy(self::FIXTURE_PNG, $basePath . '/sample.png');
+
+        $file = $storage->getFile('sample.png');
+        self::assertInstanceOf(File::class, $file);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        FakeRemoteDriver::$localProcessingCalls = 0;
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(0, FakeRemoteDriver::$localProcessingCalls);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
+        FakeRemoteDriver::$localProcessingCalls = 0;
         GeneralUtility::makeInstance(DriverRegistry::class)->registerDriverClass(
             FakeRemoteDriver::class,
             'FakeRemote',

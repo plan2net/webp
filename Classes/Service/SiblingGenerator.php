@@ -48,25 +48,21 @@ final class SiblingGenerator implements LoggerAwareInterface
             return;
         }
 
+        $pendingFormats = $this->formatsNeedingWork($originalFile, $taskType, $taskConfiguration, $onlyFormat);
+        if ([] === $pendingFormats) {
+            return;
+        }
+
+        // Fetching the source can mean a full download on a remote storage, so it
+        // happens only once we know there is something left to convert.
         $sourceLocalPath = $sourceVariant->getForLocalProcessing(false);
         if (!@\is_file($sourceLocalPath)) {
             return;
         }
 
         $mimeType = $originalFile->getMimeType();
-        $formats = null === $onlyFormat
-            ? $this->configuration->getEnabledFormats()
-            : [$onlyFormat];
-
-        foreach ($formats as $format) {
-            if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
-                continue;
-            }
-            if (!$this->configuration->isFormatRunnable($format)) {
-                $this->logger?->notice(\sprintf('webp: %s is enabled but not fully configured (missing converter or parameters) — skipping.', $format->value));
-                continue;
-            }
-            $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $taskConfiguration, $format);
+        foreach ($pendingFormats as [$format, $formatConfiguration, $formatRow]) {
+            $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $format, $formatConfiguration, $formatRow);
         }
     }
 
@@ -119,26 +115,56 @@ final class SiblingGenerator implements LoggerAwareInterface
         return $targetSize;
     }
 
+    /**
+     * @return list<array{0: OutputFormat, 1: array, 2: ProcessedFile}>
+     */
+    private function formatsNeedingWork(
+        File $originalFile,
+        string $taskType,
+        array $taskConfiguration,
+        ?OutputFormat $onlyFormat,
+    ): array {
+        $mimeType = $originalFile->getMimeType();
+        $overrideQuality = QualityOverride::forcedQualityFor($originalFile);
+        $formats = null === $onlyFormat
+            ? $this->configuration->getEnabledFormats()
+            : [$onlyFormat];
+
+        $pendingFormats = [];
+        foreach ($formats as $format) {
+            if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
+                continue;
+            }
+            if (!$this->configuration->isFormatRunnable($format)) {
+                $this->logger?->notice(\sprintf('webp: %s is enabled but not fully configured (missing converter or parameters) — skipping.', $format->value));
+                continue;
+            }
+            $formatConfiguration = QualityOverride::formatConfiguration($taskConfiguration, $format, $overrideQuality);
+            $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
+                $originalFile,
+                $taskType,
+                $formatConfiguration,
+            );
+            if (!$this->needsReprocessing($formatRow)) {
+                continue;
+            }
+            $pendingFormats[] = [$format, $formatConfiguration, $formatRow];
+        }
+
+        return $pendingFormats;
+    }
+
     private function processFormat(
         File $originalFile,
         FileInterface $sourceVariant,
         string $sourceLocalPath,
         string $mimeType,
         string $taskType,
-        array $taskConfiguration,
         OutputFormat $format,
+        array $formatConfiguration,
+        ProcessedFile $formatRow,
     ): void {
         $overrideQuality = QualityOverride::forcedQualityFor($originalFile);
-        $formatConfiguration = QualityOverride::formatConfiguration($taskConfiguration, $format, $overrideQuality);
-
-        $formatRow = $this->processedFileRepository->findOneByOriginalFileAndTaskTypeAndConfiguration(
-            $originalFile,
-            $taskType,
-            $formatConfiguration,
-        );
-        if (!$this->needsReprocessing($formatRow)) {
-            return;
-        }
 
         $parameters = $this->configuration->getParametersFor($format, $mimeType);
         if (null === $parameters || '' === $parameters) {

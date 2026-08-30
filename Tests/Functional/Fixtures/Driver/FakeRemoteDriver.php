@@ -23,8 +23,12 @@ use TYPO3\CMS\Core\Resource\Driver\LocalDriver;
  */
 final class FakeRemoteDriver extends LocalDriver
 {
+    public static int $localProcessingCalls = 0;
+
     public function getFileForLocalProcessing($fileIdentifier, $writable = true): string
     {
+        ++self::$localProcessingCalls;
+
         return parent::getFileForLocalProcessing($fileIdentifier, true);
     }
 }
