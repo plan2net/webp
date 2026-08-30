@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.8.3] - 2026-08-30
+
+### Fixed
+
+- Sibling generation no longer fetches the source image before it knows whether anything still needs converting; on remote storages (S3, Azure and other non-local drivers) that meant downloading every original again on every single render, even when its `.webp` and `.avif` siblings had long been in place.
+
 ## [14.8.2] - 2026-07-29
 
 ### Fixed
@@ -194,6 +200,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.8.3]: https://github.com/plan2net/webp/releases/tag/14.8.3
 [14.8.2]: https://github.com/plan2net/webp/releases/tag/14.8.2
 [14.8.1]: https://github.com/plan2net/webp/releases/tag/14.8.1
 [14.8.0]: https://github.com/plan2net/webp/releases/tag/14.8.0
