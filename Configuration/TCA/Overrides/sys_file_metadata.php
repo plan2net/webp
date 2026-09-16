@@ -6,6 +6,7 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 (static function (): void {
     $GLOBALS['TCA']['sys_file_metadata']['columns']['tx_webp_quality_mode'] = [
+        'exclude' => true,
         'label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_quality_mode',
         'description' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_quality_mode.description',
         'config' => [
@@ -22,6 +23,7 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
     ExtensionManagementUtility::addToAllTCAtypes('sys_file_metadata', 'tx_webp_quality_mode', '', 'after:description');
 
     $GLOBALS['TCA']['sys_file_metadata']['columns']['tx_webp_quality'] = [
+        'exclude' => true,
         'label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_quality',
         'description' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_quality.description',
         'config' => [
@@ -35,6 +37,7 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
     ExtensionManagementUtility::addToAllTCAtypes('sys_file_metadata', 'tx_webp_quality', '', 'after:tx_webp_quality_mode');
 
     $GLOBALS['TCA']['sys_file_metadata']['columns']['tx_webp_compression_report'] = [
+        'exclude' => true,
         'label' => 'LLL:EXT:webp/Resources/Private/Language/locallang.xlf:sys_file_metadata.tx_webp_compression_report',
         'config' => [
             'type' => 'user',

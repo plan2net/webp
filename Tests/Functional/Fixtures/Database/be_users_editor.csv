@@ -1,0 +1,13 @@
+"sys_filemounts"
+,"uid","pid","title","identifier","read_only"
+,1,0,"Fileadmin","1:/","0"
+
+"be_groups"
+,"uid","pid","title","tables_modify","non_exclude_fields","file_permissions"
+,1,0,"Editors without the webp grant","sys_file_metadata","","readFolder,readFile,writeFile"
+,2,0,"Editors with the webp grant","sys_file_metadata","sys_file_metadata:tx_webp_quality,sys_file_metadata:tx_webp_quality_mode,sys_file_metadata:tx_webp_compression_report","readFolder,readFile,writeFile"
+
+"be_users"
+,"uid","pid","username","password","admin","usergroup","file_mountpoints"
+,2,0,"editor","$argon2i$v=19$m=65536,t=16,p=1$invalid","0","1","1"
+,3,0,"privileged_editor","$argon2i$v=19$m=65536,t=16,p=1$invalid","0","2","1"

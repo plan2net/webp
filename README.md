@@ -410,6 +410,8 @@ The [`parameters`](#parameters) quality is a site-wide default. For a single ima
 > [!NOTE]
 > Already-rendered pages keep serving the previous sibling from cache until they are re-rendered. After changing an in-use image's quality, flush the affected frontend caches (or wait for them to expire) to see the new sibling.
 
+All three fields are TCA exclude fields, so only admins see them by default. To let an editor use them, add *Compression quality mode*, *Compression quality* and *Compression results* to **Allowed excludefields** in their backend user group. Grant all three together — a group that has the quality field but not the mode gets a number it cannot switch on.
+
 ## Compress larger variants harder
 
 A responsive site renders the same image at many widths (`480`, `768`, `1200`, `1536`, …). A fixed quality over-pays on the large variants: at high pixel density the eye no longer resolves compression artifacts — they shrink to sub-pixel noise once the image is displayed or downscaled — so a large variant can be compressed far harder than a small one with no visible loss. Image CDNs already do this; imgix, for example, serves roughly quality **80 at 1×, 40 at 2×, 20 at 3×**. The biggest variants are also the most expensive to download, so this is where the bytes are.

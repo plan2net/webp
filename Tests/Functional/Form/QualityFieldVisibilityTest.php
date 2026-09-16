@@ -7,6 +7,7 @@ namespace Plan2net\Webp\Tests\Functional\Form;
 use PHPUnit\Framework\Attributes\Test;
 use TYPO3\CMS\Backend\Form\FormDataCompiler;
 use TYPO3\CMS\Backend\Form\FormDataGroup\TcaDatabaseRecord;
+use TYPO3\CMS\Backend\Form\NodeFactory;
 use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
@@ -66,6 +67,25 @@ final class QualityFieldVisibilityTest extends FunctionalTestCase
         self::assertArrayHasKey('tx_webp_quality', $columns);
     }
 
+    #[Test]
+    public function compressionReportIsNotRenderedForEditorsWithoutTheGrant(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/be_users_editor.csv');
+        $metadataUid = $this->insertMetadata(1, 0, 'global');
+        $this->setUpBackendUser(2);
+
+        self::assertSame('', $this->renderField($metadataUid, 'tx_webp_compression_report'));
+    }
+
+    private function renderField(int $metadataUid, string $fieldName): string
+    {
+        $formData = $this->compileFormData($metadataUid);
+        $formData['fieldName'] = $fieldName;
+        $formData['renderType'] = 'singleFieldContainer';
+
+        return GeneralUtility::makeInstance(NodeFactory::class)->create($formData)->render()['html'];
+    }
+
     private function insertMetadata(int $fileUid, int $quality, string $mode): int
     {
         $connection = $this->getConnectionPool()->getConnectionForTable('sys_file_metadata');
@@ -80,7 +100,12 @@ final class QualityFieldVisibilityTest extends FunctionalTestCase
 
     private function compileFormColumns(int $metadataUid): array
     {
-        $formData = GeneralUtility::makeInstance(FormDataCompiler::class)->compile(
+        return $this->compileFormData($metadataUid)['processedTca']['columns'];
+    }
+
+    private function compileFormData(int $metadataUid): array
+    {
+        return GeneralUtility::makeInstance(FormDataCompiler::class)->compile(
             [
                 'command' => 'edit',
                 'tableName' => 'sys_file_metadata',
@@ -89,7 +114,5 @@ final class QualityFieldVisibilityTest extends FunctionalTestCase
             ],
             GeneralUtility::makeInstance(TcaDatabaseRecord::class),
         );
-
-        return $formData['processedTca']['columns'];
     }
 }
