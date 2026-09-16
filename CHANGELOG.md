@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.9.0] - 2026-09-16
+
+### Changed
+
+- The per-image compression fields — **Compression quality mode**, **Compression quality** and **Compression results** — are TCA exclude fields now, so a backend user group can be given them under *Allowed excludefields*. Editors whose group does not list them no longer see the fields and cannot save a value; admins are unaffected. Grant all three together, or an editor gets a quality field without its mode switch (#120).
+
 ## [14.8.3] - 2026-08-30
 
 ### Fixed
@@ -200,6 +206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.9.0]: https://github.com/plan2net/webp/releases/tag/14.9.0
 [14.8.3]: https://github.com/plan2net/webp/releases/tag/14.8.3
 [14.8.2]: https://github.com/plan2net/webp/releases/tag/14.8.2
 [14.8.1]: https://github.com/plan2net/webp/releases/tag/14.8.1
