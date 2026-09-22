@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.9.1] - 2026-09-22
+
+### Fixed
+
+- Sibling rows in `sys_file_processedfile` now record the storage that actually holds the sibling; where a storage keeps its processing folder in another storage, the row named the processing folder's storage while the file sat next to the original, so the extension never found it again and reconverted the image on every render, refilling the async queue with the same entries forever (#121).
+- A storage that is not enabled for siblings — set to **Disabled**, or a non-Local driver left on **Auto** — no longer gets siblings written next to its originals and no longer collects queue entries; the setting was previously only read for the processing folder's storage, so a storage keeping that folder elsewhere was written to regardless.
+
 ## [14.9.0] - 2026-09-16
 
 ### Changed
@@ -206,6 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.9.1]: https://github.com/plan2net/webp/releases/tag/14.9.1
 [14.9.0]: https://github.com/plan2net/webp/releases/tag/14.9.0
 [14.8.3]: https://github.com/plan2net/webp/releases/tag/14.8.3
 [14.8.2]: https://github.com/plan2net/webp/releases/tag/14.8.2
