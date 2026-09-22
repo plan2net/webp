@@ -59,6 +59,10 @@ final class AfterFileProcessing implements LoggerAwareInterface
             $taskConfiguration = [];
         }
 
+        if (!$this->siblingGenerator->canPublishSiblingFor($sourceVariant)) {
+            return;
+        }
+
         if ($this->configuration->isAsync()) {
             $this->enqueueEnabledFormats($originalFile, $processedFile, $sourceVariant, $event->getTaskType(), $taskConfiguration);
 

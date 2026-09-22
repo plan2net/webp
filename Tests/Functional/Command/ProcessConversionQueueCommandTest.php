@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Command\ProcessConversionQueueCommand;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\CapturingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -46,6 +47,29 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
         self::assertSame(0, $exitCode);
         self::assertSame(0, $this->countQueueRows());
         self::assertFileExists($this->fileadminPath . 'tiny.png.webp');
+    }
+
+    #[Test]
+    public function queueModeSkipsEntriesForAStorageSwitchedOffAfterEnqueuing(): void
+    {
+        $this->getConnectionPool()
+            ->getConnectionForTable('sys_file_storage')
+            ->update('sys_file_storage', ['tx_webp_mode' => StorageSiblingMode::Disabled->value], ['uid' => 1]);
+        $this->get(StorageRepository::class)->flush();
+
+        $this->get(ConversionQueueRepository::class)->enqueue(
+            1,
+            0,
+            'Image.CropScaleMask',
+            ['webp' => true],
+            OutputFormat::Webp,
+        );
+
+        $exitCode = $this->runCommand([]);
+
+        self::assertSame(0, $exitCode);
+        self::assertSame(0, $this->countQueueRows());
+        self::assertFileDoesNotExist($this->fileadminPath . 'tiny.png.webp');
     }
 
     #[Test]
@@ -238,6 +262,11 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
             \mkdir($this->fileadminPath, 0o777, true);
         }
         \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $this->fileadminPath . 'tiny.png');
+        // Tests in this class share the instance path, so siblings an earlier
+        // one produced would still be lying here.
+        foreach ((array) \glob($this->fileadminPath . '*.webp') as $sibling) {
+            \unlink((string) $sibling);
+        }
 
         $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp'] = [
             'converter' => DeterministicWebpConverter::class,

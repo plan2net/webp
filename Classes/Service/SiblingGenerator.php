@@ -48,12 +48,7 @@ final class SiblingGenerator implements LoggerAwareInterface
             return;
         }
 
-        // A sibling published next to the original lands on the source storage,
-        // so that storage has to be enabled itself.
-        $sourceStorage = $sourceVariant->getStorage();
-        if (!$sourceStorage->isWithinProcessingFolder($sourceVariant->getIdentifier())
-            && !StorageSiblingMode::isEnabledFor($sourceStorage)
-        ) {
+        if (!$this->canPublishSiblingFor($sourceVariant)) {
             return;
         }
 
@@ -73,6 +68,14 @@ final class SiblingGenerator implements LoggerAwareInterface
         foreach ($pendingFormats as [$format, $formatConfiguration, $formatRow]) {
             $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $format, $formatConfiguration, $formatRow);
         }
+    }
+
+    public function canPublishSiblingFor(FileInterface $sourceVariant): bool
+    {
+        $storage = $sourceVariant->getStorage();
+
+        return $storage->isWithinProcessingFolder($sourceVariant->getIdentifier())
+            || StorageSiblingMode::isEnabledFor($storage);
     }
 
     public function needsReprocessing(ProcessedFile $processedFile): bool

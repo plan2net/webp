@@ -296,6 +296,29 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         );
 
         self::assertFalse($storage->hasFile('/tiny.png.webp'));
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
+    public function nothingIsEnqueuedForADisabledStorage(): void
+    {
+        $this->applyConfigOverride('async', '1');
+        $storage = $this->createLocalStorageWithProcessingFolderInStorageOne(StorageSiblingMode::Disabled);
+        $file = $this->get(ResourceFactory::class)
+            ->getFileObjectFromCombinedIdentifier($storage->getUid() . ':/tiny.png');
+
+        $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 64, 'height' => 64],
+        );
+
+        // Without this the worker drains the entry, skips the conversion and
+        // the next render enqueues it again — forever.
+        $queueRows = (int) $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->count('uid', 'tx_webp_queue', []);
+
+        self::assertSame(0, $queueRows);
     }
 
     #[Test]
@@ -366,9 +389,10 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     private function createLocalStorageWithProcessingFolderInStorageOne(
         StorageSiblingMode $mode = StorageSiblingMode::Auto,
     ): ResourceStorage {
-        // One directory per call: tests in this class share the instance path,
-        // so a fixed directory would carry siblings over between them.
-        $basePath = $this->instancePath . '/second_storage-' . uniqid() . '/';
+        // Own directories per call: tests in this class share the instance
+        // path, so fixed ones would carry siblings over between them.
+        $suffix = uniqid();
+        $basePath = $this->instancePath . '/second_storage-' . $suffix . '/';
         mkdir($basePath, 0o775, true);
         copy(__DIR__ . '/../Fixtures/Images/tiny.png', $basePath . 'tiny.png');
 
@@ -380,7 +404,7 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
             'is_browsable' => 1,
             'is_online' => 1,
             'is_public' => 1,
-            'processingfolder' => '1:/second_storage_processed/',
+            'processingfolder' => '1:/second_storage_processed-' . $suffix . '/',
             'tx_webp_mode' => $mode->value,
             'configuration' => sprintf(
                 '<T3FlexForms><data><sheet index="sDEF"><language index="lDEF">'
