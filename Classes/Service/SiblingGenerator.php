@@ -234,6 +234,8 @@ final class SiblingGenerator implements LoggerAwareInterface
             throw new \RuntimeException(\sprintf('Cannot publish sibling next to "%s": parent folder is not writable', $sourceFile->getIdentifier()));
         }
         $newFile = $folder->addFile($tempTarget, $processedFile->getName(), self::replaceConflictMode());
+        // The row starts out with the processing folder's storage, not this one.
+        $processedFile->setStorage($newFile->getStorage());
         $processedFile->setIdentifier($newFile->getIdentifier());
     }
 

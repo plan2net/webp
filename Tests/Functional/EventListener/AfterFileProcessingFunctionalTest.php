@@ -259,6 +259,28 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function siblingRowCarriesTheStorageHoldingTheSiblingWhenPublishedNextToTheOriginal(): void
+    {
+        $storage = $this->createLocalStorageWithProcessingFolderInStorageOne();
+        $file = $this->get(ResourceFactory::class)
+            ->getFileObjectFromCombinedIdentifier($storage->getUid() . ':/tiny.png');
+
+        // tiny.png is 64x64: at its native size TYPO3 performs no
+        // transformation, so the sibling is published next to the original
+        // instead of into the processing folder over in storage 1.
+        $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 64, 'height' => 64],
+        );
+
+        self::assertTrue($storage->hasFile('/tiny.png.webp'), 'sibling must land next to the original');
+
+        $row = $this->fetchWebpRow((int) $file->getUid());
+        self::assertNotNull($row);
+        self::assertSame((int) $storage->getUid(), (int) $row['storage']);
+    }
+
+    #[Test]
     public function fallsBackToSynchronousConversionWhenQueueTableMissing(): void
     {
         // Upgrade install with async enabled but the DB analyzer not yet run:
@@ -326,7 +348,9 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     private function createLocalStorageWithProcessingFolderInStorageOne(): ResourceStorage
     {
         $basePath = $this->instancePath . '/second_storage/';
-        mkdir($basePath, 0o775, true);
+        if (!is_dir($basePath)) {
+            mkdir($basePath, 0o775, true);
+        }
         copy(__DIR__ . '/../Fixtures/Images/tiny.png', $basePath . 'tiny.png');
 
         $connection = $this->getConnectionPool()->getConnectionForTable('sys_file_storage');
