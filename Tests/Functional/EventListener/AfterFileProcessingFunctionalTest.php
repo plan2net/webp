@@ -300,6 +300,28 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function aPublishThatCannotWriteNextToTheOriginalIsContained(): void
+    {
+        $storage = $this->createLocalStorageWithProcessingFolderInStorageOne();
+        $file = $this->get(ResourceFactory::class)
+            ->getFileObjectFromCombinedIdentifier($storage->getUid() . ':/tiny.png');
+        $basePath = $storage->getConfiguration()['basePath'];
+
+        chmod($basePath, 0o555);
+        try {
+            $file->process(
+                ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+                ['width' => 64, 'height' => 64],
+            );
+        } finally {
+            chmod($basePath, 0o775);
+        }
+
+        self::assertFalse($storage->hasFile('/tiny.png.webp'));
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
     public function nothingIsEnqueuedForADisabledStorage(): void
     {
         $this->applyConfigOverride('async', '1');

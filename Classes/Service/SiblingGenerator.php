@@ -241,9 +241,11 @@ final class SiblingGenerator implements LoggerAwareInterface
             return;
         }
 
+        // Narrowing, not a real failure mode: getParentFolder() is typed
+        // FolderInterface, which does not carry addFile().
         $folder = $sourceFile->getParentFolder();
         if (!$folder instanceof Folder) {
-            throw new \RuntimeException(\sprintf('Cannot publish sibling next to "%s": parent folder is not writable', $sourceFile->getIdentifier()));
+            throw new \RuntimeException(\sprintf('Parent folder of "%s" cannot take files', $sourceFile->getIdentifier()));
         }
         $newFile = $folder->addFile($tempTarget, $processedFile->getName(), self::replaceConflictMode());
         // The row starts out with the processing folder's storage, not this one.
