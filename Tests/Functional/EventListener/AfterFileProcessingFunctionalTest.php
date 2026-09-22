@@ -7,6 +7,7 @@ namespace Plan2net\Webp\Tests\Functional\EventListener;
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\EventListener\AfterFileProcessing;
+use Plan2net\Webp\Service\StorageSiblingMode;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\RecordingConverter;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
@@ -281,6 +282,23 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function noSiblingIsPublishedNextToTheOriginalOnADisabledStorage(): void
+    {
+        $storage = $this->createLocalStorageWithProcessingFolderInStorageOne(StorageSiblingMode::Disabled);
+        $file = $this->get(ResourceFactory::class)
+            ->getFileObjectFromCombinedIdentifier($storage->getUid() . ':/tiny.png');
+
+        // The mode is read from the processing folder's storage, which sits in
+        // storage 1 and is enabled — but the sibling would be published here.
+        $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 64, 'height' => 64],
+        );
+
+        self::assertFalse($storage->hasFile('/tiny.png.webp'));
+    }
+
+    #[Test]
     public function fallsBackToSynchronousConversionWhenQueueTableMissing(): void
     {
         // Upgrade install with async enabled but the DB analyzer not yet run:
@@ -345,12 +363,13 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         return $this->get(ResourceFactory::class)->getFileObject($uid);
     }
 
-    private function createLocalStorageWithProcessingFolderInStorageOne(): ResourceStorage
-    {
-        $basePath = $this->instancePath . '/second_storage/';
-        if (!is_dir($basePath)) {
-            mkdir($basePath, 0o775, true);
-        }
+    private function createLocalStorageWithProcessingFolderInStorageOne(
+        StorageSiblingMode $mode = StorageSiblingMode::Auto,
+    ): ResourceStorage {
+        // One directory per call: tests in this class share the instance path,
+        // so a fixed directory would carry siblings over between them.
+        $basePath = $this->instancePath . '/second_storage-' . uniqid() . '/';
+        mkdir($basePath, 0o775, true);
         copy(__DIR__ . '/../Fixtures/Images/tiny.png', $basePath . 'tiny.png');
 
         $connection = $this->getConnectionPool()->getConnectionForTable('sys_file_storage');
@@ -362,6 +381,7 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
             'is_online' => 1,
             'is_public' => 1,
             'processingfolder' => '1:/second_storage_processed/',
+            'tx_webp_mode' => $mode->value,
             'configuration' => sprintf(
                 '<T3FlexForms><data><sheet index="sDEF"><language index="lDEF">'
                 . '<field index="basePath"><value index="vDEF">%s</value></field>'
