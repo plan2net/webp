@@ -77,6 +77,17 @@ final class QualityFieldVisibilityTest extends FunctionalTestCase
         self::assertSame('', $this->renderField($metadataUid, 'tx_webp_compression_report'));
     }
 
+    #[Test]
+    public function compressionReportRendersItsLabel(): void
+    {
+        $metadataUid = $this->insertMetadata(1, 0, 'global');
+
+        self::assertStringContainsString(
+            'Compression results',
+            $this->renderField($metadataUid, 'tx_webp_compression_report')
+        );
+    }
+
     private function renderField(int $metadataUid, string $fieldName): string
     {
         $formData = $this->compileFormData($metadataUid);

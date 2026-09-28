@@ -31,7 +31,9 @@ final class CompressionInfoElement extends AbstractFormElement
             $enabledFormats[] = $format->value;
         }
 
-        $result['html'] = $this->renderTable($report, $enabledFormats);
+        $result['html'] = $this->wrapWithFieldsetAndLegend($this->renderTable($report, $enabledFormats));
+        // Stops v12 from adding a second label
+        $result['labelHasBeenHandled'] = true;
 
         return $result;
     }
