@@ -213,7 +213,7 @@ probe() {
     local got
     got="$(curl -sk -o /dev/null -w '%{http_code} %{content_type}' \
         -H "Accept: $accept" \
-        "http://127.0.0.1:${PORT}/${PROCESSED_RELPATH}")"
+        "http://127.0.0.1:${PORT}/${PROCESSED_RELPATH}" || true)"
     local code=${got%% *}
     local ctype=${got#* }
     ctype=${ctype%%;*}  # strip charset
@@ -262,7 +262,7 @@ probe_vary_header() {
     vary="$(curl -sk -D - -o /dev/null \
         -H "Accept: $accept" \
         "http://127.0.0.1:${PORT}/${PROCESSED_RELPATH}" \
-        | grep -i '^vary:' | tr -d '\r')"
+        | grep -i '^vary:' | tr -d '\r' || true)"
     if [[ -z "$vary" ]]; then
         echo "  ✗ Vary header missing from negotiated response"
         fail_count=$((fail_count + 1))
@@ -277,13 +277,23 @@ probe_vary_header() {
     fi
 }
 
+wait_for_server() {
+    for _ in $(seq 1 40); do
+        if curl -s -o /dev/null "http://127.0.0.1:${PORT}/" 2>/dev/null; then
+            return 0
+        fi
+        sleep 0.25
+    done
+    echo "  ✗ no server listening on port ${PORT} after 10s"
+}
+
 start_nginx() {
     render_server_conf "$script_dir/nginx.conf" /tmp/plan2net-webp-e2e/nginx.conf
     inject_webp_fragment /tmp/plan2net-webp-e2e/nginx.conf __WEBP_HTTP__ nginx http
     inject_webp_fragment /tmp/plan2net-webp-e2e/nginx.conf __WEBP_SERVER__ nginx server
     nginx -c /tmp/plan2net-webp-e2e/nginx.conf &
     NGINX_PID=$!
-    sleep 1
+    wait_for_server
 }
 stop_nginx() {
     if [[ -n "${NGINX_PID:-}" ]] && kill -0 "$NGINX_PID" 2>/dev/null; then
@@ -308,7 +318,7 @@ start_apache() {
     mkdir -p "$APACHE_RUN_DIR" "$APACHE_LOCK_DIR" "$APACHE_LOG_DIR"
     apache2 -f /tmp/plan2net-webp-e2e/apache.conf -DFOREGROUND &
     APACHE_PID=$!
-    sleep 1
+    wait_for_server
 }
 stop_apache() {
     if [[ -n "${APACHE_PID:-}" ]] && kill -0 "$APACHE_PID" 2>/dev/null; then
@@ -323,7 +333,7 @@ start_caddy() {
     inject_webp_fragment /tmp/plan2net-webp-e2e/caddy.conf __WEBP_MAIN__ caddy main
     caddy run --config /tmp/plan2net-webp-e2e/caddy.conf --adapter caddyfile &
     CADDY_PID=$!
-    sleep 1
+    wait_for_server
 }
 stop_caddy() {
     if [[ -n "${CADDY_PID:-}" ]] && kill -0 "$CADDY_PID" 2>/dev/null; then

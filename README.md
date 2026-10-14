@@ -91,11 +91,11 @@ Pick a converter per format that matches what's actually installed on the host. 
 
 ## Compatibility
 
-| Extension version | TYPO3              | PHP            | Status   |
-|-------------------|--------------------|----------------|----------|
-| 14.x              | 12.4, 13.4, 14.x   | 8.2, 8.3, 8.4  | Current  |
-| 13.x              | 13.4               | 8.2, 8.3       | Legacy   |
-| 5.x               | 12.4               | 8.1, 8.2       | Legacy   |
+| Extension version | TYPO3              | PHP                 | Status   |
+|-------------------|--------------------|---------------------|----------|
+| 14.x              | 12.4, 13.4, 14.x   | 8.2, 8.3, 8.4, 8.5  | Current  |
+| 13.x              | 13.4               | 8.2, 8.3            | Legacy   |
+| 5.x               | 12.4               | 8.1, 8.2            | Legacy   |
 
 ## Requirements
 
