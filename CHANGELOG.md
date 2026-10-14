@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.10.0] - 2026-10-14
+
+### Added
+
+- PHP 8.5 support. CI runs the unit, functional and end-to-end tests on PHP 8.5 with TYPO3 13.4 and 14.3.
+
+### Fixed
+
+- A conversion that comes out larger than its source no longer blocks the other sizes of the same image. The failed-attempts cache was kept per file, parameters and format, so a small thumbnail that didn't shrink stopped every larger variant with the same settings, and those are the variants that save the most bytes. The cache is now kept per variant.
+- Going back to an earlier per-image quality (for example 50 → 70 → 50) converts the image again. Each quality had its own `sys_file_processedfile` row, but all of them pointed to the same sibling file, so the row of the earlier quality looked current while the file still held the later quality. A new upgrade wizard removes the rows that earlier versions left behind.
+- The nginx rules from `webp:webserver-config` and in the documentation fall back to the next format when a sibling is missing. A browser that accepts AVIF and WebP got the original JPEG when there was no AVIF sibling (for example because the AVIF came out larger than the source, or the async queue had not reached it yet), even though a WebP sibling existed. The Apache and Caddy rules already did this.
+
+### Changed
+
+- The README is a short landing page now. The reference material moved to `Documentation/`: formats and converters, configuration, compression, webserver configuration, operations and troubleshooting.
+
 ## [14.9.2] - 2026-10-14
 
 ### Fixed
@@ -222,6 +238,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.10.0]: https://github.com/plan2net/webp/releases/tag/14.10.0
 [14.9.2]: https://github.com/plan2net/webp/releases/tag/14.9.2
 [14.9.1]: https://github.com/plan2net/webp/releases/tag/14.9.1
 [14.9.0]: https://github.com/plan2net/webp/releases/tag/14.9.0
