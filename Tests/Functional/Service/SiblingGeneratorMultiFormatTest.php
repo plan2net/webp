@@ -267,6 +267,27 @@ final class SiblingGeneratorMultiFormatTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function goingBackToAnEarlierQualityConvertsAgain(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/Database/sys_file_metadata_mode.csv'); // file 1: mode=force, quality=50
+        $this->applyConfig([
+            'converter' => CapturingConverter::class,
+            'parameters' => 'image/png::Q=80',
+            'mime_types' => 'image/png',
+            'formats_enabled' => 'webp',
+        ]);
+
+        $file = $this->get(ResourceFactory::class)->getFileObject(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $file->getMetaData()->add(['tx_webp_quality' => 70])->save();
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $file->getMetaData()->add(['tx_webp_quality' => 50])->save();
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(['Q=50', 'Q=70', 'Q=50'], CapturingConverter::$receivedParameters);
+    }
+
+    #[Test]
     public function legacyEmptyModeWithNumberStillForcesQuality(): void
     {
         // BC regression guard: a pre-upgrade row has tx_webp_quality_mode='' (empty) + a number and

@@ -12,6 +12,8 @@ use Plan2net\Webp\Converter\MultiFormatConverter;
 use Plan2net\Webp\Format\OutputFormat;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\Folder;
@@ -28,6 +30,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         private readonly FailedAttemptsRepository $failedAttempts,
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly ProcessedFileWriter $processedFileWriter,
+        private readonly ConnectionPool $connectionPool,
     ) {
     }
 
@@ -223,6 +226,7 @@ final class SiblingGenerator implements LoggerAwareInterface
                 'size' => $fileSize,
             ]);
             $this->processedFileWriter->add($formatRow, $taskType, $formatConfiguration);
+            $this->forgetOtherRowsForTheSameFile($formatRow);
         } catch (UnsupportedFormatException $e) {
             $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
         } catch (ConvertedFileLargerThanOriginalException $e) {
@@ -273,5 +277,18 @@ final class SiblingGenerator implements LoggerAwareInterface
         }
 
         return \TYPO3\CMS\Core\Resource\DuplicationBehavior::REPLACE;
+    }
+
+    // Each per-image quality has its own row, but all rows share one file.
+    private function forgetOtherRowsForTheSameFile(ProcessedFile $formatRow): void
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file_processedfile');
+        $queryBuilder->delete('sys_file_processedfile')
+            ->where(
+                $queryBuilder->expr()->eq('storage', $queryBuilder->createNamedParameter((int) $formatRow->getStorage()->getUid(), Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('identifier', $queryBuilder->createNamedParameter($formatRow->getIdentifier())),
+                $queryBuilder->expr()->neq('uid', $queryBuilder->createNamedParameter((int) $formatRow->getUid(), Connection::PARAM_INT)),
+            )
+            ->executeStatement();
     }
 }
