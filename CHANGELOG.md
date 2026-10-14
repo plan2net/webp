@@ -5,15 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [14.9.2] - 2026-10-14
 
 ### Fixed
 
 - A conversion that leaves an empty file behind — typically ImageMagick/GraphicsMagick killed by a process or memory limit under load — is no longer published as a sibling; the webserver handed WebP-capable browsers an empty `image/webp` response, so the image was missing on the page. The failure is logged as an error, including the ImageMagick/GraphicsMagick output, and retried on the next render, not recorded as a failed attempt (#122).
 - Folder mode (`webp:process-queue --folder`) treats an empty sibling as missing and converts the image again.
-- The Apache rules in the README and from `webp:webserver-config` check for a non-empty sibling (`-s`) instead of any sibling (`-f`). Update existing Apache configurations by hand.
-
-Siblings that were already published empty stay in place until they are deleted; the next render then regenerates them. On local storages: `find public/fileadmin \( -name '*.webp' -o -name '*.avif' -o -name '*.jxl' \) -size 0 -delete`.
+- The Apache rules in the README and from `webp:webserver-config` check for a non-empty sibling (`-s`) instead of any sibling (`-f`).
+- The **Compression results** field on file metadata shows its label; it rendered as a bare table with no field title.
 
 ## [14.9.1] - 2026-09-22
 
@@ -223,6 +222,7 @@ Siblings that were already published empty stay in place until they are deleted;
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.9.2]: https://github.com/plan2net/webp/releases/tag/14.9.2
 [14.9.1]: https://github.com/plan2net/webp/releases/tag/14.9.1
 [14.9.0]: https://github.com/plan2net/webp/releases/tag/14.9.0
 [14.8.3]: https://github.com/plan2net/webp/releases/tag/14.8.3
