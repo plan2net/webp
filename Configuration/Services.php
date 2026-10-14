@@ -25,6 +25,10 @@ return static function (ContainerConfigurator $configurator): void {
             ->set(Updates\MigrateLegacyForcedQualityUpdate::class)
             ->autowire()
             ->tag('install.upgradewizard', ['identifier' => 'webp.migrateLegacyForcedQuality']);
+        $services
+            ->set(Updates\RemoveSiblingRowsSharingOneFileUpdate::class)
+            ->autowire()
+            ->tag('install.upgradewizard', ['identifier' => 'webp.removeSiblingRowsSharingOneFile']);
     }
 
     if (\class_exists(AbstractAdditionalFieldProvider::class)) {
