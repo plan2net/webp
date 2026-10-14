@@ -10,6 +10,7 @@ use Plan2net\Webp\EventListener\AfterFileProcessing;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\EmptyOutputConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\RecordingConverter;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\SmallVariantGrowsConverter;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
 use TYPO3\CMS\Core\Resource\File;
@@ -172,6 +173,19 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
 
         self::assertSame(1, $this->countFailedRows((int) $file->getUid()), 'wasAttempted() must short-circuit; no duplicate insert');
+    }
+
+    #[Test]
+    public function failedSmallVariantDoesNotBlockLargerVariants(): void
+    {
+        $this->applyConfigOverride('converter', SmallVariantGrowsConverter::class);
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 32, 'height' => 32]);
+
+        self::assertSame(1, $this->countFailedRows((int) $file->getUid()));
+        self::assertSame(1, $this->countWebpRowsForOriginal((int) $file->getUid()), 'the 32px variant must still get its sibling');
     }
 
     #[Test]

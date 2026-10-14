@@ -5,9 +5,10 @@ CREATE TABLE tx_webp_failed
     file_id            INT(11) NOT NULL DEFAULT '0',
     configuration      TEXT,
     configuration_hash VARCHAR(32),
+    variant_hash       VARCHAR(32) NOT NULL DEFAULT '',
     format             VARCHAR(8) NOT NULL DEFAULT 'webp',
     PRIMARY KEY (uid),
-    KEY configuration (file_id, configuration_hash, format)
+    KEY configuration (file_id, variant_hash, configuration_hash, format)
 );
 
 CREATE TABLE tx_webp_queue

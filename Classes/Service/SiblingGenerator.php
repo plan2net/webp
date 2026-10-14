@@ -202,7 +202,8 @@ final class SiblingGenerator implements LoggerAwareInterface
         }
 
         $fileUid = (int) $originalFile->getUid();
-        if ($this->failedAttempts->wasAttempted($fileUid, $parameters, $format)) {
+        $variant = $sourceVariant->getIdentifier();
+        if ($this->failedAttempts->wasAttempted($fileUid, $variant, $parameters, $format)) {
             $this->logger?->notice(\sprintf('webp: skipping %s for file "%s" — prior attempt failed with same configuration.', $format->value, $sourceLocalPath));
 
             return;
@@ -225,7 +226,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         } catch (UnsupportedFormatException $e) {
             $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
         } catch (ConvertedFileLargerThanOriginalException $e) {
-            $this->failedAttempts->record($fileUid, $parameters, $format);
+            $this->failedAttempts->record($fileUid, $variant, $parameters, $format);
             $this->logger?->warning($e->getMessage());
         } catch (WillNotRetryWithConfigurationException $e) {
             $this->logger?->notice($e->getMessage());

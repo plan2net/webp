@@ -11,6 +11,8 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
 final class FailedAttemptsRepositoryTest extends FunctionalTestCase
 {
+    private const VARIANT = '/_processed_/a/1/csm_tiny_a1.png';
+
     protected array $coreExtensionsToLoad = [
         'install',
         'scheduler',
@@ -25,9 +27,9 @@ final class FailedAttemptsRepositoryTest extends FunctionalTestCase
     {
         $repository = $this->get(FailedAttemptsRepository::class);
 
-        $repository->record(1, 'image/png::Q=75', OutputFormat::Webp);
+        $repository->record(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp);
 
-        self::assertTrue($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Webp));
+        self::assertTrue($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp));
     }
 
     #[Test]
@@ -35,11 +37,11 @@ final class FailedAttemptsRepositoryTest extends FunctionalTestCase
     {
         $repository = $this->get(FailedAttemptsRepository::class);
 
-        $repository->record(1, 'image/png::Q=75', OutputFormat::Avif);
+        $repository->record(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Avif);
 
-        self::assertTrue($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Avif), 'AVIF attempt is recorded');
-        self::assertFalse($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Webp), 'WebP attempt must NOT be blocked by an AVIF failure');
-        self::assertFalse($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Jxl), 'JXL attempt must NOT be blocked by an AVIF failure');
+        self::assertTrue($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Avif), 'AVIF attempt is recorded');
+        self::assertFalse($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp), 'WebP attempt must NOT be blocked by an AVIF failure');
+        self::assertFalse($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Jxl), 'JXL attempt must NOT be blocked by an AVIF failure');
     }
 
     #[Test]
@@ -47,10 +49,10 @@ final class FailedAttemptsRepositoryTest extends FunctionalTestCase
     {
         $repository = $this->get(FailedAttemptsRepository::class);
 
-        $repository->record(1, 'image/png::Q=75', OutputFormat::Webp);
+        $repository->record(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp);
 
-        self::assertTrue($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Webp));
-        self::assertFalse($repository->wasAttempted(1, 'image/png::Q=99', OutputFormat::Webp), 'A parameter change resets the cache');
+        self::assertTrue($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp));
+        self::assertFalse($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=99', OutputFormat::Webp), 'A parameter change resets the cache');
     }
 
     #[Test]
@@ -58,9 +60,20 @@ final class FailedAttemptsRepositoryTest extends FunctionalTestCase
     {
         $repository = $this->get(FailedAttemptsRepository::class);
 
-        $repository->record(1, 'image/png::Q=75', OutputFormat::Webp);
+        $repository->record(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp);
 
-        self::assertTrue($repository->wasAttempted(1, 'image/png::Q=75', OutputFormat::Webp));
-        self::assertFalse($repository->wasAttempted(2, 'image/png::Q=75', OutputFormat::Webp));
+        self::assertTrue($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp));
+        self::assertFalse($repository->wasAttempted(2, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp));
+    }
+
+    #[Test]
+    public function differentVariantsOfOneFileAreTrackedSeparately(): void
+    {
+        $repository = $this->get(FailedAttemptsRepository::class);
+
+        $repository->record(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp);
+
+        self::assertTrue($repository->wasAttempted(1, self::VARIANT, 'image/png::Q=75', OutputFormat::Webp));
+        self::assertFalse($repository->wasAttempted(1, '/_processed_/b/2/csm_tiny_b2.png', 'image/png::Q=75', OutputFormat::Webp));
     }
 }

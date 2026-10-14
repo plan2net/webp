@@ -16,7 +16,7 @@ final readonly class FailedAttemptsRepository
     ) {
     }
 
-    public function wasAttempted(int $fileUid, string $configuration, OutputFormat $format): bool
+    public function wasAttempted(int $fileUid, string $variant, string $configuration, OutputFormat $format): bool
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
 
@@ -27,6 +27,10 @@ final readonly class FailedAttemptsRepository
                     $queryBuilder->expr()->eq(
                         'file_id',
                         $queryBuilder->createNamedParameter($fileUid, Connection::PARAM_INT),
+                    ),
+                    $queryBuilder->expr()->eq(
+                        'variant_hash',
+                        $queryBuilder->createNamedParameter(md5($variant)),
                     ),
                     $queryBuilder->expr()->eq(
                         'configuration_hash',
@@ -44,12 +48,13 @@ final readonly class FailedAttemptsRepository
         }
     }
 
-    public function record(int $fileUid, string $configuration, OutputFormat $format): void
+    public function record(int $fileUid, string $variant, string $configuration, OutputFormat $format): void
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_webp_failed');
         $queryBuilder->insert('tx_webp_failed')
             ->values([
                 'file_id' => $fileUid,
+                'variant_hash' => md5($variant),
                 'configuration' => $configuration,
                 'configuration_hash' => md5($configuration),
                 'format' => $format->value,
