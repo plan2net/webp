@@ -252,6 +252,16 @@ probe_all_accept_variants() {
     probe "image/webp,image/*,*/*"                      "$(top_format_for 'image/webp')"
     probe "*/*"                                          "image/jpeg"
     probe_vary_header "image/webp,image/*,*/*"
+    probe_fallback_when_avif_is_missing
+}
+
+probe_fallback_when_avif_is_missing() {
+    if [[ "${SIBLING_PRESENT[avif]:-0}" != "1" || "${SIBLING_PRESENT[webp]:-0}" != "1" ]]; then
+        return
+    fi
+    mv "${PROCESSED_ABS}.avif" "${PROCESSED_ABS}.avif.hidden"
+    probe "image/avif,image/webp,image/*,*/*" "image/webp"
+    mv "${PROCESSED_ABS}.avif.hidden" "${PROCESSED_ABS}.avif"
 }
 
 # Asserts the negotiated response carries `Vary: Accept`. A regression that

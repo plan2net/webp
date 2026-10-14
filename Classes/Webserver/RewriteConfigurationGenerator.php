@@ -33,10 +33,14 @@ final class RewriteConfigurationGenerator
      */
     private function nginx(array $formats, array $sourceExtensions): array
     {
-        $mapLines = ['    default "";'];
+        $maps = '';
+        $tryFiles = 'try_files';
         foreach ($formats as $format) {
-            $mapLines[] = \sprintf('    "~*%s" "%s";', $format->mimeType(), $format->suffix());
+            $name = $format->value . '_suffix';
+            $maps .= \sprintf("map \$http_accept \$%s {\n    default \"\";\n    \"~*%s\" \"%s\";\n}\n", $name, $format->mimeType(), $format->value);
+            $tryFiles .= \sprintf(' $uri.$%s', $name);
         }
+        $tryFiles .= ' $uri =404;';
 
         $typeLines = [];
         foreach ($this->mimeTypesByExtension($sourceExtensions) as $mimeType => $extensionsForMimeType) {
@@ -47,9 +51,7 @@ final class RewriteConfigurationGenerator
         }
 
         $http = \sprintf("# Accept header to sibling suffix, preference order %s (first match wins).\n", $this->preferenceOrder($formats))
-            . "map \$http_accept \$sibling_suffix {\n"
-            . \implode("\n", $mapLines) . "\n"
-            . "}\n";
+            . $maps;
 
         $server = "# Keep this above any generic static-asset location.\n"
             . "# Behind a CDN such as Cloudflare, or to restrict by user agent, see the README.\n"
@@ -63,7 +65,7 @@ final class RewriteConfigurationGenerator
             . "    # the server/http level — repeat site-wide headers (HSTS etc.) in here.\n"
             . "    add_header Vary \"Accept\";\n"
             . "    add_header Cache-Control \"public, no-transform\";\n"
-            . "    try_files \$uri\$sibling_suffix \$uri =404;\n"
+            . '    ' . $tryFiles . "\n"
             . "}\n";
 
         return ['http' => $http, 'server' => $server];

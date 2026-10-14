@@ -42,7 +42,7 @@ final class GenerateWebserverConfigurationCommandTest extends FunctionalTestCase
         self::assertSame(0, $tester->getStatusCode());
         $output = $tester->getDisplay();
         self::assertStringContainsString('# Place in the http {} block:', $output);
-        self::assertStringContainsString('map $http_accept $sibling_suffix {', $output);
+        self::assertStringContainsString('map $http_accept $webp_suffix {', $output);
         self::assertStringContainsString('# Place in the server {} block:', $output);
         self::assertStringContainsString('location ~* ^.+\\.(jpg|jpeg|png|gif)$ {', $output);
     }
@@ -71,7 +71,7 @@ final class GenerateWebserverConfigurationCommandTest extends FunctionalTestCase
 
         $output = $this->executeCommand(['--server' => 'nginx', '--scope' => 'http'])->getDisplay();
 
-        self::assertStringContainsString('map $http_accept $sibling_suffix {', $output);
+        self::assertStringContainsString('map $http_accept $webp_suffix {', $output);
         self::assertStringNotContainsString('location ~*', $output);
         self::assertStringNotContainsString('Place in the', $output);
     }

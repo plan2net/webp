@@ -20,11 +20,17 @@ final class RewriteConfigurationGeneratorTest extends TestCase
     {
         $expected = <<<'NGINX'
             # Accept header to sibling suffix, preference order AVIF > WebP > JXL (first match wins).
-            map $http_accept $sibling_suffix {
+            map $http_accept $avif_suffix {
                 default "";
-                "~*image/avif" ".avif";
-                "~*image/webp" ".webp";
-                "~*image/jxl" ".jxl";
+                "~*image/avif" "avif";
+            }
+            map $http_accept $webp_suffix {
+                default "";
+                "~*image/webp" "webp";
+            }
+            map $http_accept $jxl_suffix {
+                default "";
+                "~*image/jxl" "jxl";
             }
 
             NGINX;
@@ -61,7 +67,7 @@ final class RewriteConfigurationGeneratorTest extends TestCase
                 # the server/http level — repeat site-wide headers (HSTS etc.) in here.
                 add_header Vary "Accept";
                 add_header Cache-Control "public, no-transform";
-                try_files $uri$sibling_suffix $uri =404;
+                try_files $uri.$avif_suffix $uri.$webp_suffix $uri.$jxl_suffix $uri =404;
             }
 
             NGINX;
@@ -151,9 +157,9 @@ final class RewriteConfigurationGeneratorTest extends TestCase
     {
         $expected = <<<'NGINX'
             # Accept header to sibling suffix, preference order WebP (first match wins).
-            map $http_accept $sibling_suffix {
+            map $http_accept $webp_suffix {
                 default "";
-                "~*image/webp" ".webp";
+                "~*image/webp" "webp";
             }
 
             NGINX;
@@ -162,18 +168,10 @@ final class RewriteConfigurationGeneratorTest extends TestCase
     }
 
     #[Test]
-    public function nginxHttpPreservesInputFormatOrder(): void
+    public function nginxTryFilesPreservesInputFormatOrder(): void
     {
-        $expected = <<<'NGINX'
-            # Accept header to sibling suffix, preference order WebP > AVIF (first match wins).
-            map $http_accept $sibling_suffix {
-                default "";
-                "~*image/webp" ".webp";
-                "~*image/avif" ".avif";
-            }
+        $server = (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp, OutputFormat::Avif], self::SOURCE_EXTENSIONS)['server'];
 
-            NGINX;
-
-        self::assertSame($expected, (new RewriteConfigurationGenerator())->generate(WebserverType::Nginx, [OutputFormat::Webp, OutputFormat::Avif], self::SOURCE_EXTENSIONS)['http']);
+        self::assertStringContainsString('try_files $uri.$webp_suffix $uri.$avif_suffix $uri =404;', $server);
     }
 }

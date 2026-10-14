@@ -26,42 +26,45 @@ Each example below shows all three formats. Delete the blocks for the formats yo
 
 ## nginx
 
-Add a `map` directive in the `http` block. The order matters, because the first match wins. List the formats in order of preference: AVIF first, then WebP, then JXL.
+Add one `map` per format in the `http` block. Each map is `avif`, `webp` or `jxl` when the client accepts that format, and empty when it doesn't:
 
 ```nginx
-map $http_accept $sibling_suffix {
+map $http_accept $avif_suffix {
     default        "";
-    "~*image/avif" ".avif";
-    "~*image/webp" ".webp";
-    "~*image/jxl"  ".jxl";
+    "~*image/avif" "avif";
+}
+map $http_accept $webp_suffix {
+    default        "";
+    "~*image/webp" "webp";
+}
+map $http_accept $jxl_suffix {
+    default        "";
+    "~*image/jxl"  "jxl";
 }
 ```
 
-If you only generate `.webp`, the map can be the one-line `"~*webp" ".webp";` variant. Clients never ask for `image/avif` from a server that doesn't offer it.
+If you only generate `.webp`, keep only the `$webp_suffix` map.
 
 ### Behind Cloudflare
 
-If Cloudflare is in front of the site, use this variant instead. Cloudflare caches one response per URL and would otherwise mix the formats:
+If Cloudflare is in front of the site, use these maps instead. Cloudflare caches one response per URL and would otherwise mix the formats. When Cloudflare is in front, every suffix stays empty and the original is served:
 
 ```nginx
-map $http_accept $sibling_suffix_raw {
-    default        "";
-    "~*image/avif" ".avif";
-    "~*image/webp" ".webp";
-    "~*image/jxl"  ".jxl";
-}
 map $http_cf_cache_status $iscf {
     default   1;
     ""        0;
 }
-# Suppress the sibling whenever Cloudflare is in front (iscf=1). Composite key
-# is "<iscf><suffix>": "0.avif" serves AVIF directly, "1.avif" serves the
-# original. Every iscf=1 case falls through `default ""`.
-map $iscf$sibling_suffix_raw $sibling_suffix {
-    default   "";
-    "0.avif"  ".avif";
-    "0.webp"  ".webp";
-    "0.jxl"   ".jxl";
+map "$iscf:$http_accept" $avif_suffix {
+    default              "";
+    "~*^0:.*image/avif"  "avif";
+}
+map "$iscf:$http_accept" $webp_suffix {
+    default              "";
+    "~*^0:.*image/webp"  "webp";
+}
+map "$iscf:$http_accept" $jxl_suffix {
+    default              "";
+    "~*^0:.*image/jxl"   "jxl";
 }
 ```
 
@@ -83,9 +86,11 @@ location ~* ^.+\.(png|gif|jpe?g)$ {
     }
     add_header Vary "Accept";
     add_header Cache-Control "public, no-transform";
-    try_files $uri$sibling_suffix $uri =404;
+    try_files $uri.$avif_suffix $uri.$webp_suffix $uri.$jxl_suffix $uri =404;
 }
 ```
+
+`try_files` lists the formats in order of preference (AVIF → WebP → JPEG XL). nginx serves the first sibling that exists on disk, so a browser that accepts AVIF still gets WebP when there is no AVIF sibling. A format the client didn't ask for becomes an empty suffix (`$uri.`), which never matches a real file and is skipped. If you only generate `.webp`, use `try_files $uri.$webp_suffix $uri =404;`.
 
 > [!IMPORTANT]
 > An `add_header` directive in a location drops **all** `add_header` lines inherited from the `server` or `http` level. Repeat your site-wide headers (HSTS etc.) inside the block.
@@ -95,7 +100,9 @@ location ~* ^.+\.(png|gif|jpe?g)$ {
 ```nginx
 location ~* ^.+\.(png|gif|jpe?g)$ {
     if ($http_user_agent !~* (Chrome|Firefox|Edge)) {
-        set $sibling_suffix "";
+        set $avif_suffix "";
+        set $webp_suffix "";
+        set $jxl_suffix "";
     }
     …
 }
