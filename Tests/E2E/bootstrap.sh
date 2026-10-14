@@ -51,6 +51,9 @@ cat > composer.json <<JSON
         "allow-plugins": {
             "typo3/cms-composer-installers": true,
             "typo3/class-alias-loader": true
+        },
+        "audit": {
+            "block-insecure": false
         }
     }
 }
