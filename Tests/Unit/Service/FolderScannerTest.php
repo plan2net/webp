@@ -70,6 +70,23 @@ final class FolderScannerTest extends TestCase
     }
 
     #[Test]
+    public function treatsEmptySiblingAsMissing(): void
+    {
+        $this->touchAtPath($this->tempDir . '/photo.png');
+        \file_put_contents($this->tempDir . '/photo.png.webp', '');
+
+        $entries = \iterator_to_array(
+            (new FolderScanner())->scan($this->tempDir, ['image/png'], [OutputFormat::Webp]),
+            false
+        );
+
+        self::assertSame(
+            [['path' => $this->tempDir . '/photo.png', 'mimeType' => 'image/png', 'missingFormats' => [OutputFormat::Webp]]],
+            $entries
+        );
+    }
+
+    #[Test]
     public function filtersByMimeType(): void
     {
         $this->touchAtPath($this->tempDir . '/foo.png');

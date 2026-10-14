@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\EventListener\AfterFileProcessing;
 use Plan2net\Webp\Service\StorageSiblingMode;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\EmptyOutputConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\RecordingConverter;
 use TYPO3\CMS\Core\Resource\Driver\DriverInterface;
 use TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent;
@@ -171,6 +172,30 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
 
         self::assertSame(1, $this->countFailedRows((int) $file->getUid()), 'wasAttempted() must short-circuit; no duplicate insert');
+    }
+
+    #[Test]
+    public function emptyConversionResultIsNotPublished(): void
+    {
+        $this->applyConfigOverride('converter', EmptyOutputConverter::class);
+
+        $file = $this->getFile(1);
+        $processed = $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16],
+        );
+        $siblingPath = $processed->getForLocalProcessing(false) . '.webp';
+
+        // Shared instance path: an earlier test may have left this sibling.
+        @\unlink($siblingPath);
+        $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16],
+        );
+
+        self::assertFileDoesNotExist($siblingPath);
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+        self::assertSame(0, $this->countFailedRows((int) $file->getUid()), 'an empty result is transient and must be retried');
     }
 
     #[Test]

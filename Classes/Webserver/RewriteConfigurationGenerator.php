@@ -107,7 +107,7 @@ final class RewriteConfigurationGenerator
             $addTypes .= \sprintf("AddType %s %s\n", $format->mimeType(), $format->suffix());
             $rewrites .= \sprintf("RewriteCond %%{HTTP_ACCEPT} %s\n", $format->mimeType())
                 . \sprintf("RewriteCond %%{REQUEST_FILENAME} (.*)\\.(?i:%s)$\n", $extensions)
-                . \sprintf("RewriteCond %%{REQUEST_FILENAME}\\%s -f\n", $format->suffix())
+                . \sprintf("RewriteCond %%{REQUEST_FILENAME}\\%s -s\n", $format->suffix())
                 . \sprintf("RewriteRule ^ %%{REQUEST_FILENAME}\\%s [L,T=%s]\n\n", $format->suffix(), $format->mimeType());
         }
 

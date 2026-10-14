@@ -35,6 +35,20 @@ final class MagickConverterTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function failedRunIntoPreCreatedTargetThrows(): void
+    {
+        $sourceFile = $this->workingDirectory . '/tiny.png';
+        \copy(__DIR__ . '/../Fixtures/Images/tiny.png', $sourceFile);
+        $targetFile = $sourceFile . '.webp';
+        \touch($targetFile);
+
+        $converter = new MagickConverter('-no-such-option', $this->createConfiguration());
+
+        $this->expectException(\RuntimeException::class);
+        $converter->convertTo($sourceFile, $targetFile, OutputFormat::Webp);
+    }
+
+    #[Test]
     public function pngConvertsToValidAvifFile(): void
     {
         // FunctionalTestCase pins GFX.processor=GraphicsMagick. GM cannot WRITE

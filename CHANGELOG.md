@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- A conversion that leaves an empty file behind — typically ImageMagick/GraphicsMagick killed by a process or memory limit under load — is no longer published as a sibling; the webserver handed WebP-capable browsers an empty `image/webp` response, so the image was missing on the page. The failure is logged as an error, including the ImageMagick/GraphicsMagick output, and retried on the next render, not recorded as a failed attempt (#122).
+- Folder mode (`webp:process-queue --folder`) treats an empty sibling as missing and converts the image again.
+- The Apache rules in the README and from `webp:webserver-config` check for a non-empty sibling (`-s`) instead of any sibling (`-f`). Update existing Apache configurations by hand.
+
+Siblings that were already published empty stay in place until they are deleted; the next render then regenerates them. On local storages: `find public/fileadmin \( -name '*.webp' -o -name '*.avif' -o -name '*.jxl' \) -size 0 -delete`.
+
 ## [14.9.1] - 2026-09-22
 
 ### Fixed

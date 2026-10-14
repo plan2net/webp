@@ -32,8 +32,9 @@ final class MagickConverter extends AbstractConverter
             $parameters
         );
 
-        if (!@\is_file($targetFilePath)) {
-            throw new \RuntimeException(\sprintf('File "%s" was not created: %s', $targetFilePath, $result ?: \sprintf('maybe missing %s delegate?', $format->value)));
+        \clearstatcache(true, $targetFilePath);
+        if (0 === (int) @\filesize($targetFilePath)) {
+            throw new \RuntimeException(\sprintf('File "%s" was not created or is empty: %s', $targetFilePath, $result ?: \sprintf('maybe missing %s delegate?', $format->value)));
         }
     }
 

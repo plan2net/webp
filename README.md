@@ -581,17 +581,17 @@ AddType image/jxl  .jxl
 # AVIF preferred over WebP — order matters, first matching rule wins.
 RewriteCond %{HTTP_ACCEPT} image/avif
 RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
-RewriteCond %{REQUEST_FILENAME}\.avif -f
+RewriteCond %{REQUEST_FILENAME}\.avif -s
 RewriteRule ^ %{REQUEST_FILENAME}\.avif [L,T=image/avif]
 
 RewriteCond %{HTTP_ACCEPT} image/webp
 RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
-RewriteCond %{REQUEST_FILENAME}\.webp -f
+RewriteCond %{REQUEST_FILENAME}\.webp -s
 RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
 
 RewriteCond %{HTTP_ACCEPT} image/jxl
 RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:png|gif|jpe?g)$
-RewriteCond %{REQUEST_FILENAME}\.jxl -f
+RewriteCond %{REQUEST_FILENAME}\.jxl -s
 RewriteRule ^ %{REQUEST_FILENAME}\.jxl [L,T=image/jxl]
 
 <IfModule mod_headers.c>
@@ -602,6 +602,8 @@ RewriteRule ^ %{REQUEST_FILENAME}\.jxl [L,T=image/jxl]
 ```
 
 If you only generate `.webp` (default `formats_enabled = webp`), keep just the WebP block and drop the AVIF/JXL ones.
+
+`-s` (exists and is not empty) rather than `-f` keeps an empty sibling from being served as a blank image.
 
 #### When `%{REQUEST_FILENAME}` doesn't resolve
 

@@ -43,7 +43,7 @@ final class FolderScanner
             $path = $fileInfo->getPathname();
             $missing = [];
             foreach ($expectedFormats as $format) {
-                if (!\is_file($path . $format->suffix())) {
+                if (0 === (int) @\filesize($path . $format->suffix())) {
                     $missing[] = $format;
                 }
             }

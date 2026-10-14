@@ -84,17 +84,17 @@ final class RewriteConfigurationGeneratorTest extends TestCase
             # Preference order AVIF > WebP > JXL (first matching rule wins).
             RewriteCond %{HTTP_ACCEPT} image/avif
             RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:jpg|jpeg|png|gif)$
-            RewriteCond %{REQUEST_FILENAME}\.avif -f
+            RewriteCond %{REQUEST_FILENAME}\.avif -s
             RewriteRule ^ %{REQUEST_FILENAME}\.avif [L,T=image/avif]
 
             RewriteCond %{HTTP_ACCEPT} image/webp
             RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:jpg|jpeg|png|gif)$
-            RewriteCond %{REQUEST_FILENAME}\.webp -f
+            RewriteCond %{REQUEST_FILENAME}\.webp -s
             RewriteRule ^ %{REQUEST_FILENAME}\.webp [L,T=image/webp]
 
             RewriteCond %{HTTP_ACCEPT} image/jxl
             RewriteCond %{REQUEST_FILENAME} (.*)\.(?i:jpg|jpeg|png|gif)$
-            RewriteCond %{REQUEST_FILENAME}\.jxl -f
+            RewriteCond %{REQUEST_FILENAME}\.jxl -s
             RewriteRule ^ %{REQUEST_FILENAME}\.jxl [L,T=image/jxl]
 
             <IfModule mod_headers.c>

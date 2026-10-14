@@ -116,9 +116,15 @@ final class SiblingGenerator implements LoggerAwareInterface
             throw new \RuntimeException(\sprintf('Converter class %s does not implement Plan2net\\Webp\\Converter\\Converter.', $converterClass));
         }
 
+        \clearstatcache(true, $targetPath);
         $sourceSize = (int) @\filesize($sourcePath);
         $targetSize = (int) @\filesize($targetPath);
-        if ($targetSize > 0 && $sourceSize > 0 && $sourceSize <= $targetSize) {
+        if (0 === $targetSize) {
+            @\unlink($targetPath);
+
+            throw new \RuntimeException(\sprintf('Converter %s produced an empty file for "%s" (%s).', $converterClass, $sourcePath, $format->value));
+        }
+        if ($sourceSize > 0 && $sourceSize <= $targetSize) {
             @\unlink($targetPath);
 
             throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s).', $targetPath, $targetSize, $sourceSize, $sourcePath));
