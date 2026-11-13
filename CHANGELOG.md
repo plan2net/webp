@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.11.0] - 2026-11-13
+
+### Fixed
+
+- In async mode, an image whose sibling came out larger than the original is no longer added to the queue again on every render.
+
+### Changed
+
+- Pages render faster. The extension now remembers which images already have all their siblings and stops checking them on every render. It checks again when the original, its quality or the extension configuration changes, and after you clear the frontend caches.
+- A sibling you delete by hand is created again only after you clear the frontend caches.
+
 ## [14.10.0] - 2026-10-14
 
 ### Added
@@ -238,6 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.11.0]: https://github.com/plan2net/webp/releases/tag/14.11.0
 [14.10.0]: https://github.com/plan2net/webp/releases/tag/14.10.0
 [14.9.2]: https://github.com/plan2net/webp/releases/tag/14.9.2
 [14.9.1]: https://github.com/plan2net/webp/releases/tag/14.9.1
