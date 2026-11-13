@@ -54,6 +54,15 @@ services:
   Plan2net\Webp\Service\PathMatcher:
     public: true
 
+  cache.webp_siblings:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['webp_siblings']
+
+  Plan2net\Webp\Service\SettledVariants:
+    arguments:
+      $cache: '@cache.webp_siblings'
+
   Plan2net\Webp\Service\ProcessedFileWriter: ~
 
   Plan2net\Webp\Service\FailedAttemptsRepository: ~

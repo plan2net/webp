@@ -12,8 +12,11 @@ use Plan2net\Webp\Format\OutputFormat;
  */
 final class EmptyOutputConverter extends AbstractConverter
 {
+    public static int $conversions = 0;
+
     public function convertTo(string $originalFilePath, string $targetFilePath, OutputFormat $format): void
     {
+        ++self::$conversions;
         \file_put_contents($targetFilePath, '');
     }
 }

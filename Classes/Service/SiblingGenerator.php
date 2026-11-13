@@ -39,6 +39,8 @@ final class SiblingGenerator implements LoggerAwareInterface
      * gets its own ProcessedFile row; failures in one format never block the
      * others. The incoming $sourceVariant (TYPO3's variant row, or the original
      * File when no real transformation happened) is NOT mutated.
+     *
+     * Returns false only after a failure worth retrying.
      */
     public function process(
         File $originalFile,
@@ -46,31 +48,34 @@ final class SiblingGenerator implements LoggerAwareInterface
         string $taskType,
         array $taskConfiguration,
         ?OutputFormat $onlyFormat = null,
-    ): void {
+    ): bool {
         if (OutputFormat::isOutputExtension($originalFile->getExtension())) {
-            return;
+            return true;
         }
 
         if (!$this->canPublishSiblingFor($sourceVariant)) {
-            return;
+            return true;
         }
 
         $pendingFormats = $this->formatsNeedingWork($originalFile, $taskType, $taskConfiguration, $onlyFormat);
         if ([] === $pendingFormats) {
-            return;
+            return true;
         }
 
         // Fetching the source can mean a full download on a remote storage, so it
         // happens only once we know there is something left to convert.
         $sourceLocalPath = $sourceVariant->getForLocalProcessing(false);
         if (!@\is_file($sourceLocalPath)) {
-            return;
+            return false;
         }
 
         $mimeType = $originalFile->getMimeType();
+        $settled = true;
         foreach ($pendingFormats as [$format, $formatConfiguration, $formatRow]) {
-            $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $format, $formatConfiguration, $formatRow);
+            $settled = $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $format, $formatConfiguration, $formatRow) && $settled;
         }
+
+        return $settled;
     }
 
     public function canPublishSiblingFor(FileInterface $sourceVariant): bool
@@ -86,6 +91,14 @@ final class SiblingGenerator implements LoggerAwareInterface
         return $processedFile->isNew()
             || (!$processedFile->usesOriginalFile() && !$processedFile->exists())
             || $processedFile->isOutdated();
+    }
+
+    public function failedBefore(File $originalFile, FileInterface $sourceVariant, OutputFormat $format): bool
+    {
+        $parameters = $this->effectiveParameters($originalFile, $sourceVariant, $format);
+
+        return null !== $parameters
+            && $this->failedAttempts->wasAttempted((int) $originalFile->getUid(), $sourceVariant->getIdentifier(), $parameters, $format);
     }
 
     /**
@@ -184,24 +197,12 @@ final class SiblingGenerator implements LoggerAwareInterface
         OutputFormat $format,
         array $formatConfiguration,
         ProcessedFile $formatRow,
-    ): void {
-        $overrideQuality = QualityOverride::forcedQualityFor($originalFile);
-
-        $parameters = $this->configuration->getParametersFor($format, $mimeType);
-        if (null === $parameters || '' === $parameters) {
+    ): bool {
+        $parameters = $this->effectiveParameters($originalFile, $sourceVariant, $format);
+        if (null === $parameters) {
             $this->logger?->notice(\sprintf('webp: no %s parameters for mime "%s" — skipping "%s".', $format->value, $mimeType, $sourceLocalPath));
 
-            return;
-        }
-        // Effective quality drives only the converter parameters: the per-image override wins;
-        // otherwise the per-format width curve applies, but only to lossy parameters (rewriting the
-        // -quality token of a lossless string would change its compression effort, not quality).
-        $effectiveQuality = $overrideQuality;
-        if (null === $effectiveQuality && !QualityOverride::isLossless($parameters)) {
-            $effectiveQuality = $this->configuration->qualityForWidth($format, (int) $sourceVariant->getProperty('width'));
-        }
-        if (null !== $effectiveQuality) {
-            $parameters = QualityOverride::applyToParameters($parameters, $effectiveQuality);
+            return true;
         }
 
         $fileUid = (int) $originalFile->getUid();
@@ -209,7 +210,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         if ($this->failedAttempts->wasAttempted($fileUid, $variant, $parameters, $format)) {
             $this->logger?->notice(\sprintf('webp: skipping %s for file "%s" — prior attempt failed with same configuration.', $format->value, $sourceLocalPath));
 
-            return;
+            return true;
         }
 
         $tempTarget = GeneralUtility::tempnam(\sprintf('sibling-%s-', $format->value), $format->suffix());
@@ -227,18 +228,48 @@ final class SiblingGenerator implements LoggerAwareInterface
             ]);
             $this->processedFileWriter->add($formatRow, $taskType, $formatConfiguration);
             $this->forgetOtherRowsForTheSameFile($formatRow);
+
+            return true;
         } catch (UnsupportedFormatException $e) {
             $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
+
+            return true;
         } catch (ConvertedFileLargerThanOriginalException $e) {
             $this->failedAttempts->record($fileUid, $variant, $parameters, $format);
             $this->logger?->warning($e->getMessage());
+
+            return true;
         } catch (WillNotRetryWithConfigurationException $e) {
             $this->logger?->notice($e->getMessage());
+
+            return true;
         } catch (\Throwable $e) {
             $this->logger?->error(\sprintf('webp: %s conversion of "%s" failed: %s', $format->value, $originalFile->getIdentifier(), $e->getMessage()));
+
+            return false;
         } finally {
             GeneralUtility::unlink_tempfile($tempTarget);
         }
+    }
+
+    private function effectiveParameters(File $originalFile, FileInterface $sourceVariant, OutputFormat $format): ?string
+    {
+        $parameters = $this->configuration->getParametersFor($format, $originalFile->getMimeType());
+        if (null === $parameters || '' === $parameters) {
+            return null;
+        }
+        // Effective quality drives only the converter parameters: the per-image override wins;
+        // otherwise the per-format width curve applies, but only to lossy parameters (rewriting the
+        // -quality token of a lossless string would change its compression effort, not quality).
+        $effectiveQuality = QualityOverride::forcedQualityFor($originalFile);
+        if (null === $effectiveQuality && !QualityOverride::isLossless($parameters)) {
+            $effectiveQuality = $this->configuration->qualityForWidth($format, (int) $sourceVariant->getProperty('width'));
+        }
+        if (null !== $effectiveQuality) {
+            $parameters = QualityOverride::applyToParameters($parameters, $effectiveQuality);
+        }
+
+        return $parameters;
     }
 
     private function publishToStorage(FileInterface $sourceFile, ProcessedFile $processedFile, string $tempTarget): void

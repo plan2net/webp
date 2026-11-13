@@ -9,6 +9,7 @@ use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\QualityOverride;
+use Plan2net\Webp\Service\SettledVariants;
 use Plan2net\Webp\Service\SiblingGenerator;
 use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Log\LoggerAwareInterface;
@@ -32,6 +33,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         private readonly Configuration $configuration,
         private readonly ConversionQueueRepository $queueRepository,
         private readonly ProcessedFileRepository $processedFileRepository,
+        private readonly SettledVariants $settledVariants,
     ) {
     }
 
@@ -46,6 +48,10 @@ final class AfterFileProcessing implements LoggerAwareInterface
 
         $originalFile = $file instanceof FileReference ? $file->getOriginalFile() : $file;
         if (!$originalFile instanceof File) {
+            return;
+        }
+
+        if ($this->settledVariants->contains($originalFile, $processedFile)) {
             return;
         }
 
@@ -64,13 +70,17 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         if ($this->configuration->isAsync()) {
-            $this->enqueueEnabledFormats($originalFile, $processedFile, $sourceVariant, $event->getTaskType(), $taskConfiguration);
+            if ($this->enqueueEnabledFormats($originalFile, $processedFile, $sourceVariant, $event->getTaskType(), $taskConfiguration)) {
+                $this->settledVariants->add($originalFile, $processedFile);
+            }
 
             return;
         }
 
         try {
-            $this->siblingGenerator->process($originalFile, $sourceVariant, $event->getTaskType(), $taskConfiguration);
+            if ($this->siblingGenerator->process($originalFile, $sourceVariant, $event->getTaskType(), $taskConfiguration)) {
+                $this->settledVariants->add($originalFile, $processedFile);
+            }
         } catch (\Throwable $e) {
             $this->logger?->error(\sprintf('webp: sibling generation aborted for "%s": %s', $sourceVariant->getIdentifier(), $e->getMessage()));
         }
@@ -80,12 +90,14 @@ final class AfterFileProcessing implements LoggerAwareInterface
      * Enqueues one row per enabled format whose mime list accepts this file.
      * The queue worker re-dispatches each entry with its own $entry->format,
      * so a single drain produces exactly the formats that were enqueued.
+     * Returns whether nothing was left to enqueue.
      */
-    private function enqueueEnabledFormats(File $originalFile, ProcessedFile $processedFile, FileInterface $sourceVariant, string $taskType, array $taskConfiguration): void
+    private function enqueueEnabledFormats(File $originalFile, ProcessedFile $processedFile, FileInterface $sourceVariant, string $taskType, array $taskConfiguration): bool
     {
         $processedFileId = $processedFile->usesOriginalFile() ? 0 : (int) $processedFile->getUid();
         $mimeType = $originalFile->getMimeType();
         $quality = QualityOverride::forcedQualityFor($originalFile);
+        $settled = true;
 
         foreach ($this->configuration->getEnabledFormats() as $format) {
             if (!$this->configuration->isSupportedMimeTypeFor($format, $mimeType)) {
@@ -103,6 +115,9 @@ final class AfterFileProcessing implements LoggerAwareInterface
             if (!$this->siblingGenerator->needsReprocessing($formatRow)) {
                 continue;
             }
+            if ($this->siblingGenerator->failedBefore($originalFile, $sourceVariant, $format)) {
+                continue;
+            }
             try {
                 $this->queueRepository->enqueue(
                     (int) $originalFile->getUid(),
@@ -111,15 +126,19 @@ final class AfterFileProcessing implements LoggerAwareInterface
                     $formatConfiguration,
                     $format,
                 );
+                $settled = false;
             } catch (\Doctrine\DBAL\Exception $exception) {
                 $this->logger?->notice(\sprintf('webp: queue table unavailable for %s, falling back to synchronous conversion: %s', $format->value, $exception->getMessage()));
                 try {
-                    $this->siblingGenerator->process($originalFile, $sourceVariant, $taskType, $taskConfiguration, $format);
+                    $settled = $this->siblingGenerator->process($originalFile, $sourceVariant, $taskType, $taskConfiguration, $format) && $settled;
                 } catch (\Throwable $inner) {
+                    $settled = false;
                     $this->logger?->error(\sprintf('webp: sync fallback for %s also failed: %s', $format->value, $inner->getMessage()));
                 }
             }
         }
+
+        return $settled;
     }
 
     private function shouldProcess(string $taskType, ProcessedFile $processedFile): bool

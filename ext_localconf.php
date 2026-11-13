@@ -18,6 +18,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
     }
     $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] = \implode(',', $known);
 
+    // Set on its own so a site-level backend override keeps the frontend-cache flush.
+    $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['webp_siblings']['groups'] ??= ['pages'];
+
     if (GeneralUtility::makeInstance(Configuration::class)->isHideSiblings()) {
         // Hide generated sibling files (.webp/.avif/.jxl) in BE file lists
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['fal']['defaultFilterCallbacks'][] = [

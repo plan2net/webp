@@ -45,6 +45,7 @@ TYPO3's log (`var/log/typo3_*.log` by default) has an entry for every conversion
 | File still served as JPEG after a successful generation | Webserver rewrite rule missing or shadowed by another rule                  |
 | Only one format is served when several are enabled     | Rewrite rule lists the formats in the wrong priority order: AVIF should come before WebP, see [Webserver configuration](Webserver.md#which-blocks-do-i-need) |
 | Sibling left behind after deleting the source          | None; fixed in 14.0.0, upgrade                                               |
+| Sibling deleted by hand is not created again           | Clear the frontend caches, or [remove the processed files](Operations.md#removing-siblings) |
 | Large/high-resolution originals fail or time out, or produce no sibling | See [Very large or high-resolution originals](#very-large-or-high-resolution-originals) |
 | WebP/AVIF looks softer or blurrier than the JPEG       | See [Sharp output](#sharp-output)                                            |
 

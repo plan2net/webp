@@ -47,6 +47,18 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function aSettledVariantIsNotCheckedAgainOnTheNextRender(): void
+    {
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $this->deleteWebpRowsForOriginal((int) $file->getUid());
+
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
     public function skipsUnsupportedMimeType(): void
     {
         $this->applyConfigOverride('mime_types', 'image/jpeg,image/gif');
@@ -97,17 +109,13 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         $file = $this->getFile(1);
         $reference = $this->getFileReference(101);
 
+        // Leave the variant unsettled for the event below.
+        $this->applyConfigOverride('mime_types', 'image/jpeg');
         $processed = $file->process(
             ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
             ['width' => 16, 'height' => 16],
         );
-        $existingWebp = $this->fetchWebpRow((int) $file->getUid());
-        if (null !== $existingWebp) {
-            $this->getConnectionPool()
-                ->getConnectionForTable('sys_file_processedfile')
-                ->delete('sys_file_processedfile', ['uid' => $existingWebp['uid']]);
-        }
-        @unlink($processed->getForLocalProcessing(false) . '.webp');
+        $this->applyConfigOverride('mime_types', 'image/jpeg,image/png,image/gif');
 
         $event = new AfterFileProcessingEvent(
             $this->createMock(DriverInterface::class),
@@ -213,6 +221,19 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function aTransientFailureIsRetriedOnTheNextRender(): void
+    {
+        $this->applyConfigOverride('converter', EmptyOutputConverter::class);
+        EmptyOutputConverter::$conversions = 0;
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(2, EmptyOutputConverter::$conversions);
+    }
+
+    #[Test]
     public function enqueuesWhenAsyncEnabled(): void
     {
         $this->applyConfigOverride('async', '1');
@@ -281,6 +302,47 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
             ->count('uid', 'tx_webp_queue', []);
 
         self::assertSame(0, $queueRows, 'Existing current webp must not be re-enqueued');
+    }
+
+    #[Test]
+    public function asyncSettlesAVariantWhoseSiblingsAreAllCurrent(): void
+    {
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $this->applyConfigOverride('async', '1');
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $this->deleteWebpRowsForOriginal((int) $file->getUid());
+
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(0, $this->countQueueRows());
+    }
+
+    #[Test]
+    public function asyncDoesNotEnqueueAConversionThatAlreadyCameOutLarger(): void
+    {
+        $this->applyConfigOverride('converter', RecordingConverter::class);
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        self::assertSame(1, $this->countFailedRows((int) $file->getUid()));
+        $this->applyConfigOverride('async', '1');
+
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(0, $this->countQueueRows());
+    }
+
+    #[Test]
+    public function asyncKeepsAnEnqueuedVariantUnsettled(): void
+    {
+        $this->applyConfigOverride('async', '1');
+
+        $file = $this->getFile(1);
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $this->getConnectionPool()->getConnectionForTable('tx_webp_queue')->truncate('tx_webp_queue');
+        $file->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+
+        self::assertSame(1, $this->countQueueRows(), 'the variant must be enqueued again until its sibling exists');
     }
 
     #[Test]
@@ -505,6 +567,14 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         return $count;
     }
 
+    private function deleteWebpRowsForOriginal(int $originalUid): void
+    {
+        $connection = $this->getConnectionPool()->getConnectionForTable('sys_file_processedfile');
+        while (null !== ($row = $this->fetchWebpRow($originalUid))) {
+            $connection->delete('sys_file_processedfile', ['uid' => $row['uid']]);
+        }
+    }
+
     private function fetchWebpRow(int $originalUid): ?array
     {
         $rows = $this->getConnectionPool()
@@ -520,6 +590,13 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         }
 
         return null;
+    }
+
+    private function countQueueRows(): int
+    {
+        return (int) $this->getConnectionPool()
+            ->getConnectionForTable('tx_webp_queue')
+            ->count('uid', 'tx_webp_queue', []);
     }
 
     private function countFailedRows(int $fileId): int

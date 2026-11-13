@@ -140,6 +140,11 @@ final class Configuration
         return $this->perFormatOrLegacyWebp($format, 'parameters');
     }
 
+    public function fingerprint(): string
+    {
+        return \sha1(\serialize($this->settings()));
+    }
+
     /**
      * @template T
      *
