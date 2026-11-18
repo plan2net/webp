@@ -172,10 +172,16 @@ final class SiblingFile implements LoggerAwareInterface
     private function deleteSiblingIfExists(ResourceStorage $storage, string $identifier): void
     {
         try {
-            if ($storage->hasFile($identifier)) {
-                $storage->deleteFile($storage->getFile($identifier));
+            if (!$storage->hasFile($identifier)) {
+                return;
             }
-        } catch (\Exception $e) {
+            // A processing-folder file without a sys_file_processedfile row has no object.
+            $sibling = $storage->getFile($identifier);
+            if (null === $sibling) {
+                return;
+            }
+            $storage->deleteFile($sibling);
+        } catch (\Throwable $e) {
             $this->logger?->warning(sprintf('webp: failed to delete sibling "%s": %s', $identifier, $e->getMessage()));
         }
     }

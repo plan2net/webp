@@ -7,6 +7,7 @@ namespace Plan2net\Webp\Tests\Functional\EventListener;
 use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -122,6 +123,21 @@ final class SiblingCleanupFunctionalTest extends FunctionalTestCase
         $file->getStorage()->replaceFile($file, $replacement);
 
         self::assertFileDoesNotExist($sibling);
+    }
+
+    #[Test]
+    public function processedVariantIsDeletedWhenItsSiblingHasNoRow(): void
+    {
+        $variant = $this->getFile(1)->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $variantPath = $this->fileadminPath . \ltrim($variant->getIdentifier(), '/');
+        \file_put_contents($variantPath . '.webp', 'fake-webp');
+        $this->getConnectionPool()
+            ->getConnectionForTable('sys_file_processedfile')
+            ->delete('sys_file_processedfile', ['identifier' => $variant->getIdentifier() . '.webp']);
+
+        $variant->delete(true);
+
+        self::assertFileDoesNotExist($variantPath);
     }
 
     protected function setUp(): void
