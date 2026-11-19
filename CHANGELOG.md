@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.11.2] - 2026-11-19
+
+### Fixed
+
+- Images rendered as WebP, AVIF or JPEG XL, for example with `fileExtension="webp"` in `<f:image>`, no longer get a second sibling in the same format. This also removes the "converted file is larger than the original" warnings these attempts left in the log (#124).
+
 ## [14.11.1] - 2026-11-18
 
 ### Fixed
@@ -255,6 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.11.2]: https://github.com/plan2net/webp/releases/tag/14.11.2
 [14.11.1]: https://github.com/plan2net/webp/releases/tag/14.11.1
 [14.11.0]: https://github.com/plan2net/webp/releases/tag/14.11.0
 [14.10.0]: https://github.com/plan2net/webp/releases/tag/14.10.0
