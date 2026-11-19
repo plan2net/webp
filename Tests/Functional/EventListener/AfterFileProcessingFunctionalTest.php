@@ -150,6 +150,22 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function skipsVariantAlreadyRenderedAsWebp(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['GFX']['imagefile_ext'] .= ',webp';
+        $file = $this->getFile(1);
+
+        $processed = $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16, 'fileExtension' => 'webp'],
+        );
+
+        self::assertSame('webp', $processed->getExtension());
+        self::assertFileDoesNotExist($processed->getForLocalProcessing(false) . '.webp');
+        self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
     public function recordsFailedAttemptWhenConvertedFileLargerThanOriginal(): void
     {
         $this->applyConfigOverride('converter', RecordingConverter::class);

@@ -80,6 +80,10 @@ final class SiblingGenerator implements LoggerAwareInterface
 
     public function canPublishSiblingFor(FileInterface $sourceVariant): bool
     {
+        if (OutputFormat::isOutputExtension($sourceVariant->getExtension())) {
+            return false;
+        }
+
         $storage = $sourceVariant->getStorage();
 
         return $storage->isWithinProcessingFolder($sourceVariant->getIdentifier())
