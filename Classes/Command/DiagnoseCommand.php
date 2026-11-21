@@ -12,6 +12,7 @@ use Plan2net\Webp\Converter\MagickConverter;
 use Plan2net\Webp\Converter\MultiFormatConverter;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\Converter\VipsConverter;
+use Plan2net\Webp\Format\FileSignature;
 use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\StorageSiblingMode;
@@ -21,6 +22,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -197,9 +199,76 @@ final class DiagnoseCommand extends Command
                     $reason,
                 ));
             }
+
+            $this->reportMismatchedSiblings($io, $storage, $selectedFormats);
         }
 
         $this->reportPhantomStorages($io, $visibleUids);
+    }
+
+    /**
+     * @param list<OutputFormat> $selectedFormats
+     */
+    private function reportMismatchedSiblings(SymfonyStyle $io, ResourceStorage $storage, array $selectedFormats): void
+    {
+        if ('Local' !== $storage->getDriverType()) {
+            $io->writeln('  ↳ sibling content not checked: only storages with the Local driver are read');
+
+            return;
+        }
+        $storageConfiguration = $storage->getConfiguration();
+        $basePath = ('relative' === ($storageConfiguration['pathType'] ?? '') ? Environment::getPublicPath() . '/' : '')
+            . \rtrim((string) ($storageConfiguration['basePath'] ?? ''), '/');
+
+        foreach ($selectedFormats as $format) {
+            $query = $this->connectionPool->getQueryBuilderForTable('sys_file_processedfile');
+            $identifiers = $query
+                ->select('identifier')
+                ->from('sys_file_processedfile')
+                ->where(
+                    $query->expr()->eq('storage', $query->createNamedParameter($storage->getUid(), Connection::PARAM_INT)),
+                    $query->expr()->like('identifier', $query->createNamedParameter('%' . $format->suffix())),
+                )
+                ->executeQuery();
+
+            $checkedCount = 0;
+            $mismatches = [];
+            while (false !== ($identifier = $identifiers->fetchOne())) {
+                $header = FileSignature::read($basePath . $identifier);
+                // Missing files are converted again on the next render.
+                if ('' === $header) {
+                    continue;
+                }
+                ++$checkedCount;
+                if (!FileSignature::matches($format, $header)) {
+                    $mismatches[] = \sprintf('%s (%s)', $identifier, FileSignature::describe($header) ?? 'unknown format');
+                }
+            }
+            if ([] === $mismatches) {
+                continue;
+            }
+
+            $this->recordFailure(
+                $io,
+                \sprintf('[%s] siblings with content that is not %s: %d of %d checked', $format->value, $format->label(), \count($mismatches), $checkedCount),
+                \sprintf(
+                    "Storage #%d (%s) holds %s siblings that are not %s files, but the webserver delivers them as %s.\nFix the %s converter first (see Converter above), then delete the listed siblings and clear the page cache. The next render converts them again.",
+                    $storage->getUid(),
+                    $storage->getName(),
+                    $format->suffix(),
+                    $format->label(),
+                    $format->mimeType(),
+                    $format->value,
+                ),
+            );
+            $shownMismatches = $io->isVerbose() ? $mismatches : \array_slice($mismatches, 0, 5);
+            foreach ($shownMismatches as $mismatch) {
+                $io->writeln('    ' . $basePath . $mismatch);
+            }
+            if (\count($shownMismatches) < \count($mismatches)) {
+                $io->writeln(\sprintf('    … and %d more (run with -v to list all)', \count($mismatches) - \count($shownMismatches)));
+            }
+        }
     }
 
     /**

@@ -15,7 +15,7 @@ vendor/bin/typo3 webp:diagnose --format=avif                # limit the report t
 
 For each enabled format it reports:
 
-- Storages: mode, driver, number of siblings per format, and leftover rows whose driver is not registered.
+- Storages: mode, driver, number of siblings per format, and leftover rows whose driver is not registered. On local storages it also lists siblings whose content is not in the format of their suffix, for example JPEG data in a `.avif` file (`-v` lists all of them, not only the first five).
 - Converter: class, whether the delegate for each format is there (`convert -list format` for Magick; `vips_foreign_find_save` for libvips), how the parameters parse.
 - Async pipeline: queue size and age of the oldest entry per format, state of the scheduler task.
 - Failed-conversion cache: totals per format, recent rows, the most common config hash.
@@ -40,6 +40,7 @@ TYPO3's log (`var/log/typo3_*.log` by default) has an entry for every conversion
 |--------------------------------------------------------|------------------------------------------------------------------------------|
 | No sibling files appear in `_processed_/`              | Converter binary lacks the delegate for the enabled format(s) (`webp:diagnose` reports this), or `mime_types_<format>` excludes the source |
 | Files are bigger than the original                     | Automatically removed and **not retried** with the same configuration         |
+| Converter writes another format, for example JPEG data into a `.avif` file | The encoder for that format is missing (`webp:diagnose` reports this). The file is removed and **not retried** with the same configuration. Siblings written before 14.11.3 stay: `webp:diagnose` lists them, delete them and clear the page cache |
 | Output renders darker / off-colour                     | `$GLOBALS['TYPO3_CONF_VARS']['GFX']['processor_colorspace']` (e.g. `sRGB`)    |
 | Apache rewrite returns 403/404                         | [`%{REQUEST_FILENAME}` doesn't resolve](Webserver.md#when-request_filename-doesnt-resolve) |
 | File still served as JPEG after a successful generation | Webserver rewrite rule missing or shadowed by another rule                  |

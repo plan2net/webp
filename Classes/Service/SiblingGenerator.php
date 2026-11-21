@@ -6,9 +6,11 @@ namespace Plan2net\Webp\Service;
 
 use Plan2net\Webp\Converter\Converter;
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
+use Plan2net\Webp\Converter\Exception\ConvertedFileNotInRequestedFormatException;
 use Plan2net\Webp\Converter\Exception\UnsupportedFormatException;
 use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Converter\MultiFormatConverter;
+use Plan2net\Webp\Format\FileSignature;
 use Plan2net\Webp\Format\OutputFormat;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
@@ -111,6 +113,7 @@ final class SiblingGenerator implements LoggerAwareInterface
      * @return int Size in bytes of the converted file
      *
      * @throws ConvertedFileLargerThanOriginalException
+     * @throws ConvertedFileNotInRequestedFormatException
      * @throws UnsupportedFormatException
      */
     public function convertFilePath(string $sourcePath, string $targetPath, string $parameters, OutputFormat $format = OutputFormat::Webp): int
@@ -148,6 +151,12 @@ final class SiblingGenerator implements LoggerAwareInterface
             @\unlink($targetPath);
 
             throw new ConvertedFileLargerThanOriginalException(\sprintf('Converted file (%s) is larger (%d vs. %d) than the original (%s).', $targetPath, $targetSize, $sourceSize, $sourcePath));
+        }
+        $header = FileSignature::read($targetPath);
+        if (!FileSignature::matches($format, $header)) {
+            @\unlink($targetPath);
+
+            throw new ConvertedFileNotInRequestedFormatException(\sprintf('Converter %s was asked for %s but wrote %s for "%s".', $converterClass, $format->label(), FileSignature::describe($header) ?? 'data in an unknown format', $sourcePath));
         }
 
         return $targetSize;
@@ -238,7 +247,7 @@ final class SiblingGenerator implements LoggerAwareInterface
             $this->logger?->warning(\sprintf('webp: %s converter cannot produce %s — skipping (%s).', $this->configuration->getConverterFor($format), $format->value, $e->getMessage()));
 
             return true;
-        } catch (ConvertedFileLargerThanOriginalException $e) {
+        } catch (ConvertedFileLargerThanOriginalException|ConvertedFileNotInRequestedFormatException $e) {
             $this->failedAttempts->record($fileUid, $variant, $parameters, $format);
             $this->logger?->warning($e->getMessage());
 
