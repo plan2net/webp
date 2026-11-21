@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.11.3] - 2026-11-22
+
+### Fixed
+
+- A converted file that is not in the requested format is no longer kept. An ImageMagick build without an AVIF encoder, for example, wrote JPEG data into `.avif` siblings, and the webserver delivered them as AVIF. Such files are now removed and not retried with the same configuration.
+- `webp:diagnose` lists siblings whose content does not match their suffix. Delete them and clear the page cache to have them converted again.
+
 ## [14.11.2] - 2026-11-19
 
 ### Fixed
