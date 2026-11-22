@@ -444,6 +444,11 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         $basePath = $storage->getConfiguration()['basePath'];
 
         chmod($basePath, 0o555);
+        if (@touch($basePath . 'probe')) {
+            unlink($basePath . 'probe');
+            chmod($basePath, 0o775);
+            self::markTestSkipped('This filesystem ignores folder permissions.');
+        }
         try {
             $file->process(
                 ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
