@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Plan2net\Webp\Converter\PhpGdConverter;
 use Plan2net\Webp\EventListener\AfterFileProcessing;
 use Plan2net\Webp\Service\StorageSiblingMode;
+use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\CapturingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\EmptyOutputConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\RecordingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\SmallVariantGrowsConverter;
@@ -163,6 +164,24 @@ final class AfterFileProcessingFunctionalTest extends FunctionalTestCase
         self::assertSame('webp', $processed->getExtension());
         self::assertFileDoesNotExist($processed->getForLocalProcessing(false) . '.webp');
         self::assertSame(0, $this->countWebpRowsForOriginal((int) $file->getUid()));
+    }
+
+    #[Test]
+    public function aVariantIsConvertedByItsOwnTypeNotByTheTypeOfItsOriginal(): void
+    {
+        CapturingConverter::$receivedParameters = [];
+        $this->applyConfigOverride('converter', CapturingConverter::class);
+        $this->applyConfigOverride('mime_types', 'image/jpeg');
+        $file = $this->getFile(1);
+
+        $processed = $file->process(
+            ProcessedFile::CONTEXT_IMAGECROPSCALEMASK,
+            ['width' => 16, 'height' => 16, 'fileExtension' => 'jpg'],
+        );
+
+        self::assertSame('jpg', $processed->getExtension());
+        self::assertFileExists($processed->getForLocalProcessing(false) . '.webp');
+        self::assertSame(['-quality 85'], CapturingConverter::$receivedParameters);
     }
 
     #[Test]

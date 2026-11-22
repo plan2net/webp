@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Format;
 
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 
 final class SourceMimeType
 {
@@ -18,7 +19,11 @@ final class SourceMimeType
 
     public static function of(File $originalFile, FileInterface $source): string
     {
-        return $originalFile->getMimeType();
+        if (!$source instanceof ProcessedFile) {
+            return $originalFile->getMimeType();
+        }
+
+        return self::fromExtension($source->getExtension()) ?? '';
     }
 
     /**

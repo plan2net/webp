@@ -55,6 +55,8 @@ mime_types = image/jpeg,image/png,image/gif
 
 The WebP slot only converts source files whose mime type is in this comma-separated list. AVIF and JPEG XL have their own lists, `mime_types_avif` and `mime_types_jxl`.
 
+The source is the file that gets converted. For a processed image that is the processed file, so its own type counts, not the type of its original. TYPO3 renders PDF, TIFF, BMP and cropped SVG files as PNG, so those images get siblings when `image/png` is in the list, and they use the `image/png::` parameters.
+
 ### `parameters`
 
 Each entry is `mime/type::params`, and `|` separates the entries. The `::` matters: a single colon doesn't match, and the extension then uses the value as the default parameters for every mime type.
