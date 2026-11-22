@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [14.12.0] - 2026-11-22
+
+### Added
+
+- `webp:process-queue --missing` checks every processed image and creates the siblings that are missing, for example after you deleted siblings by hand. It converts the files directly, also in async mode.
+
+### Changed
+
+- A processed image is now converted by its own file type, not by the type of its original. Images that TYPO3 renders as PNG, for example previews of PDF, TIFF or BMP files, now get siblings when `image/png` is in the list of supported mime types. An image rendered in another type than its original, for example with `fileExtension="jpg"`, now uses the parameters of that type.
+
 ## [14.11.3] - 2026-11-22
 
 ### Fixed
@@ -268,6 +278,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The listener now normalises `FileReference` inputs to their underlying `File` before the repository lookup — fixes a latent v12/v13 bug where the wrong UID was being queried.
 - `FileNameFilter` no longer emits PHP 8+ warnings on invalid filter regex patterns.
 
+[14.12.0]: https://github.com/plan2net/webp/releases/tag/14.12.0
+[14.11.3]: https://github.com/plan2net/webp/releases/tag/14.11.3
 [14.11.2]: https://github.com/plan2net/webp/releases/tag/14.11.2
 [14.11.1]: https://github.com/plan2net/webp/releases/tag/14.11.1
 [14.11.0]: https://github.com/plan2net/webp/releases/tag/14.11.0
