@@ -12,6 +12,7 @@ use Plan2net\Webp\Converter\Exception\WillNotRetryWithConfigurationException;
 use Plan2net\Webp\Converter\MultiFormatConverter;
 use Plan2net\Webp\Format\FileSignature;
 use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Format\SourceMimeType;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Database\Connection;
@@ -59,7 +60,8 @@ final class SiblingGenerator implements LoggerAwareInterface
             return true;
         }
 
-        $pendingFormats = $this->formatsNeedingWork($originalFile, $taskType, $taskConfiguration, $onlyFormat);
+        $mimeType = SourceMimeType::of($originalFile, $sourceVariant);
+        $pendingFormats = $this->formatsNeedingWork($originalFile, $mimeType, $taskType, $taskConfiguration, $onlyFormat);
         if ([] === $pendingFormats) {
             return true;
         }
@@ -71,7 +73,6 @@ final class SiblingGenerator implements LoggerAwareInterface
             return false;
         }
 
-        $mimeType = $originalFile->getMimeType();
         $settled = true;
         foreach ($pendingFormats as [$format, $formatConfiguration, $formatRow]) {
             $settled = $this->processFormat($originalFile, $sourceVariant, $sourceLocalPath, $mimeType, $taskType, $format, $formatConfiguration, $formatRow) && $settled;
@@ -167,11 +168,11 @@ final class SiblingGenerator implements LoggerAwareInterface
      */
     private function formatsNeedingWork(
         File $originalFile,
+        string $mimeType,
         string $taskType,
         array $taskConfiguration,
         ?OutputFormat $onlyFormat,
     ): array {
-        $mimeType = $originalFile->getMimeType();
         $overrideQuality = QualityOverride::forcedQualityFor($originalFile);
         $formats = null === $onlyFormat
             ? $this->configuration->getEnabledFormats()
@@ -267,7 +268,7 @@ final class SiblingGenerator implements LoggerAwareInterface
 
     private function effectiveParameters(File $originalFile, FileInterface $sourceVariant, OutputFormat $format): ?string
     {
-        $parameters = $this->configuration->getParametersFor($format, $originalFile->getMimeType());
+        $parameters = $this->configuration->getParametersFor($format, SourceMimeType::of($originalFile, $sourceVariant));
         if (null === $parameters || '' === $parameters) {
             return null;
         }

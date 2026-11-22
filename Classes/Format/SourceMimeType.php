@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Plan2net\Webp\Format;
 
+use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\FileInterface;
+
 final class SourceMimeType
 {
     private const BY_EXTENSION = [
@@ -12,6 +15,11 @@ final class SourceMimeType
         'png' => 'image/png',
         'gif' => 'image/gif',
     ];
+
+    public static function of(File $originalFile, FileInterface $source): string
+    {
+        return $originalFile->getMimeType();
+    }
 
     /**
      * @return list<string>

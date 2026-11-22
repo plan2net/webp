@@ -6,6 +6,7 @@ namespace Plan2net\Webp\EventListener;
 
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
 use Plan2net\Webp\Format\OutputFormat;
+use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\QualityOverride;
@@ -51,10 +52,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
             return;
         }
 
-        if ($this->settledVariants->contains($originalFile, $processedFile)) {
-            return;
-        }
-
         // When no real transformation happened the variant's storage record is
         // stale and points at the original; use the original FAL File directly
         // so identifier/parent-folder lookups resolve correctly.
@@ -63,6 +60,14 @@ final class AfterFileProcessing implements LoggerAwareInterface
         if ($processedFile->usesOriginalFile()) {
             $sourceVariant = $originalFile;
             $taskConfiguration = [];
+        }
+
+        if (!$this->anyEnabledFormatAcceptsMimeType(SourceMimeType::of($originalFile, $sourceVariant))) {
+            return;
+        }
+
+        if ($this->settledVariants->contains($originalFile, $processedFile)) {
+            return;
         }
 
         if (!$this->siblingGenerator->canPublishSiblingFor($sourceVariant)) {
@@ -95,7 +100,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
     private function enqueueEnabledFormats(File $originalFile, ProcessedFile $processedFile, FileInterface $sourceVariant, string $taskType, array $taskConfiguration): bool
     {
         $processedFileId = $processedFile->usesOriginalFile() ? 0 : (int) $processedFile->getUid();
-        $mimeType = $originalFile->getMimeType();
+        $mimeType = SourceMimeType::of($originalFile, $sourceVariant);
         $quality = QualityOverride::forcedQualityFor($originalFile);
         $settled = true;
 
@@ -153,10 +158,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
-            return false;
-        }
-
-        if (!$this->anyEnabledFormatAcceptsMimeType($originalFile->getMimeType())) {
             return false;
         }
 
