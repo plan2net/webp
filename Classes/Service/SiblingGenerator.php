@@ -34,6 +34,7 @@ final class SiblingGenerator implements LoggerAwareInterface
         private readonly ProcessedFileRepository $processedFileRepository,
         private readonly ProcessedFileWriter $processedFileWriter,
         private readonly ConnectionPool $connectionPool,
+        private readonly PathMatcher $pathMatcher,
     ) {
     }
 
@@ -91,6 +92,32 @@ final class SiblingGenerator implements LoggerAwareInterface
 
         return $storage->isWithinProcessingFolder($sourceVariant->getIdentifier())
             || StorageSiblingMode::isEnabledFor($storage);
+    }
+
+    public function isInScope(string $taskType, ProcessedFile $processedFile): bool
+    {
+        if ('Image.CropScaleMask' !== $taskType) {
+            return false;
+        }
+
+        $originalFile = $processedFile->getOriginalFile();
+        if (OutputFormat::isOutputExtension($originalFile->getExtension())) {
+            return false;
+        }
+
+        if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
+            return false;
+        }
+
+        if (!$this->configuration->isConvertAll() && !$this->isFileInProcessingFolder($processedFile)) {
+            return false;
+        }
+
+        if ($this->originalFileIsInExcludedDirectory($originalFile)) {
+            return false;
+        }
+
+        return true;
     }
 
     public function needsReprocessing(ProcessedFile $processedFile): bool
@@ -335,5 +362,18 @@ final class SiblingGenerator implements LoggerAwareInterface
                 $queryBuilder->expr()->neq('uid', $queryBuilder->createNamedParameter((int) $formatRow->getUid(), Connection::PARAM_INT)),
             )
             ->executeStatement();
+    }
+
+    private function isFileInProcessingFolder(ProcessedFile $file): bool
+    {
+        return $file->getStorage()->isWithinProcessingFolder($file->getIdentifier());
+    }
+
+    private function originalFileIsInExcludedDirectory(FileInterface $file): bool
+    {
+        $storageBasePath = $file->getStorage()->getConfiguration()['basePath'] ?? '';
+        $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
+
+        return $this->pathMatcher->matchesAny($filePath, $this->configuration->getExcludeDirectories());
     }
 }

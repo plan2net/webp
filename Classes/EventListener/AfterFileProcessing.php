@@ -5,14 +5,11 @@ declare(strict_types=1);
 namespace Plan2net\Webp\EventListener;
 
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
-use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
-use Plan2net\Webp\Service\PathMatcher;
 use Plan2net\Webp\Service\QualityOverride;
 use Plan2net\Webp\Service\SettledVariants;
 use Plan2net\Webp\Service\SiblingGenerator;
-use Plan2net\Webp\Service\StorageSiblingMode;
 use Psr\Log\LoggerAwareInterface;
 use Psr\Log\LoggerAwareTrait;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
@@ -29,7 +26,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
     use LoggerAwareTrait;
 
     public function __construct(
-        private readonly PathMatcher $pathMatcher,
         private readonly SiblingGenerator $siblingGenerator,
         private readonly Configuration $configuration,
         private readonly ConversionQueueRepository $queueRepository,
@@ -43,7 +39,7 @@ final class AfterFileProcessing implements LoggerAwareInterface
         $processedFile = $event->getProcessedFile();
         $file = $event->getFile();
 
-        if (!$this->shouldProcess($event->getTaskType(), $processedFile)) {
+        if (!$this->siblingGenerator->isInScope($event->getTaskType(), $processedFile)) {
             return;
         }
 
@@ -146,32 +142,6 @@ final class AfterFileProcessing implements LoggerAwareInterface
         return $settled;
     }
 
-    private function shouldProcess(string $taskType, ProcessedFile $processedFile): bool
-    {
-        if ('Image.CropScaleMask' !== $taskType) {
-            return false;
-        }
-
-        $originalFile = $processedFile->getOriginalFile();
-        if (OutputFormat::isOutputExtension($originalFile->getExtension())) {
-            return false;
-        }
-
-        if (!StorageSiblingMode::isEnabledFor($processedFile->getStorage())) {
-            return false;
-        }
-
-        if (!$this->configuration->isConvertAll() && !$this->isFileInProcessingFolder($processedFile)) {
-            return false;
-        }
-
-        if ($this->originalFileIsInExcludedDirectory($originalFile)) {
-            return false;
-        }
-
-        return true;
-    }
-
     private function anyEnabledFormatAcceptsMimeType(string $mimeType): bool
     {
         foreach ($this->configuration->getEnabledFormats() as $format) {
@@ -184,18 +154,5 @@ final class AfterFileProcessing implements LoggerAwareInterface
         }
 
         return false;
-    }
-
-    private function isFileInProcessingFolder(ProcessedFile $file): bool
-    {
-        return $file->getStorage()->isWithinProcessingFolder($file->getIdentifier());
-    }
-
-    private function originalFileIsInExcludedDirectory(FileInterface $file): bool
-    {
-        $storageBasePath = $file->getStorage()->getConfiguration()['basePath'] ?? '';
-        $filePath = rtrim($storageBasePath, '/') . '/' . ltrim($file->getIdentifier(), '/');
-
-        return $this->pathMatcher->matchesAny($filePath, $this->configuration->getExcludeDirectories());
     }
 }
