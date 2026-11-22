@@ -13,6 +13,7 @@ use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\CapturingConverter;
 use Plan2net\Webp\Tests\Functional\Fixtures\Doubles\DeterministicWebpConverter;
 use Symfony\Component\Console\Tester\CommandTester;
 use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
 use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -197,6 +198,37 @@ final class ProcessConversionQueueCommandTest extends FunctionalTestCase
         $this->runCommand(['--folder' => 'fileadmin']);
 
         self::assertSame($originalContents, \file_get_contents($this->fileadminPath . 'tiny.png.webp'), 'Existing sibling must not be overwritten');
+    }
+
+    #[Test]
+    public function missingModeRecreatesASiblingDeletedByHand(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['async'] = '0';
+        $processed = $this->getFile(1)->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        $siblingPath = $processed->getForLocalProcessing(false) . '.webp';
+        self::assertFileExists($siblingPath);
+        \unlink($siblingPath);
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['async'] = '1';
+
+        $exitCode = $this->runCommand(['--missing' => true]);
+
+        self::assertSame(0, $exitCode);
+        self::assertFileExists($siblingPath);
+        self::assertSame(0, $this->countQueueRows());
+    }
+
+    #[Test]
+    public function missingModeLeavesCurrentSiblingsAlone(): void
+    {
+        CapturingConverter::$receivedParameters = [];
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['converter'] = CapturingConverter::class;
+        $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['webp']['async'] = '0';
+        $this->getFile(1)->process(ProcessedFile::CONTEXT_IMAGECROPSCALEMASK, ['width' => 16, 'height' => 16]);
+        self::assertCount(1, CapturingConverter::$receivedParameters);
+
+        $this->runCommand(['--missing' => true]);
+
+        self::assertCount(1, CapturingConverter::$receivedParameters);
     }
 
     #[Test]

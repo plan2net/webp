@@ -6,6 +6,7 @@ namespace Plan2net\Webp\Command;
 
 use Plan2net\Webp\Converter\Exception\ConvertedFileLargerThanOriginalException;
 use Plan2net\Webp\Domain\Queue\ConversionQueueRepository;
+use Plan2net\Webp\Format\OutputFormat;
 use Plan2net\Webp\Format\SourceMimeType;
 use Plan2net\Webp\Service\Configuration;
 use Plan2net\Webp\Service\FolderScanner;
@@ -18,6 +19,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
@@ -42,6 +44,7 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         private readonly Configuration $configuration,
         private readonly FolderScanner $folderScanner,
         private readonly LockFactory $lockFactory,
+        private readonly ConnectionPool $connectionPool,
     ) {
         parent::__construct();
     }
@@ -53,6 +56,7 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         // typo3/cms-scheduler is absent (the Task class extends AbstractTask).
         $this->addOption('batch', null, InputOption::VALUE_REQUIRED, 'Maximum number of queue entries to process per run', '50');
         $this->addOption('folder', null, InputOption::VALUE_REQUIRED, 'Filesystem folder to sweep (relative to public web root). When set, bypasses the queue.');
+        $this->addOption('missing', null, InputOption::VALUE_NONE, 'Check every processed image and create the siblings that are missing. Bypasses the queue.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -74,6 +78,9 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
             return Command::SUCCESS;
         }
         try {
+            if (true === $input->getOption('missing')) {
+                return $this->runMissingMode($output);
+            }
             $folder = $input->getOption('folder');
             if (\is_string($folder) && '' !== $folder) {
                 return $this->runFolderMode($folder, $output);
@@ -117,6 +124,60 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
         }
 
         return Command::SUCCESS;
+    }
+
+    private function runMissingMode(OutputInterface $output): int
+    {
+        $checked = 0;
+        foreach ($this->variantUids() as $uid) {
+            try {
+                $variant = $this->processedFileRepository->findByUid($uid);
+            } catch (\Throwable) {
+                continue;
+            }
+            $taskType = $variant->getTaskIdentifier();
+            if (!$this->siblingGenerator->isInScope($taskType, $variant)) {
+                continue;
+            }
+            // The next render processes this variant again and creates its siblings.
+            if ($this->siblingGenerator->needsReprocessing($variant)) {
+                continue;
+            }
+            $originalFile = $variant->getOriginalFile();
+            try {
+                if ($variant->usesOriginalFile()) {
+                    $this->siblingGenerator->process($originalFile, $originalFile, $taskType, []);
+                } else {
+                    $this->siblingGenerator->process($originalFile, $variant, $taskType, $variant->getProcessingConfiguration());
+                }
+            } catch (\Throwable $exception) {
+                $this->logger?->error('webp missing: ' . $exception->getMessage(), ['processedFileId' => $uid]);
+            }
+            ++$checked;
+        }
+        $output->writeln(\sprintf('<info>Checked %d processed images.</info>', $checked));
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @return iterable<int>
+     */
+    private function variantUids(): iterable
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file_processedfile');
+        $rows = $queryBuilder
+            ->select('uid', 'identifier')
+            ->from('sys_file_processedfile')
+            ->where($queryBuilder->expr()->eq('task_type', $queryBuilder->createNamedParameter('Image.CropScaleMask')))
+            ->orderBy('uid')
+            ->executeQuery();
+        while (false !== ($row = $rows->fetchAssociative())) {
+            if (OutputFormat::isOutputExtension(\pathinfo((string) $row['identifier'], \PATHINFO_EXTENSION))) {
+                continue;
+            }
+            yield (int) $row['uid'];
+        }
     }
 
     private function runFolderMode(string $folder, OutputInterface $output): int
@@ -168,7 +229,7 @@ final class ProcessConversionQueueCommand extends Command implements LoggerAware
     }
 
     /**
-     * @param list<\Plan2net\Webp\Format\OutputFormat> $enabledFormats
+     * @param list<OutputFormat> $enabledFormats
      *
      * @return list<string>
      */

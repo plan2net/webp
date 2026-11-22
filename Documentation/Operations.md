@@ -37,6 +37,16 @@ vendor/bin/typo3 webp:process-queue --folder=typo3temp/assets/online_media/
 
 Add this as a second Scheduler task ("Execute console command") if you want it to run regularly. Paths are relative to the public web root, and for safety they must stay inside it.
 
+### Creating missing siblings again
+
+A sibling that was deleted by hand comes back only when TYPO3 renders its image again, and a cached page does not do that. The `--missing` argument checks every processed image TYPO3 knows about and creates the siblings that are missing. It skips the queue and converts the files directly, also with `async = 1`:
+
+```sh
+vendor/bin/typo3 webp:process-queue --missing
+```
+
+It works through FAL, so it also covers remote storages, but there it makes one request per image and format.
+
 ## Remote storages (S3, Azure, custom FAL drivers)
 
 ![Generate WebP / AVIF / JPEG XL siblings storage setting](generate_webp_variants.png)
